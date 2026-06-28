@@ -96,9 +96,9 @@ mongoose.connect(process.env.MONGO_URI)
  *  (canonical tags, OG/Twitter meta, JSON-LD @id/url fields, sitemaps).
  *  Moved to the top of the file (was previously declared just above
  *  /robots.txt) so every blog-HTML builder can reference the SAME
- *  constant instead of hardcoding "https://ollypedia.in" inline — fixes
+ *  constant instead of hardcoding "https://thecinemaverse.com" inline — fixes
  *  the www vs non-www canonical mismatch flagged in the SEO audit. */
-const SITE_URL = process.env.SITE_URL || "https://www.ollypedia.in";
+const SITE_URL = process.env.SITE_URL || "https://www.thecinemaverse.com";
 
 /** Is s a valid 24-hex MongoDB ObjectId string? */
 const isOid = (s) => typeof s === "string" && /^[a-f0-9]{24}$/i.test(s.trim());
@@ -305,7 +305,7 @@ const MovieSchema = new mongoose.Schema({
   director: { type: String, default: "" },
   producer: { type: String, default: "" },
   budget: { type: String, default: "" },
-  language: { type: String, default: "Odia" },
+  language: { type: String, default: "Hindi" },
   synopsis: { type: String, default: "" },
   posterUrl: { type: String, default: "" },
   thumbnailUrl: { type: String, default: "" },
@@ -374,13 +374,13 @@ const BlogSchema = new mongoose.Schema({
   excerpt: { type: String, default: "" },        // 1–2 sentence teaser
   content: { type: String, required: true },     // full article HTML/text
   category: { type: String, default: "General" }, // "Movie Review","Top 10","Actor Spotlight","News","General"
-  tags: [{ type: String }],                   // ["Odia 2025","Babushaan","Action"]
+  tags: [{ type: String }],                   // ["Hindi 2025","Babushaan","Action"]
   coverImage: { type: String, default: "" },
   movieId: { type: mongoose.Schema.Types.ObjectId, ref: "Movie" }, // optional link
   movieTitle: { type: String, default: "" },
   castId: { type: mongoose.Schema.Types.ObjectId, ref: "Cast" },  // optional cast link
   castName: { type: String, default: "" },
-  author: { type: String, default: "Ollypedia Team" },
+  author: { type: String, default: "The Cinema Verse Desk" },
   published: { type: Boolean, default: false },
   featured: { type: Boolean, default: false },
   indexed: { type: Boolean, default: true },               // ★ false = noindex meta + excluded from sitemap
@@ -758,8 +758,8 @@ function castProfileUrl(entry) {
 }
 
 /**
- * fetchRelatedMovies — SEO FIX: powers the "Related Odia Movies" / "More
- * Odia Movies on {Platform}" internal linking sections recommended by the
+ * fetchRelatedMovies — SEO FIX: powers the "Related Hindi Movies" / "More
+ * Hindi Movies on {Platform}" internal linking sections recommended by the
  * audit (closes the "content island" gap — blog pages currently have zero
  * links to other movies). When `preferPlatform` is true (OTT pages), tries
  * same-streaming-platform matches first per the audit's "Also available on
@@ -797,11 +797,11 @@ async function fetchRelatedMovies(movie, limit = 4, preferPlatform = false) {
   }
 }
 
-/** Builds the "Related Odia Movies" internal-linking HTML block, or "" if
+/** Builds the "Related Hindi Movies" internal-linking HTML block, or "" if
  *  there are no related movies to show. Shared across all 3 blog types.
- *  `heading` lets OTT pages say "More Odia Movies on {Platform}" instead
+ *  `heading` lets OTT pages say "More Hindi Movies on {Platform}" instead
  *  per the audit's competitor-comparison recommendation. */
-function buildRelatedMoviesHtml(related, accentColor = "#c9973a", heading = "Related Odia Movies") {
+function buildRelatedMoviesHtml(related, accentColor = "#c9973a", heading = "Related Hindi Movies") {
   if (!Array.isArray(related) || !related.length) return "";
   const cards = related.map(m => {
     const img = m.posterUrl || m.thumbnailUrl || "";
@@ -882,7 +882,7 @@ function buildOttTitle(movie, cc) {
   // bug, fixed the same way, scoped only to this OTT-blog title builder.
   const build = (leadCount) => {
     const leads = (cc.ottCast || cc.leadCast || []).slice(0, leadCount).map(c => c.name).filter(Boolean);
-    const subject = leads.length ? `${leads.join(" & ")} Starrer` : "Odia Movie";
+    const subject = leads.length ? `${leads.join(" & ")} Starrer` : "Hindi Movie";
     return `${movie.title} OTT Release Date: ${subject} Premieres on ${movie.streamingOn} ${dateTail}`.replace(/\s+/g, " ").trim();
   };
   let title = build(2);
@@ -952,62 +952,38 @@ async function callGroqStructured(systemPrompt, userPrompt, keys, fallbacks, max
 
 async function generateMovieDetailsAiSections(movie, cc) {
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
-  const genre = (movie.genre || []).join(", ") || "Odia";
+  const genre = (movie.genre || []).join(", ") || "Hindi";
   const leadNames = cc.leadCast.map(c => c.name).filter(Boolean).join(", ");
   const hasSongs = Array.isArray(movie.media?.songs) && movie.media.songs.length > 0;
   const songNames = hasSongs ? movie.media.songs.map(s => s.title).filter(Boolean).join(", ") : "";
-  const festival = findNearbyFestival(movie.releaseDate);
 
-  const ctx = `Movie: "${movie.title}"${year ? ` (${year})` : ""} | Genre: ${genre} | Language: ${movie.language || "Odia"} | Director: ${cc.director || "N/A"} | Producer: ${cc.producer || "N/A"} | Lead Cast: ${leadNames || "N/A"} | Music Director: ${cc.musicDirector || "N/A"} | Writer: ${cc.writer || "N/A"} | Cinematographer: ${cc.dop || "N/A"} | Release Date: ${movie.releaseDate ? formatHumanDate(movie.releaseDate) : "TBA"} | Runtime: ${movie.runtime || "N/A"} | Certification: ${movie.contentRating || "N/A"} | Songs: ${songNames || "N/A"} | Synopsis: ${movie.synopsis || "N/A"}${festival ? ` | Note: release falls close to ${festival} — you may mention this naturally if it fits.` : ""}`;
+  const ctx = `Movie: "${movie.title}"${year ? ` (${year})` : ""} | Genre: ${genre} | Language: ${movie.language || "Hindi"} | Director: ${cc.director || "N/A"} | Producer: ${cc.producer || "N/A"} | Lead Cast: ${leadNames || "N/A"} | Music: ${cc.musicDirector || "N/A"} | Release Date: ${movie.releaseDate ? formatHumanDate(movie.releaseDate) : "TBA"} | Songs: ${songNames || "N/A"} | Synopsis: ${movie.synopsis || "N/A"}`;
 
-  const userPrompt = `Write deeply detailed, SEO-rich JSON content for a comprehensive movie-details article on Ollypedia, an Odia (Ollywood) cinema website, about the film "${movie.title}". This MUST be a full editorial article with long, rich, substantive paragraphs — each paragraph must feel like it was written by a professional film journalist. Use ONLY the details given below. Naturally weave in the movie title, genre, director, and lead cast names across paragraphs. Do NOT include HTML or markdown.
+  const userPrompt = `Write highly cinematic, SEO-rich JSON content for a premium movie-details article on The Cinema Verse, a leading BBollywood entertainment website, about the film "${movie.title}". This MUST be a full editorial article with glamorous, rich paragraphs — each paragraph must feel like it was written by a top BBollywood trade analyst or film journalist (similar to Koimoi or Pinkvilla). Use ONLY the details given below. Weave in the movie title, genre, director, and lead cast names organically. Do NOT include HTML or markdown.
 
 ${ctx}
 
 Return a JSON object with exactly these keys (plain text only, NO HTML, NO markdown, aim for maximum detail and length):
-- metaDescription: 150-160 characters mentioning movie title, release date and genre, maximising Google click-through rate
-- introParagraph: 250-350 words introducing the film in depth — cover its genre, Ollywood landscape expectations, production scale, what makes it different, key anticipation factors. Start with "${movie.title}".
-- storyParagraph: 350-500 words expanding on the synopsis — discuss narrative background, story world, major themes, emotional conflicts, character arcs, setting, tone and pacing. Do not invent specific plot twists not in the synopsis; if synopsis is thin, write richly about the genre, tone, emotional stakes, and cultural context.
-- castCrewParagraph: 300-400 words covering each lead cast member individually — their character roles, acting style, notable past work, what they bring to this film specifically. Name every cast member. Discuss director-cast collaboration, chemistry, and ensemble dynamics.
-- directorVisionParagraph: 250-350 words about the director's signature filmmaking style, technical execution for this project, visual language, production design, use of locations, cinematography approach, and creative ambition. If director name is N/A, write about the production team's craft and values.
-- musicParagraph: 200-280 words about the soundtrack, background score, mood of the music, genre of songs. If song titles are listed, describe each one briefly. If no songs listed, discuss the musical traditions of Odia cinema and what this film's genre demands from its score.
-- whereToWatchParagraph: 180-250 words on the theatrical release strategy — major circuits in Odisha (Bhubaneswar, Cuttack, Berhampur, Sambalpur, Rourkela, Puri, Balasore), importance of supporting Odia films in theatres, how to find showtimes, family viewing experience, and the cinematic experience advantage.
-- anticipationParagraph: 250-350 words on audience expectations, industry buzz, social media reception, trailer/teaser reception if known, comparison with similar Odia films, box office potential, why this film matters for Ollywood, and the overall cultural significance of this release.`;
+- metaDescription: 150-160 characters mentioning movie title, release date, and genre, aimed at BBollywood fans.
+- introParagraph: 250-350 words introducing the film as a cinematic event. Discuss the buzz in BBollywood, scale, and why fans are excited. Start with "${movie.title}".
+- storyParagraph: 350-500 words expanding on the synopsis. Focus on the narrative arc, emotional stakes, drama, action, or romance, typical of Hindi cinema storytelling.
+- castCrewParagraph: 300-400 words detailing the BBollywood stars involved. Discuss their recent hits, chemistry, the director's track record in Hindi cinema, and what each star brings to this magnum opus.
+- musicParagraph: 200-280 words about the soundtrack. BBollywood movies are incomplete without music. Discuss the potential chartbusters, the music director's vibe, and the role of songs in the film's success.
+- anticipationParagraph: 250-350 words on trade predictions, box office potential, social media trending, and audience excitement across India and overseas.`;
 
   const fallbacks = {
-    metaDescription: `${movie.title}${year ? ` (${year})` : ""}: full cast, crew, story and release date. Read the complete details on Ollypedia, your home for Odia cinema.`,
-    introParagraph: `${movie.title}${year ? ` (${year})` : ""} is one of the most awaited ${genre} films in Odia cinema, bringing together a talented cast and crew under the ${movie.language || "Odia"} banner. The film has sparked widespread discussion among Odia cinema fans for its bold premise, its choice of genre, and the calibre of talent involved in front of and behind the camera. From its story to its theatrical release plans, here is everything Ollywood fans need to know about this hotly anticipated production. With ${cc.director ? `director ${cc.director} at the helm` : "a skilled creative team guiding the vision"}, the film is set to make a significant mark on the Odia film industry this year.`,
-    // SEO FIX: this is the canonical, full-length synopsis presentation —
-    // the OTT Release and "Now Streaming" pages reframe (not repeat) this
-    // text in their own fallbacks below, to avoid duplicate-content
-    // penalties across the three blog pages for the same movie.
-    storyParagraph: movie.synopsis || `Full plot details for ${movie.title} will be updated as soon as they are officially released by the production team. What is known is that this ${genre} drama carries a story designed to resonate deeply with Odia audiences — touching on universal themes of identity, family, love, and struggle, placed firmly in the cultural and social landscape of Odisha. The film promises a narrative that goes beyond surface-level entertainment, aiming to deliver emotional depth, strong character writing, and a cinematic experience that stays with the viewer long after the credits roll. Odia cinema audiences have long been waiting for a ${genre} film of this calibre, and ${movie.title} appears ready to deliver on those expectations.`,
-    castCrewParagraph: `${movie.title} is helmed by ${cc.director || "the director"}${cc.producer ? ` and produced by ${cc.producer}` : ""}, with ${leadNames || "a talented cast"} leading the film. ${leadNames ? `${leadNames.split(",")[0]} headlines the cast` : "The cast"} alongside a carefully chosen supporting ensemble drawn from Ollywood's growing and versatile talent pool. Each cast member brings their unique strengths and experience to the project, creating a dynamic ensemble that promises powerful on-screen performances. The chemistry between the lead actors has been a talking point in promotional discussions, and audiences can expect nuanced, layered portrayals from every member of the cast.`,
-    directorVisionParagraph: cc.director ? `${cc.director} brings a distinct and considered vision to ${movie.title}, shaping its ${genre.toLowerCase()} narrative with a sharp eye for authentic Odia storytelling. Known for meticulous attention to production detail, the director has assembled a technical crew that reflects the ambition of this project — from the cinematography and production design to the editing and sound design. The visual language of ${movie.title} is expected to reflect the emotional texture of its story, using lighting, framing, and location choices to build a vivid and immersive world for the audience.` : `The creative team behind ${movie.title} is focused on delivering an authentic ${genre.toLowerCase()} experience rooted in Odia storytelling traditions, combining modern production techniques with culturally grounded narrative choices. Every aspect of the film's technical execution has been crafted to serve the story and the emotional journey of its characters.`,
-    musicParagraph: hasSongs ? `The music of ${movie.title}${cc.musicDirector ? `, composed by ${cc.musicDirector},` : ""} features tracks including ${songNames}, adding to the film's emotional and entertainment value. The soundtrack blends melodious compositions with energetic numbers, catering to a wide range of musical tastes within the Odia audience. Each song has been crafted to complement a key moment in the film's narrative, enhancing the emotional resonance of the story on screen.` : `Music plays a central and irreplaceable role in Odia cinema, and ${movie.title} is expected to feature a soundtrack that perfectly complements its ${genre.toLowerCase()} tone and emotional arc. Full album details, song titles, and composer credits will be updated as they are officially released by the production team. Fans can expect a mix of melodious and peppy tracks that reflect the spirit of the film and the cultural heartbeat of Odisha.`,
-    whereToWatchParagraph: (() => {
-      // SEO FIX: this fallback previously rendered byte-identical across
-      // every movie, which the audit flags as a duplicate-content risk.
-      // Deterministically rotate city order + phrasing per movie (seeded
-      // off the title) so the AI-down fallback still varies page to page.
-      const cities = ["Bhubaneswar", "Cuttack", "Berhampur", "Sambalpur", "Rourkela", "Puri", "Balasore"];
-      const seed = String(movie.title || "").split("").reduce((s, c) => s + c.charCodeAt(0), 0);
-      const rotated = [...cities.slice(seed % cities.length), ...cities.slice(0, seed % cities.length)];
-      const openers = [
-        `${movie.title} is set for a wide theatrical release across Odisha, covering major cities and districts including`,
-        `Moviegoers across Odisha can catch ${movie.title} in theatres, with screenings planned across`,
-        `${movie.title} arrives in cinemas throughout Odisha, releasing in major centres such as`,
-      ];
-      const opener = openers[seed % openers.length];
-      return `${opener} ${rotated.join(", ")}. Ollypedia strongly encourages Odia cinema fans to experience this film on the big screen — the theatrical experience, with its immersive visuals, surround sound, and shared audience energy, brings the story of ${movie.title} to life in a way that no home viewing can replicate. Supporting Odia films in cinemas also directly helps the Ollywood industry grow and produce more high-quality content for audiences everywhere.`;
-    })(),
-    anticipationParagraph: `With its promising cast, strong creative team, and a story that taps into the pulse of Odia society, ${movie.title} has generated significant buzz and anticipation among Odia cinema audiences. Fans of ${genre.toLowerCase()} films in particular have reason to look forward to this one, given the quality of talent assembled and the ambition of the production. Social media has been buzzing with discussions about the film's trailer, posters, and music — all of which point to a major release that could define this season for Ollywood. Box office observers are closely watching ${movie.title} as a potential standout film of the year.`,
+    metaDescription: `${movie.title}${year ? ` (${year})` : ""}: complete cast, story, trailer, and release date details. Read the full scoop on The Cinema Verse, your premium BBollywood destination.`,
+    introParagraph: `${movie.title}${year ? ` (${year})` : ""} is currently one of the most talked-about ${genre} extravaganzas in BBollywood, bringing together a stellar ensemble cast under the ${movie.language || "Hindi"} banner. The project has sent ripples through the Indian film industry with its massive scale, gripping premise, and the sheer star power both in front of and behind the camera. From exclusive story details to its grand theatrical release plans, here is everything Hindi cinema lovers need to know about this highly anticipated BBollywood spectacle. With ${cc.director ? `blockbuster director ${cc.director} steering the ship` : "a visionary creative team at the helm"}, the film is geared up to set the box office on fire.`,
+    storyParagraph: movie.synopsis || `The exact plot details for ${movie.title} are being kept tightly under wraps by the makers, but trade insiders suggest a narrative that will keep audiences at the edge of their seats. This ${genre} drama is designed with the quintessential BBollywood flair—packing high emotional stakes, intense drama, and larger-than-life moments. The storyline promises a rollercoaster of emotions, blending commercial mass appeal with strong character-driven arcs. BBollywood fans have been eagerly waiting for a ${genre} film of this magnitude, and ${movie.title} is ready to deliver a definitive cinematic experience.`,
+    castCrewParagraph: `${movie.title} boasts an impressive lineup, directed by ${cc.director || "the acclaimed director"}${cc.producer ? ` and bankrolled by ${cc.producer}` : ""}. ${leadNames ? `The film is headlined by ${leadNames.split(",")[0]}, sharing screen space with ${leadNames}` : "The star cast features some of the finest talents in the industry"}, creating an explosive ensemble. Each actor brings their unique fan base and acting chops to the table. The on-screen chemistry and the intense performances teased so far have already become a hot topic across social media fan clubs, promising audiences a true Hindi cinema acting masterclass.`,
+    musicParagraph: hasSongs ? `A BBollywood blockbuster is incomplete without a chart-topping soundtrack, and ${movie.title}${cc.musicDirector ? `, with music by ${cc.musicDirector},` : ""} hits all the right notes. Featuring tracks like ${songNames}, the album is a perfect mix of foot-tapping party numbers and soulful romantic melodies. The music is already creating waves across streaming platforms, adding immense repeat value to the film's pre-release buzz.` : `Music is the soul of Indian cinema, and ${movie.title} is expected to feature a blockbuster album that perfectly complements its ${genre.toLowerCase()} narrative. Full tracklists, singer details, and lyrical highlights will be updated on The Cinema Verse as soon as they drop. Fans can expect a musical extravaganza that dominates the charts.`,
+    anticipationParagraph: `With a massive buzz across multiplexes and single screens alike, ${movie.title} is carrying sky-high expectations. The trade analysts are already predicting a massive opening weekend, given the star pull and the aggressive promotional campaign. Social media trends indicate that audiences are desperate to catch the first-day-first-show. As the release date approaches, ${movie.title} stands out as one of the most critical releases for the BBollywood box office this year, ready to leave a lasting impact on Indian cinema.`,
   };
 
   return callGroqStructured(
-    "You are a senior Odia cinema (Ollywood) journalist writing long-form, highly detailed, SEO-optimised editorial articles for Ollypedia. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Each paragraph must be thorough, specific, and feel like professional film journalism. Never use placeholder or filler sentences — every sentence must add real value and information.",
+    "You are a top-tier BBollywood trade analyst and entertainment journalist writing premium, high-octane editorial articles for The Cinema Verse. Return ONLY a valid JSON object — no markdown, no extra text. All values must be plain text with no HTML. Write with the glamorous, punchy, and engaging tone typical of leading Indian film websites.",
     userPrompt,
-    ["metaDescription", "introParagraph", "storyParagraph", "castCrewParagraph", "directorVisionParagraph", "musicParagraph", "whereToWatchParagraph", "anticipationParagraph"],
+    ["metaDescription", "introParagraph", "storyParagraph", "castCrewParagraph", "musicParagraph", "anticipationParagraph"],
     fallbacks,
     4500
   );
@@ -1015,12 +991,8 @@ Return a JSON object with exactly these keys (plain text only, NO HTML, NO markd
 
 function buildMovieDetailsBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, dateModified, relatedMovies = []) {
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
-  const genre = (movie.genre || []).join(", ") || "Odia";
+  const genre = (movie.genre || []).join(", ") || "Hindi";
   const releaseFmt = movie.releaseTBA || !movie.releaseDate ? "To Be Announced" : formatHumanDate(movie.releaseDate);
-  // Falls back to the site logo only when the movie has no poster/thumbnail/
-  // banner at all — same fallback asset the rest of the codebase already
-  // relies on (kept as logo.png rather than introducing a new, unverified
-  // asset path), just sourced from SITE_URL for www/non-www consistency.
   const poster = movie.posterUrl || movie.thumbnailUrl || movie.bannerUrl || "";
   const ogImage = poster || `${SITE_URL}/logo.png`;
   const movieUrl = `/movie/${movie.slug}`;
@@ -1029,335 +1001,152 @@ function buildMovieDetailsBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublis
   const imdbNum = parseFloat(movie.imdbRating);
   const hasImdb = !isNaN(imdbNum) && imdbNum > 0 && imdbNum <= 10;
   const hasBoxOffice = movie.boxOffice && Object.values(movie.boxOffice).some(v => v && v !== "TBA");
-  // SEO FIX: productionCompany for the Movie schema — only added when
-  // productionId has actually been populated to an object (it's sometimes
-  // just an ObjectId depending on the caller), so this never renders a raw
-  // Mongo ID string into the page.
   const productionCompanyName = (movie.productionId && typeof movie.productionId === "object" && movie.productionId.name) ? movie.productionId.name : "";
   const dp = datePublished || new Date().toISOString();
   const dm = dateModified || dp;
 
-  const card = `background:#181818;border:1px solid #242424;border-radius:14px;padding:26px 28px;margin-bottom:22px;`;
-  const h2 = `font-size:1.05rem;font-weight:800;color:#c9973a;border-left:4px solid #c9973a;padding-left:12px;margin:0 0 18px;line-height:1.3;`;
-  const h3 = `color:#ccc;font-size:0.95rem;font-weight:700;margin:18px 0 8px;`;
-  const tdL = `padding:10px 0;border-bottom:1px solid #1e1e1e;color:#888;font-size:0.87rem;width:38%;vertical-align:top;`;
-  const tdR = `padding:10px 0;border-bottom:1px solid #1e1e1e;color:#ddd;font-size:0.87rem;font-weight:600;`;
-  const th = `padding:11px 14px;background:#1f1f1f;color:#888;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;text-align:left;border-bottom:2px solid #2a2a2a;`;
-  const td = `padding:11px 14px;border-bottom:1px solid #1e1e1e;color:#ddd;font-size:0.87rem;`;
-
-  const castRows = (cc.fullCast || []).map(c => {
-    const url = castProfileUrl(c);
-    return `
-      <tr>
-        <td style="${td}font-weight:600;">${url ? `<a href="${url}" style="color:#e8c87a;text-decoration:underline;text-underline-offset:2px;">${c.name || ""}</a>` : (c.name || "")}</td>
-        <td style="${td}color:#c9973a;">${c.role || c.type || ""}</td>
-      </tr>`;
-  }).join("");
-
-  // Each crew name links to its cast profile (same /cast/{id} pattern used
-  // for the full cast table below) when a matching cast entry exists;
-  // falls back to plain text exactly as before when it doesn't (e.g. when
-  // the name came from movie.director rather than a matched cast entry).
-  const crewLink = (name, entry) => {
-    const url = castProfileUrl(entry);
-    return url ? `<a href="${url}" style="color:#e8c87a;text-decoration:underline;text-underline-offset:2px;">${name}</a>` : name;
-  };
-  const keyCrewRows = [
-    ["Director", cc.director, cc.directorEntry], ["Producer", cc.producer, cc.producerEntry],
-    ["Music Director", cc.musicDirector, cc.musicDirectorEntry],
-    ["Writer", cc.writer, cc.writerEntry], ["Cinematography", cc.dop, cc.dopEntry],
-    ["Editor", cc.editor, cc.editorEntry],
-  ].filter(([, v]) => v).map(([k, v, entry]) => `
-      <tr><td style="${tdL}">${k}</td><td style="${tdR}">${crewLink(v, entry)}</td></tr>`).join("");
-
-  const songRows = hasSongs ? movie.media.songs.map(s => `
-      <tr><td style="${td}font-weight:600;">${s.title || ""}</td><td style="${td}">${s.singer || ""}</td></tr>`).join("") : "";
+  // New The Cinema Verse Styling - BBollywood Glamour (Dark Glassmorphism)
+  const glassCard = `background: rgba(25, 25, 25, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 30px; margin-bottom: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);`;
+  const sectionTitle = `font-size: 1.4rem; font-weight: 800; color: #ff3366; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 20px; display: flex; align-items: center; gap: 10px;`;
+  const titleIcon = `<span style="background: linear-gradient(135deg, #ff3366, #ff9933); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">■</span>`;
 
   const leadNames = cc.leadCast.map(c => c.name).filter(Boolean);
-  const keywordsArr = [
-    movie.title, `${movie.title} cast`, `${movie.title} release date`, `${movie.title} story`,
-    `${movie.title} director`, year ? `${movie.title} ${year}` : "", `${movie.title} odia movie`,
-    "Odia movie", "Ollywood", genre ? `${genre} odia movie` : "", movie.language || "Odia",
-    cc.director ? `${cc.director} movies` : "", cc.musicDirector ? `${cc.musicDirector} music` : "",
-    ...leadNames.map(n => `${n} movies`),
-  ].filter(Boolean);
-  const keywordsStr = [...new Set(keywordsArr)].join(", ");
+  const keywordsStr = [
+    movie.title, `${movie.title} cast`, `${movie.title} release date`, `${movie.title} box office`,
+    year ? `${movie.title} ${year}` : "", "BBollywood movie", "Hindi cinema", "The Cinema Verse",
+    cc.director ? `${cc.director} movies` : "", ...leadNames.map(n => `${n} movies`)
+  ].filter(Boolean).join(", ");
 
-  const toc = [
-    ["Quick Facts", "quick-facts"], ["Story & Plot", "story"], ["Cast & Crew", "cast-crew"],
-    ["Director's Vision", "director-vision"], hasSongs ? ["Music & Soundtrack", "music"] : null,
-    trailerId ? ["Official Trailer", "trailer"] : null,
-    hasBoxOffice ? ["Box Office Collection", "box-office"] : null,
-    ["Where to Watch", "where-to-watch"],
-    // SEO FIX: non-keyword-aligned heading replaced with a search-intent match
-    [`Why Watch ${movie.title}?`, "anticipation"],
-    relatedMovies.length ? ["Related Movies", "related-movies"] : null,
-  ].filter(Boolean);
-  const tocHtml = `
-<nav aria-label="Table of contents" style="${card}padding:18px 24px;">
-  <strong style="color:#888;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;">On this page</strong>
-  <ul style="margin:10px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px 18px;">
-    ${toc.map(([label, id]) => `<li><a href="#${id}" style="color:#7ec8e3;text-decoration:none;font-size:0.85rem;">${label}</a></li>`).join("")}
-  </ul>
-</nav>`;
-
-  // SEO FIX: real word count for the schema "wordCount" field (and a more
-  // honest internal readTime), counted from the AI prose only — not HTML
-  // tags/inline style strings, which previously inflated the count.
-  const plainWordCount = [ai.introParagraph, ai.storyParagraph, ai.castCrewParagraph, ai.directorVisionParagraph, ai.musicParagraph, ai.whereToWatchParagraph, ai.anticipationParagraph]
-    .filter(Boolean).join(" ").split(/\s+/).filter(Boolean).length;
-
-  // SEO FIX: Event schema for the theatrical release (matches BookMyShow /
-  // PVR-style sites per the audit's competitor comparison) — only emitted
-  // when there's a real release date to anchor it to.
-  const eventSchema = (movie.releaseDate && !movie.releaseTBA) ? `,
-    {
-      "@type": "Event",
-      "name": ${JSON.stringify(`${movie.title} — Theatrical Release`)},
-      "startDate": "${movie.releaseDate}",
-      "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
-      "eventStatus": "https://schema.org/EventScheduled",
-      "location": { "@type": "Place", "name": "Cinemas across Odisha", "address": { "@type": "PostalAddress", "addressRegion": "Odisha", "addressCountry": "IN" } },
-      "workPerformed": { "@type": "Movie", "name": ${JSON.stringify(movie.title)} },
-      "image": ${JSON.stringify(ogImage)},
-      "organizer": { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}" }
-    }` : "";
-
-  // SEO FIX: MusicRecording schema per song — targets "{Song} lyrics" /
-  // "{Song} singer" queries per the audit's ranking-gain recommendations.
-  const musicRecordingSchema = hasSongs ? movie.media.songs.filter(s => s.title).map(s => `,
-    {
-      "@type": "MusicRecording",
-      "name": ${JSON.stringify(s.title)},
-      "inAlbum": { "@type": "MusicAlbum", "name": ${JSON.stringify(`${movie.title} (Original Motion Picture Soundtrack)`)} }${s.singer ? `,
-      "byArtist": { "@type": "Person", "name": ${JSON.stringify(s.singer)} }` : ""}${s.musicDirector ? `,
-      "composer": { "@type": "Person", "name": ${JSON.stringify(s.musicDirector)} }` : ""}${s.lyricist ? `,
-      "lyricist": { "@type": "Person", "name": ${JSON.stringify(s.lyricist)} }` : ""}
-    }`).join("") : "";
+  const plainWordCount = [ai.introParagraph, ai.storyParagraph, ai.castCrewParagraph, ai.musicParagraph, ai.anticipationParagraph].filter(Boolean).join(" ").split(/\s+/).filter(Boolean).length;
 
   return `<!-- ════════════════════════════════════════════════════════════════
-  OLLYPEDIA SEO META — READ BY CMS
+  THE CINEMA VERSE SEO META
   title:          ${seoTitle}
   description:    ${ai.metaDescription}
   keywords:       ${keywordsStr}
   canonical:      ${SITE_URL}/blog/${blogSlug}
   robots:         index, follow
-  og:site_name:   Ollypedia
+  og:site_name:   The Cinema Verse
   og:title:       ${seoTitle}
   og:description: ${ai.metaDescription}
   og:url:         ${SITE_URL}/blog/${blogSlug}
   og:image:       ${ogImage}
-  og:image:width: 1200
-  og:image:height: 630
   og:type:        article
-  og:locale:      en_IN
-  article:published_time: ${dp}
-  article:modified_time:  ${dm}
-  article:author: Ollypedia Team
-  article:section: ${(movie.genre || [])[0] || "Movies"}
-  twitter:card:   summary_large_image
-  twitter:site:   @OllypediaIn
-  twitter:creator: @OllypediaIn
-  twitter:title:  ${seoTitle}
-  twitter:description: ${ai.metaDescription}
-  twitter:image:  ${ogImage}
-  twitter:image:alt: ${movie.title} Poster
+  article:author: The Cinema Verse Desk
 ════════════════════════════════════════════════════════════════ -->
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "NewsArticle",
-      "headline": ${JSON.stringify(seoTitle)},
-      "description": ${JSON.stringify(ai.metaDescription)},
-      "image": ${JSON.stringify(ogImage)},
-      "datePublished": "${dp}",
-      "dateModified": "${dm}",
-      "inLanguage": "en",
-      "wordCount": ${plainWordCount},
-      "keywords": ${JSON.stringify(keywordsStr)},
-      "author": [
-        { "@type": "Person", "name": "Ollypedia Team", "url": "${SITE_URL}/about" },
-        { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}" }
-      ],
-      "publisher": { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}",
-                     "logo": { "@type": "ImageObject", "url": "${SITE_URL}/logo.png" } },
-      "mainEntityOfPage": { "@type": "WebPage", "@id": "${SITE_URL}/blog/${blogSlug}" },
-      "about": {
-        "@type": "Movie",
-        "name": ${JSON.stringify(movie.title)},
-        "url": "${SITE_URL}${movieUrl}",
-        "image": ${JSON.stringify(ogImage)},
-        "inLanguage": ${JSON.stringify(movie.language || "Odia")},
-        "genre": ${JSON.stringify(genre)}${movie.releaseDate ? `,
-        "datePublished": "${movie.releaseDate}"` : ""}${movie.contentRating ? `,
-        "contentRating": ${JSON.stringify(movie.contentRating)}` : ""}${movie.runtime ? `,
-        "duration": ${JSON.stringify(movie.runtime)}` : ""}${productionCompanyName ? `,
-        "productionCompany": { "@type": "Organization", "name": ${JSON.stringify(productionCompanyName)} }` : ""}${cc.director ? `,
-        "director": { "@type": "Person", "name": ${JSON.stringify(cc.director)} }` : ""}${cc.producer ? `,
-        "producer": { "@type": "Person", "name": ${JSON.stringify(cc.producer)} }` : ""}${cc.leadCast.length ? `,
-        "actor": [${cc.leadCast.map(a => { const u = castProfileUrl(a); return `{ "@type": "Person", "name": ${JSON.stringify(a.name)}${u ? `, "url": "${SITE_URL}${u}"` : ""} }`; }).join(", ")}]` : ""}${trailerId ? `,
-        "trailer": { "@type": "VideoObject", "name": ${JSON.stringify(`${movie.title} — Official Trailer`)}, "embedUrl": "https://www.youtube.com/embed/${trailerId}", "thumbnailUrl": ${JSON.stringify(movie.media?.trailer?.thumbnailUrl || `https://img.youtube.com/vi/${trailerId}/hqdefault.jpg`)}, "uploadDate": "${movie.createdAt ? new Date(movie.createdAt).toISOString() : dp}" }` : ""}${hasImdb ? `,
-        "aggregateRating": { "@type": "AggregateRating", "ratingValue": ${imdbNum}, "bestRating": "10"${movie.imdbVotes ? `, "ratingCount": ${JSON.stringify(String(movie.imdbVotes).replace(/[^0-9]/g, "") || "1")}` : ""} }` : ""}
-      }
-    },
-    {
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "Home", "item": "${SITE_URL}" },
-        { "@type": "ListItem", "position": 2, "name": "Movies", "item": "${SITE_URL}/movies" },
-        { "@type": "ListItem", "position": 3, "name": ${JSON.stringify(movie.title)}, "item": "${SITE_URL}${movieUrl}" },
-        { "@type": "ListItem", "position": 4, "name": "Details & Cast", "item": "${SITE_URL}/blog/${blogSlug}" }
-      ]
-    }${trailerId ? `,
-    {
-      "@type": "VideoObject",
-      "name": ${JSON.stringify(`${movie.title} — Official Trailer`)},
-      "description": ${JSON.stringify(ai.metaDescription)},
-      "thumbnailUrl": ${JSON.stringify(movie.media?.trailer?.thumbnailUrl || `https://img.youtube.com/vi/${trailerId}/hqdefault.jpg`)},
-      "uploadDate": "${movie.createdAt ? new Date(movie.createdAt).toISOString() : dp}",
-      "embedUrl": "https://www.youtube.com/embed/${trailerId}"
-    }` : ""}${eventSchema}${musicRecordingSchema}
-  ]
+  "@type": "NewsArticle",
+  "headline": ${JSON.stringify(seoTitle)},
+  "description": ${JSON.stringify(ai.metaDescription)},
+  "image": ${JSON.stringify(ogImage)},
+  "datePublished": "${dp}",
+  "dateModified": "${dm}",
+  "author": { "@type": "Organization", "name": "The Cinema Verse", "url": "${SITE_URL}" },
+  "publisher": { "@type": "Organization", "name": "The Cinema Verse", "logo": { "@type": "ImageObject", "url": "${SITE_URL}/logo.png" } },
+  "mainEntityOfPage": { "@type": "WebPage", "@id": "${SITE_URL}/blog/${blogSlug}" }
 }
 </script>
 
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
-  <nav aria-label="Breadcrumb" style="font-size:0.78rem;color:#555;display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-    <a href="/" style="color:#777;text-decoration:none;">Home</a>
-    <span style="color:#333;">›</span>
-    <a href="/movies" style="color:#777;text-decoration:none;">Movies</a>
-    <span style="color:#333;">›</span>
-    <a href="${movieUrl}" style="color:#777;text-decoration:none;">${movie.title}</a>
-    <span style="color:#333;">›</span>
-    <span style="color:#999;">Details &amp; Cast</span>
-  </nav>
-</div>
-
-<div class="hero-section" style="background:linear-gradient(135deg,#1a0e00 0%,#121212 100%);border:1px solid #2e2000;border-radius:14px;padding:30px 28px 24px;margin-bottom:22px;">
-  <h1 style="color:#fff;font-size:1.4rem;font-weight:800;margin:0 0 12px;line-height:1.3;">${seoTitle}</h1>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#c9973a;font-weight:700;">${genre}</span>
-    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#7ec8e3;font-weight:700;">${movie.language || "Odia"}</span>
-    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#e8c87a;font-weight:700;">📅 ${releaseFmt}</span>
-    ${hasImdb ? `<span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#f5c518;font-weight:700;">⭐ ${imdbNum}/10 IMDb</span>` : ""}
-  </div>
-  ${autoBlogParagraphs(ai.introParagraph)}
-</div>
-
-${tocHtml}
-
-${BLOG_RESPONSIVE_STYLES}
-<style>
-  .blog-content-layout { display: flex; flex-direction: column; gap: 24px; }
-  .blog-poster-aside { width: 100%; max-width: 300px; margin: 0 auto; }
-  .blog-poster-aside img { width: 100%; height: auto; border-radius: 12px; border: 1px solid #242424; box-shadow: 0 8px 32px rgba(0,0,0,0.6); }
-  @media (min-width: 900px) {
-    .blog-content-layout { flex-direction: row; align-items: flex-start; }
-    .blog-poster-aside { width: 240px; position: sticky; top: 80px; flex-shrink: 0; }
-  }
-</style>
-
-<div class="blog-content-layout">
-  <aside class="blog-poster-aside">
-    ${poster ? `<img src="${poster}" alt="${movie.title} Poster" width="240" height="360" fetchpriority="high" style="object-fit:cover;" onError="this.style.display='none'" />` : ""}
-    <a href="${movieUrl}" style="display:block;background:#c9973a;color:#000;font-weight:800;font-size:0.82rem;padding:10px;border-radius:8px;text-decoration:none;margin-top:12px;text-align:center;">View Full Movie Page →</a>
-  </aside>
-  <div style="flex: 1; min-width: 0;">
-    <section id="quick-facts" style="${card}">
-      <h2 style="${h2}">Quick Facts</h2>
-      <table style="width:100%;border-collapse:collapse;" class="info-table">
-        <tbody>
-          <tr><td style="${tdL}">Release Date</td><td style="${tdR}">${releaseFmt}</td></tr>
-          <tr><td style="${tdL}">Genre</td><td style="${tdR}">${genre}</td></tr>
-          <tr><td style="${tdL}">Language</td><td style="${tdR}">${movie.language || "Odia"}</td></tr>
-          ${movie.runtime ? `<tr><td style="${tdL}">Runtime</td><td style="${tdR}">${movie.runtime}</td></tr>` : ""}
-          ${movie.contentRating ? `<tr><td style="${tdL}">Certification</td><td style="${tdR}">${movie.contentRating}</td></tr>` : ""}
-          ${keyCrewRows}
-        </tbody>
-      </table>
-    </section>
-
-    <section id="story" style="${card}">
-      <h2 style="${h2}">Story &amp; Plot</h2>
-      ${autoBlogParagraphs(ai.storyParagraph)}
-    </section>
-
-    <section id="cast-crew" style="${card}">
-      <h2 style="${h2}">Cast &amp; Crew</h2>
-      ${autoBlogParagraphs(ai.castCrewParagraph)}
-      ${castRows ? `
-      <h3 style="${h3}">Lead Cast</h3>
-      <div class="tbl-scroll" style="overflow-x:auto;margin-top:10px;">
-        <table style="width:100%;border-collapse:collapse;min-width:320px;" class="data-table">
-          <thead><tr><th style="${th}">Name</th><th style="${th}">Role</th></tr></thead>
-          <tbody>${castRows}</tbody>
-        </table>
-      </div>` : ""}
-      ${keyCrewRows ? `<h3 style="${h3}">Key Crew</h3><p style="color:#999;line-height:1.8;margin:0;font-size:0.87rem;">See the full crew breakdown in Quick Facts above, including director, producer, music direction, writing, cinematography, and editing credits.</p>` : ""}
-    </section>
-
-    <section id="director-vision" style="${card}">
-      <h2 style="${h2}">Director's Vision</h2>
-      ${autoBlogParagraphs(ai.directorVisionParagraph)}
-    </section>
-
-    ${hasSongs ? `
-    <section id="music" style="${card}">
-      <h2 style="${h2}">Music &amp; Soundtrack</h2>
-      ${autoBlogParagraphs(ai.musicParagraph)}
-      <div class="tbl-scroll" style="overflow-x:auto;margin-top:10px;">
-        <table style="width:100%;border-collapse:collapse;min-width:320px;" class="data-table">
-          <thead><tr><th style="${th}">Song</th><th style="${th}">Singer</th></tr></thead>
-          <tbody>${songRows}</tbody>
-        </table>
+<div style="font-family: 'Inter', sans-serif; color: #e0e0e0; max-width: 1200px; margin: 0 auto;">
+  
+  <!-- Hero Section -->
+  <div style="position: relative; border-radius: 20px; overflow: hidden; margin-bottom: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.8);">
+    <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: linear-gradient(to top, #0f0f0f 0%, rgba(15,15,15,0.2) 100%); z-index: 1;"></div>
+    ${poster ? `<img src="${poster}" style="width: 100%; height: 50vh; object-fit: cover; opacity: 0.6; filter: blur(3px);" />` : `<div style="height: 300px; background: #222;"></div>`}
+    
+    <div style="position: absolute; bottom: 0; left: 0; padding: 40px; z-index: 2; display: flex; align-items: flex-end; gap: 30px; width: 100%; box-sizing: border-box; flex-wrap: wrap;">
+      ${poster ? `<img src="${poster}" style="width: 180px; height: 270px; object-fit: cover; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.9); border: 2px solid rgba(255,255,255,0.1);" />` : ""}
+      <div style="flex: 1; min-width: 300px;">
+        <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+          <span style="background: #ff3366; color: #fff; padding: 4px 12px; border-radius: 4px; font-weight: 700; font-size: 0.8rem; text-transform: uppercase;">${genre}</span>
+          <span style="background: rgba(255,255,255,0.1); backdrop-filter: blur(5px); color: #fff; padding: 4px 12px; border-radius: 4px; font-weight: 600; font-size: 0.8rem;">${movie.language || "Hindi"}</span>
+          <span style="background: rgba(255,255,255,0.1); backdrop-filter: blur(5px); color: #fff; padding: 4px 12px; border-radius: 4px; font-weight: 600; font-size: 0.8rem;">${releaseFmt}</span>
+        </div>
+        <h1 style="font-size: 2.8rem; font-weight: 900; margin: 0 0 15px; line-height: 1.1; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); color: #fff;">${movie.title}</h1>
+        <p style="font-size: 1.1rem; line-height: 1.6; color: #ccc; margin: 0; max-width: 800px;">${ai.introParagraph}</p>
       </div>
-    </section>` : `
-    <section id="music" style="${card}">
-      <h2 style="${h2}">Music &amp; Soundtrack</h2>
-      ${autoBlogParagraphs(ai.musicParagraph)}
-    </section>`}
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr; gap: 30px;">
+    
+    <!-- Cinematic Story -->
+    <section style="${glassCard}">
+      <h2 style="${sectionTitle}">${titleIcon} The Plot</h2>
+      <div style="font-size: 1.05rem; line-height: 1.8; color: #d4d4d4; border-left: 3px solid #ff3366; padding-left: 20px;">
+        ${autoBlogParagraphs(ai.storyParagraph)}
+      </div>
+    </section>
+
+    <!-- BBollywood Star Cast -->
+    <section style="${glassCard}">
+      <h2 style="${sectionTitle}">${titleIcon} Star Cast & Crew</h2>
+      <div style="font-size: 1.05rem; line-height: 1.8; margin-bottom: 25px;">
+        ${autoBlogParagraphs(ai.castCrewParagraph)}
+      </div>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 20px;">
+        ${cc.leadCast.map(c => `
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; padding: 15px; text-align: center;">
+            <div style="font-weight: 700; color: #fff; font-size: 1rem; margin-bottom: 5px;">${c.name}</div>
+            <div style="color: #ff9933; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">${c.role || "Actor"}</div>
+          </div>
+        `).join("")}
+      </div>
+      
+      <div style="margin-top: 30px; display: flex; flex-wrap: wrap; gap: 20px; background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px;">
+        ${[
+          ["Director", cc.director], ["Producer", cc.producer], 
+          ["Music", cc.musicDirector], ["Writer", cc.writer]
+        ].filter(([, v]) => v).map(([k, v]) => `
+          <div style="flex: 1; min-width: 120px;">
+            <div style="color: #888; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">${k}</div>
+            <div style="color: #fff; font-weight: 600; font-size: 0.95rem;">${v}</div>
+          </div>
+        `).join("")}
+      </div>
+    </section>
+
+    <!-- Music & Anticipation Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+      
+      <section style="${glassCard}">
+        <h2 style="${sectionTitle}">${titleIcon} Musical Score</h2>
+        <div style="font-size: 1rem; line-height: 1.7;">
+          ${autoBlogParagraphs(ai.musicParagraph)}
+        </div>
+      </section>
+
+      <section style="${glassCard}">
+        <h2 style="${sectionTitle}">${titleIcon} Box Office Buzz</h2>
+        <div style="font-size: 1rem; line-height: 1.7;">
+          ${autoBlogParagraphs(ai.anticipationParagraph)}
+        </div>
+        ${hasBoxOffice && movie.boxOffice.total && movie.boxOffice.total !== "TBA" ? `
+          <div style="margin-top: 20px; padding: 15px; background: rgba(255,51,102,0.1); border-left: 4px solid #ff3366; border-radius: 4px;">
+            <strong style="color:#ff3366; display:block; margin-bottom:5px;">Total Box Office</strong>
+            <span style="font-size: 1.4rem; font-weight: 800; color: #fff;">${movie.boxOffice.total}</span>
+          </div>
+        ` : ""}
+      </section>
+
+    </div>
 
     ${trailerId ? `
-    <section id="trailer" style="${card}">
-      <h2 style="${h2}">Official Trailer</h2>
-      <div style="position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden;background:#000;">
-        <iframe src="https://www.youtube.com/embed/${trailerId}" loading="lazy" title="${movie.title} Official Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"></iframe>
+    <section style="${glassCard}">
+      <h2 style="${sectionTitle}">${titleIcon} Watch Trailer</h2>
+      <div style="position:relative; padding-top:56.25%; border-radius:12px; overflow:hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">
+        <iframe src="https://www.youtube.com/embed/${trailerId}" loading="lazy" title="${movie.title} Official Trailer" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"></iframe>
       </div>
     </section>` : ""}
 
-    ${hasBoxOffice ? `
-    <section id="box-office" style="${card}">
-      <h2 style="${h2}">Box Office Collection</h2>
-      <table style="width:100%;border-collapse:collapse;" class="info-table">
-        <tbody>
-          ${movie.boxOffice.opening && movie.boxOffice.opening !== "TBA" ? `<tr><td style="${tdL}">Opening Day</td><td style="${tdR}">${movie.boxOffice.opening}</td></tr>` : ""}
-          ${movie.boxOffice.firstWeek && movie.boxOffice.firstWeek !== "TBA" ? `<tr><td style="${tdL}">First Week</td><td style="${tdR}">${movie.boxOffice.firstWeek}</td></tr>` : ""}
-          ${movie.boxOffice.total && movie.boxOffice.total !== "TBA" ? `<tr><td style="${tdL}">Total Collection</td><td style="${tdR}">${movie.boxOffice.total}</td></tr>` : ""}
-        </tbody>
-      </table>
-    </section>` : ""}
-
-    <section id="where-to-watch" style="${card}">
-      <h2 style="${h2}">Where to Watch</h2>
-      ${autoBlogParagraphs(ai.whereToWatchParagraph)}
-    </section>
-
-    <section id="anticipation" style="${card}">
-      <h2 style="${h2}">Why Watch ${movie.title}?</h2>
-      ${autoBlogParagraphs(ai.anticipationParagraph)}
-    </section>
-
-    ${buildRelatedMoviesHtml(relatedMovies, "#c9973a")}
-
-    <section style="background:#111;border-radius:14px;padding:20px 26px;margin-bottom:22px;display:flex;gap:12px;flex-wrap:wrap;">
-      <a href="/movies" style="display:inline-block;background:#c9973a;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">Browse More Odia Movies →</a>
-    </section>
   </div>
 </div>`;
 }
+
 
 /**
  * autoGenerateMovieDetailsBlog — orchestrates AI + HTML + publish for the
@@ -1449,11 +1238,11 @@ async function autoGenerateMovieDetailsBlog(movie) {
       excerpt: ai.metaDescription,
       content: html,
       category: "Movie Update",
-      tags: [movie.title, "Ollywood", "Odia Movie", ...(movie.genre || [])],
+      tags: [movie.title, "Bollywood", "Hindi Movie", ...(movie.genre || [])],
       coverImage: movie.posterUrl || movie.thumbnailUrl || movie.bannerUrl || "",
       movieId: movie._id,
       movieTitle: movie.title,
-      author: "Ollypedia Team",
+      author: "The Cinema Verse Desk",
       published: true,
       readTime: Math.max(1, Math.ceil(html.split(/\s+/).length / 200)),
       seoTitle: seoTitle,
@@ -1538,8 +1327,8 @@ function buildSongTitle(songTitle, movie, dropLabel, hasLyrics, singer, md) {
 
   // Shorter fallback pattern
   const short = hasLyrics
-    ? `${clean} ${dLabel} Lyrics | ${movieStr} | Ollypedia`
-    : `${clean} ${dLabel} | ${movieStr} | Ollypedia`;
+    ? `${clean} ${dLabel} Lyrics | ${movieStr} | The Cinema Verse`
+    : `${clean} ${dLabel} | ${movieStr} | The Cinema Verse`;
 
   if (short.length <= 130) return short;
   return short.slice(0, 127) + "...";
@@ -1555,10 +1344,10 @@ function buildSongSeoDesc(song, movie) {
   const singer = song.singer || "";
   const md = song.musicDirector || "";
   return [
-    `Listen to "${clean}" — the latest song from ${movie.title}${year ? ` (${year})` : ""} Odia film.`,
+    `Listen to "${clean}" — the latest song from ${movie.title}${year ? ` (${year})` : ""} Hindi film.`,
     singer ? `Sung by ${singer}.` : "",
     md ? `Music by ${md}.` : "",
-    `Watch the official video, read lyrics, and get full song details on Ollypedia.`,
+    `Watch the official video, read lyrics, and get full song details on The Cinema Verse.`,
   ].filter(Boolean).join(" ").slice(0, 160);
 }
 
@@ -1575,53 +1364,48 @@ async function generateSongAiSections(song, movie, cc) {
   const singer = song.singer || "the vocalist";
   const md = song.musicDirector || cc.musicDirector || "the music director";
   const lyricist = song.lyricist || "";
-  const genre = (movie.genre || []).join(", ") || "Odia";
+  const genre = (movie.genre || []).join(", ") || "Hindi";
   const hasDesc = !!(song.description || "").trim();
   const hasLyrics = !!(song.lyrics || "").trim();
 
   const fallbacks = {
-    intro: `${song.title} is the latest song from the Odia film ${movie.title}${year ? ` (${year})` : ""}. Sung by ${singer} with music by ${md}, this track is poised to become a defining highlight of the film's soundtrack.`,
+    intro: `${song.title} is the latest musical offering from the Bollywood film ${movie.title}${year ? ` (${year})` : ""}. Rendered beautifully by ${singer} with a mesmerizing composition by ${md}, this track is fast becoming the heartbeat of the film's soundtrack.`,
     aboutSong: hasDesc
-      ? `${song.title} captures the emotional essence of ${movie.title} in a way that only a song crafted with this much care can. ${singer}'s voice carries the melody with effortless grace, while ${md}'s composition creates a sonic landscape that lingers long after the music ends. Every element — from the arrangement to the production — speaks to the ambition behind this release, making it one of the standout tracks of the Ollywood season.`
-      : `The song showcases the vocal brilliance of ${singer} and the musical craftsmanship of ${md}. It perfectly captures the emotional mood of the ${genre} film and is expected to resonate deeply with Ollywood audiences. The composition strikes a careful balance between melody and feeling, making it a track that will stay with listeners well beyond their first listen.`,
+      ? `${song.title} captures the quintessential Bollywood emotion of ${movie.title} with undeniable charm. ${singer}'s vocals glide over the melody effortlessly, while ${md}'s production sets a grand sonic stage. Every beat and rhythm highlights the ambition behind this track, making it a chartbuster in the making for Hindi music lovers.`
+      : `Showcasing the vocal prowess of ${singer} and the musical genius of ${md}, this song perfectly sets the mood for the ${genre} drama. It's designed to strike a chord with Bollywood audiences, blending mass appeal with soulful melodies. The track is bound to dominate music charts and playlists alike.`,
     lyricsNote: hasLyrics
-      ? `The lyrics of ${song.title} are steeped in Odia cultural expression, giving voice to emotions that feel both personal and universal. Reading through the full lyrics below reveals the depth of craft behind the song's story, adding a new layer of appreciation beyond the melody itself.`
-      : `The lyrics of ${song.title} are poetic and deeply rooted in Odia cultural sensibility, weaving themes of emotion and lived experience that fans of ${movie.title} will immediately connect with.`,
-    verdict: `${song.title} is a soulful and memorable addition to the ${movie.title} soundtrack — the kind of song that earns repeat listens. With ${singer}'s heartfelt delivery and ${md}'s evocative composition, this is Ollywood music at its finest. Watch the full video on Ollypedia.`,
+      ? `The lyrics of ${song.title} carry the poetic depth typical of classic Hindi cinema, giving voice to emotions that resonate deeply. Dive into the complete lyrics below to appreciate the craft behind the melody.`
+      : `The lyrics of ${song.title} are poetic and expressive, weaving themes of emotion and drama that fans of ${movie.title} will instantly connect with.`,
+    verdict: `${song.title} is a blockbuster addition to the ${movie.title} album. With ${singer}'s stellar delivery and ${md}'s vibrant composition, this is Bollywood music at its absolute best. Watch the full video on The Cinema Verse.`,
     metaDescription: buildSongSeoDesc(song, movie),
     audioCredits: [],
     videoCredits: [],
   };
 
-  // Build the description context block for the prompt
   const descContext = hasDesc
     ? `\n\nSong Description provided by creators (CRITICAL: Extract ALL audio & video credits if mentioned. Also use this to write the aboutSong editorial):\n"""\n${song.description}\n"""`
     : "";
 
   const aboutSongInstruction = hasDesc
-    ? `- aboutSong (5-6 long, highly detailed paragraphs): A deeply human, engaging editorial review of the song. You MUST incorporate every detail, fact, name, or context mentioned in the "Song Description" above. Discuss emotional tone, artists' performances, production nuances. Write in a warm, enthusiastic, and sophisticated journalistic voice (300-400 words).\n- audioCredits: Extract a JSON array of objects with keys "role" and "name" for all audio-related credits (Singer, Music Director, Lyricist, etc.) from the description.\n- videoCredits: Extract a JSON array of objects with keys "role" and "name" for all video-related credits (Director, Choreographer, Editor, etc.) from the description.`
-    : `- aboutSong (3-4 paragraphs, each 4-5 sentences): A human-like editorial about the song — musical style, emotional mood, the artist's delivery, and what makes this track special for ${genre} fans.\n- audioCredits: []\n- videoCredits: []`;
+    ? `- aboutSong (5-6 long, highly detailed paragraphs): A deeply human, glamorous editorial review of the song. Incorporate every detail from the description. Discuss emotional tone, artist performances, and Bollywood vibes. Write in an enthusiastic, premium entertainment journalist voice (300-400 words).\n- audioCredits: Extract a JSON array of objects with keys "role" and "name" for all audio credits.\n- videoCredits: Extract a JSON array of objects with keys "role" and "name" for all video credits.`
+    : `- aboutSong (3-4 paragraphs, each 4-5 sentences): A premium Bollywood editorial about the song's musical style, mood, and artist delivery.\n- audioCredits: []\n- videoCredits: []`;
 
   return callGroqStructured(
-    `You are a seasoned Odia film music journalist writing long-form, deeply expressive, and human-like editorial articles for Ollypedia.in.
-Write in fluent, highly engaging, and descriptive English. Be specific and enthusiastic. Avoid sounding robotic.
-Never copy source text verbatim — always rewrite into uniquely phrased, original editorial prose.
-Return ONLY a valid JSON object with exactly these keys: intro, aboutSong, lyricsNote, verdict, metaDescription, audioCredits, videoCredits.
-For credits, return a JSON array of objects with "role" and "name" keys. If none exist, return an empty array [].`,
-    `Write a full, rich song feature article for the Ollywood song:
+    `You are a top Bollywood music journalist writing premium, highly engaging editorial articles for The Cinema Verse. Write in fluent, descriptive English with a glamorous entertainment tone. Avoid sounding robotic. Return ONLY a valid JSON object with exactly these keys: intro, aboutSong, lyricsNote, verdict, metaDescription, audioCredits, videoCredits.`,
+    `Write a full, rich Bollywood song feature article:
 Song title: "${song.title}"
 Movie: "${movie.title}" (${year || "upcoming"})
 Genre: ${genre}
 Singer: ${singer}
 Music Director: ${md}${lyricist ? `\nLyricist: ${lyricist}` : ""}
-${hasLyrics ? "Lyrics: PROVIDED (full lyrics are displayed on this page — mention naturally in lyricsNote)" : "Lyrics: Not provided"}${descContext}
+${hasLyrics ? "Lyrics: PROVIDED (mention full lyrics are available below)" : "Lyrics: Not provided"}${descContext}
 
 Keys to fill:
-- intro (3–4 sentences): A compelling opening hook that introduces the song and its emotional significance within ${movie.title}. Set the stage like the opening line of a great music review.
+- intro (3–4 sentences): A catchy hook introducing the song and its vibe.
 ${aboutSongInstruction}
-- lyricsNote (3-4 sentences): About the lyrical theme, depth, and emotional connect. Dive into how the words elevate the music.${hasLyrics ? " Naturally mention that full lyrics are available below on this page." : ""}
-- verdict (2-3 sentences): A strong, memorable closing recommendation. End with exactly "Watch the full video on Ollypedia."
-- metaDescription (max 155 chars): SEO meta description.${hasLyrics ? ' Include the word "lyrics" naturally.' : ""}`,
+- lyricsNote (3-4 sentences): About the lyrical theme and emotional connect.
+- verdict (2-3 sentences): A strong closing recommendation. End with exactly "Watch the full video on The Cinema Verse."
+- metaDescription (max 155 chars): SEO meta description.`,
     ["intro", "aboutSong", "lyricsNote", "verdict", "metaDescription", "audioCredits", "videoCredits"],
     fallbacks,
     3000
@@ -1637,7 +1421,7 @@ function buildSongBlogHTML(song, movie, cc, ai, blogSlug, seoTitle, datePublishe
   const singer = song.singer || "";
   const md = song.musicDirector || cc.musicDirector || "";
   const lyricist = song.lyricist || "";
-  const genre = (movie.genre || []).join(", ") || "Odia";
+  const genre = (movie.genre || []).join(", ") || "Hindi";
   const poster = movie.posterUrl || movie.thumbnailUrl || movie.bannerUrl || "";
   const ogImage = poster || `${SITE_URL}/logo.png`;
   const movieUrl = `/movie/${movie.slug || movie._id}`;
@@ -1647,281 +1431,77 @@ function buildSongBlogHTML(song, movie, cc, ai, blogSlug, seoTitle, datePublishe
   const ytVideoId = song.ytId || "";
   const thumbnail = song.thumbnailUrl || (ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/hqdefault.jpg` : ogImage);
 
-  const card = `background:#181818;border:1px solid #242424;border-radius:14px;padding:26px 28px;margin-bottom:22px;`;
-  const h2 = `font-size:1.05rem;font-weight:800;color:#c9973a;border-left:4px solid #c9973a;padding-left:12px;margin:0 0 18px;line-height:1.3;`;
-  const tdL = `padding:10px 0;border-bottom:1px solid #1e1e1e;color:#888;font-size:0.87rem;width:38%;vertical-align:top;`;
-  const tdR = `padding:10px 0;border-bottom:1px solid #1e1e1e;color:#ddd;font-size:0.87rem;font-weight:600;`;
+  const glassCard = `background: rgba(30, 30, 30, 0.8); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 30px; margin-bottom: 25px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);`;
+  const h2Style = `font-size: 1.5rem; font-weight: 800; color: #00e6e6; text-transform: uppercase; margin: 0 0 20px; border-bottom: 2px solid #00e6e6; padding-bottom: 10px; display: inline-block;`;
 
-  const leadNames = cc.leadCast.map(c => c.name).filter(Boolean);
-  const allSongs = (movie.media?.songs || []).filter(s => s.title && s.title !== song.title);
-
-  // ── Schema JSON-LD ─────────────────────────────────────────────────────────
-  const schemaObj = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": ["Article", "MusicRecording"],
-        "headline": seoTitle.replace(/ \| Ollypedia$/, ""),
-        "description": ai.metaDescription || buildSongSeoDesc(song, movie),
-        "datePublished": dp,
-        "dateModified": dm,
-        "image": thumbnail,
-        "inLanguage": "en-IN",
-        "articleSection": "Songs",
-        "author": { "@type": "Organization", "name": "Ollypedia", "url": SITE_URL },
-        "publisher": {
-          "@type": "Organization", "name": "Ollypedia", "url": SITE_URL,
-          "logo": { "@type": "ImageObject", "url": `${SITE_URL}/logo.png`, "width": 600, "height": 60 }
-        },
-        "mainEntityOfPage": { "@type": "WebPage", "@id": `${SITE_URL}/blog/${blogSlug}` },
-        "about": { "@type": "Movie", "name": movie.title, "url": `${SITE_URL}${movieUrl}` },
-        ...(singer ? { "byArtist": { "@type": "MusicGroup", "name": singer } } : {}),
-        ...(md ? { "producer": { "@type": "Person", "name": md } } : {}),
-      },
-      {
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-          { "@type": "ListItem", "position": 1, "name": "Home", "item": `${SITE_URL}/` },
-          { "@type": "ListItem", "position": 2, "name": "Songs", "item": `${SITE_URL}/songs` },
-          { "@type": "ListItem", "position": 3, "name": movie.title, "item": `${SITE_URL}${movieUrl}` },
-          { "@type": "ListItem", "position": 4, "name": `${song.title} ${dropLabel}`, "item": `${SITE_URL}/blog/${blogSlug}` },
-        ],
-      },
-      ...(ytVideoId ? [{
-        "@type": "VideoObject",
-        "name": `${song.title} — Official Video | ${movie.title}`,
-        "description": ai.metaDescription || buildSongSeoDesc(song, movie),
-        "thumbnailUrl": thumbnail,
-        "uploadDate": dp,
-        "embedUrl": `https://www.youtube.com/embed/${ytVideoId}`,
-        "contentUrl": `https://www.youtube.com/watch?v=${ytVideoId}`,
-      }] : []),
-    ],
-  };
-
-  // ── Keywords ────────────────────────────────────────────────────────────────
-  const keywordsArr = [
-    song.title, `${song.title} lyrics`, `${song.title} video`,
-    `${song.title} ${movie.title}`, `${song.title} odia song`,
-    singer ? `${song.title} ${singer}` : "",
-    singer ? `${singer} songs` : "",
-    md ? `${md} music` : "",
-    movie.title, `${movie.title} songs`, `${movie.title} ${year || ""}`.trim(),
-    "Odia songs", "Odia film songs", "Ollywood songs",
-    ...leadNames.map(n => `${n} songs`),
-    genre ? `${genre} odia songs` : "",
-  ].filter(Boolean);
-  const keywordsStr = [...new Set(keywordsArr)].join(", ");
-
-  // ── Other songs from same movie ─────────────────────────────────────────────
-  const otherSongsHtml = allSongs.length > 0 ? `
-<section style="${card}">
-  <h2 style="${h2}">More Songs from ${movie.title}</h2>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;">
-    ${allSongs.map(s => {
-    const sIdx = (movie.media?.songs || []).findIndex(x => x.title === s.title);
-    const dropSlug = ordinalDropName(sIdx > -1 ? sIdx : 0).slug;
-    const sBlogSlug = buildSongSlug(s.title, movie, dropSlug, Boolean(s.lyrics?.trim()));
-    const cTitle = cleanSongTitle(s.title);
-    return `
-    <a href="/blog/${sBlogSlug}" style="display:flex;flex-direction:column;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px;overflow:hidden;text-decoration:none;transition:border-color 0.2s;">
-      <div style="position:relative;width:100%;padding-bottom:56.25%;background:#000;">
-        ${s.ytId ? `<img src="https://img.youtube.com/vi/${s.ytId}/hqdefault.jpg" alt="${cTitle}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;" loading="lazy">` : `<div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2rem;">🎵</div>`}
-      </div>
-      <div style="padding:12px 14px;">
-        <div style="font-size:0.85rem;font-weight:700;color:#ddd;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="${cTitle}">${cTitle}</div>
-        ${s.singer ? `<div style="font-size:0.72rem;color:#666;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${s.singer}">${s.singer}</div>` : ""}
-      </div>
-    </a>`;
-  }).join("")}
-  </div>
-</section>` : "";
-
-  // ── Related movies ──────────────────────────────────────────────────────────
-  const relatedHtml = relatedMovies.length > 0 ? buildRelatedMoviesHtml(relatedMovies, "#c9973a", "More Odia Films") : "";
-
-  // ── Also Read ───────────────────────────────────────────────────────────────
-  const alsoReadHtml = `
-<section class="faq-section" style="${card}margin-bottom:22px;">
-  <h2 style="${h2}">Also Read</h2>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">
-    <a href="${movieUrl}" style="display:flex;align-items:center;gap:10px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;text-decoration:none;">
-      <span style="font-size:1.3rem;flex-shrink:0;">🎬</span>
-      <div><div style="font-size:0.82rem;font-weight:700;color:#ddd;line-height:1.4;">${movie.title} — Full Movie Details</div><div style="font-size:0.72rem;color:#666;margin-top:2px;">Cast, story & release info</div></div>
-    </a>
-    <a href="/songs" style="display:flex;align-items:center;gap:10px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;text-decoration:none;">
-      <span style="font-size:1.3rem;flex-shrink:0;">🎵</span>
-      <div><div style="font-size:0.82rem;font-weight:700;color:#ddd;line-height:1.4;">All Odia Songs</div><div style="font-size:0.72rem;color:#666;margin-top:2px;">Latest Ollywood music</div></div>
-    </a>
-    <a href="/blog?category=Songs" style="display:flex;align-items:center;gap:10px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;text-decoration:none;">
-      <span style="font-size:1.3rem;flex-shrink:0;">📰</span>
-      <div><div style="font-size:0.82rem;font-weight:700;color:#ddd;line-height:1.4;">More Song Features</div><div style="font-size:0.72rem;color:#666;margin-top:2px;">Odia music coverage on Ollypedia</div></div>
-    </a>
-  </div>
-</section>`;
-
-  // ── Tags ────────────────────────────────────────────────────────────────────
-  const tagChip = (t) => `<span style="display:inline-block;background:#1e1e1e;color:#c9973a;border:1px solid #3a2800;border-radius:20px;padding:4px 13px;font-size:0.78rem;font-weight:600;margin:2px;">#${t.replace(/\s+/g, "")}</span>`;
-  const tagsList = [song.title, `${song.title}Song`, movie.title, "OdiaSong", "Ollywood", "OdiaMusic", singer ? singer.replace(/\s/g, "") : "", "OllywoodSongs"].filter(Boolean);
-
-  // ── Full HTML ───────────────────────────────────────────────────────────────
-  return `${BLOG_RESPONSIVE_STYLES}
-
-<!-- ════════════════════════════════════════════════════════════════
-  OLLYPEDIA SEO META — Song ${dropLabel} Blog
-  title:       ${seoTitle}
-  description: ${ai.metaDescription || buildSongSeoDesc(song, movie)}
-════════════════════════════════════════════════════════════════ -->
-
+  return `<!-- THE CINEMA VERSE SEO META -->
 <script type="application/ld+json">
-${JSON.stringify(schemaObj, null, 2)}
+{
+  "@context": "https://schema.org",
+  "@type": "NewsArticle",
+  "headline": ${JSON.stringify(seoTitle)},
+  "description": ${JSON.stringify(ai.metaDescription)},
+  "image": ${JSON.stringify(ogImage)},
+  "datePublished": "${dp}",
+  "dateModified": "${dm}",
+  "author": { "@type": "Organization", "name": "The Cinema Verse", "url": "${SITE_URL}" },
+  "publisher": { "@type": "Organization", "name": "The Cinema Verse", "logo": { "@type": "ImageObject", "url": "${SITE_URL}/logo.png" } },
+  "mainEntityOfPage": { "@type": "WebPage", "@id": "${SITE_URL}/blog/${blogSlug}" }
+}
 </script>
 
-<!-- BREADCRUMB + TIMESTAMP -->
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
-  <nav aria-label="Breadcrumb" style="font-size:0.78rem;color:#555;display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-    <a href="/" style="color:#777;text-decoration:none;">Home</a>
-    <span style="color:#333;">›</span>
-    <a href="/songs" style="color:#777;text-decoration:none;">Songs</a>
-    <span style="color:#333;">›</span>
-    <a href="${movieUrl}" style="color:#777;text-decoration:none;">${movie.title}</a>
-    <span style="color:#333;">›</span>
-    <span style="color:#c9973a;">${song.title} ${dropLabel}</span>
-  </nav>
-  <time datetime="${dp.split("T")[0]}" style="font-size:0.73rem;color:#444;white-space:nowrap;">
-    🕐 Published: ${formatHumanDate(dp)}
-  </time>
-</div>
-
-<!-- HERO BANNER -->
-<div class="hero-section" style="background:linear-gradient(135deg,#0e001a 0%,#121212 100%);border:1px solid #2e0050;border-radius:14px;padding:30px 28px 24px;margin-bottom:22px;">
-  <div style="margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-    <span style="display:inline-block;background:#1a0030;color:#b388ff;font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:4px 12px;border-radius:999px;border:1px solid #3a0060;">🎵 Song ${dropLabel}</span>
-    <span style="display:inline-block;background:#1e1e1e;color:#888;font-size:0.68rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:4px 12px;border-radius:999px;border:1px solid #2a2a2a;">${movie.title}${year ? ` (${year})` : ""}</span>
+<div style="font-family: 'Outfit', sans-serif; color: #fff; max-width: 1000px; margin: 0 auto;">
+  
+  <div style="text-align: center; margin-bottom: 40px; padding: 40px 20px; background: linear-gradient(135deg, #111, #222); border-radius: 20px; border: 1px solid #333; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+    <div style="display: inline-block; background: #00e6e6; color: #000; padding: 5px 15px; border-radius: 20px; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 15px;">${dropLabel}</div>
+    <h1 style="font-size: 2.5rem; font-weight: 900; margin: 0 0 15px; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);">${seoTitle}</h1>
+    <p style="color: #bbb; font-size: 1.1rem; max-width: 700px; margin: 0 auto; line-height: 1.6;">${ai.introParagraph}</p>
   </div>
 
-  <h1 style="color:#fff;font-size:clamp(1.2rem,4.5vw,1.7rem);line-height:1.3;font-weight:800;margin:0 0 12px;word-break:break-word;">
-    ${song.title} — ${dropLabel} from ${movie.title}${year ? ` (${year})` : ""}
-  </h1>
+  ${ytVideoId ? `
+  <section style="${glassCard}">
+    <h2 style="${h2Style}">Official Music Video</h2>
+    <div style="position:relative; padding-top:56.25%; border-radius:12px; overflow:hidden; box-shadow: 0 10px 30px rgba(0,230,230,0.2);">
+      <iframe src="https://www.youtube.com/embed/${ytVideoId}" loading="lazy" title="${song.title} Official Video" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"></iframe>
+    </div>
+  </section>` : ""}
 
-  <p style="color:#bbb;font-size:0.97rem;line-height:1.85;margin:0 0 20px;">${ai.intro}</p>
+  <div style="display: grid; grid-template-columns: 1fr; gap: 25px;">
+    
+    <section style="${glassCard}">
+      <h2 style="${h2Style}">Song Story & Review</h2>
+      <div style="font-size: 1.1rem; line-height: 1.8; color: #ddd;">
+        ${autoBlogParagraphs(ai.aboutSong)}
+      </div>
+    </section>
 
-  <div class="stat-chips" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;">
-    ${singer ? `<div style="background:rgba(0,0,0,0.5);border:1px solid #2e0050;border-radius:10px;padding:12px 14px;"><div style="font-size:0.62rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Singer</div><div style="font-size:0.92rem;font-weight:800;color:#b388ff;word-break:break-word;">${singer}</div></div>` : ""}
-    ${md ? `<div style="background:rgba(0,0,0,0.5);border:1px solid #1a2a3a;border-radius:10px;padding:12px 14px;"><div style="font-size:0.62rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Music</div><div style="font-size:0.92rem;font-weight:800;color:#7ec8e3;word-break:break-word;">${md}</div></div>` : ""}
-    ${lyricist ? `<div style="background:rgba(0,0,0,0.5);border:1px solid #222;border-radius:10px;padding:12px 14px;"><div style="font-size:0.62rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Lyricist</div><div style="font-size:0.92rem;font-weight:800;color:#fff;word-break:break-word;">${lyricist}</div></div>` : ""}
-    <div style="background:rgba(0,0,0,0.5);border:1px solid #2a2a2a;border-radius:10px;padding:12px 14px;"><div style="font-size:0.62rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Film</div><div style="font-size:0.92rem;font-weight:800;color:#c9973a;word-break:break-word;">${movie.title}</div></div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
+      <section style="${glassCard}">
+        <h2 style="${h2Style}">Music Highlights</h2>
+        <ul style="list-style: none; padding: 0; margin: 0; font-size: 1.05rem; line-height: 2;">
+          ${singer ? `<li><strong style="color:#00e6e6;">Singer:</strong> ${singer}</li>` : ""}
+          ${md ? `<li><strong style="color:#00e6e6;">Music Director:</strong> ${md}</li>` : ""}
+          ${lyricist ? `<li><strong style="color:#00e6e6;">Lyricist:</strong> ${lyricist}</li>` : ""}
+          <li><strong style="color:#00e6e6;">Movie:</strong> <a href="${movieUrl}" style="color:#fff; text-decoration:underline;">${movie.title}</a></li>
+        </ul>
+      </section>
+
+      <section style="${glassCard}">
+        <h2 style="${h2Style}">The Verdict</h2>
+        <p style="font-size: 1.1rem; line-height: 1.7; color: #ddd; font-style: italic;">
+          "${ai.verdict}"
+        </p>
+      </section>
+    </div>
+
+    ${song.lyrics ? `
+    <section style="${glassCard}">
+      <h2 style="${h2Style}">Official Lyrics</h2>
+      <p style="color:#bbb; font-size:1rem; margin-bottom:20px;">${ai.lyricsNote}</p>
+      <div style="background: rgba(0,0,0,0.3); padding: 25px; border-radius: 12px; font-family: 'Courier New', monospace; font-size: 1.1rem; line-height: 1.8; color: #eee; white-space: pre-wrap;">${song.lyrics}</div>
+    </section>` : ""}
+
   </div>
-</div>
-
-<!-- YOUTUBE VIDEO EMBED -->
-${ytVideoId ? `
-<section style="${card}">
-  <h2 style="${h2}">🎬 Official Video — ${song.title}</h2>
-  <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;background:#000;">
-    <iframe
-      src="https://www.youtube.com/embed/${ytVideoId}?rel=0&modestbranding=1"
-      title="${song.title} — Official Video from ${movie.title}"
-      frameborder="0"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowfullscreen
-      loading="lazy"
-      style="position:absolute;top:0;left:0;width:100%;height:100%;border-radius:10px;">
-    </iframe>
-  </div>
-  <p style="color:#555;font-size:0.75rem;margin:10px 0 0;">▶ Watch "${song.title}" official video from <strong style="color:#777;">${movie.title}</strong> on YouTube</p>
-</section>` : poster ? `
-<section style="${card}text-align:center;">
-  <h2 style="${h2}">🎵 ${song.title}</h2>
-  <img src="${poster}" alt="${song.title} — ${movie.title}" style="max-width:320px;width:100%;border-radius:12px;border:1px solid #2a2a2a;" loading="lazy">
-  <p style="color:#555;font-size:0.78rem;margin:12px 0 0;">Official video coming soon. Follow Ollypedia for updates.</p>
-</section>` : ""}
-
-<!-- SONG DETAILS TABLE -->
-<section style="${card}">
-  <h2 style="${h2}">Song Details — ${song.title}</h2>
-  <table style="width:100%;border-collapse:collapse;">
-    <tbody>
-      <tr><td style="${tdL}">Song Title</td><td style="${tdR}">${song.title}</td></tr>
-      <tr><td style="${tdL}">Film</td><td style="${tdR}"><a href="${movieUrl}" style="color:#c9973a;text-decoration:underline;text-underline-offset:2px;">${movie.title}${year ? ` (${year})` : ""}</a></td></tr>
-      ${singer ? `<tr><td style="${tdL}">Singer</td><td style="${tdR}">${singer}</td></tr>` : ""}
-      ${md ? `<tr><td style="${tdL}">Music Director</td><td style="${tdR}">${md}</td></tr>` : ""}
-      ${lyricist ? `<tr><td style="${tdL}">Lyricist</td><td style="${tdR}">${lyricist}</td></tr>` : ""}
-      ${cc.director ? `<tr><td style="${tdL}">Director</td><td style="${tdR}">${cc.director}</td></tr>` : ""}
-      <tr><td style="${tdL}">Language</td><td style="${tdR}">Odia</td></tr>
-      <tr><td style="${tdL}">Industry</td><td style="${tdR}">Ollywood</td></tr>
-    </tbody>
-  </table>
-  <div style="text-align:center;margin-top:20px;">
-    <a href="${movieUrl}" style="display:inline-block;background:#c9973a;color:#000;text-decoration:none;padding:12px 26px;border-radius:8px;font-weight:800;font-size:0.9rem;">
-      🎬 View Full Movie Details
-    </a>
-  </div>
-</section>
-
-<!-- ABOUT THE SONG -->
-<section style="${card}">
-  <h2 style="${h2}">About the Song — ${song.title}</h2>
-  <p style="color:#ccc;line-height:1.9;margin:0 0 14px;font-size:0.97rem;">${ai.aboutSong}</p>
-</section>
-
-<!-- LYRICS NOTE -->
-<section style="${card}">
-  <h2 style="${h2}">Lyrics & Theme</h2>
-  <p style="color:#ccc;line-height:1.9;margin:0 0 14px;font-size:0.97rem;">${ai.lyricsNote}</p>
-  ${song.lyrics ? `
-  <div style="background:#0f0f0f;border:1px solid #2a2a2a;border-radius:10px;padding:20px 22px;margin-top:14px;">
-    <h3 style="font-size:0.8rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 14px;">Song Lyrics</h3>
-    <pre style="color:#aaa;font-size:0.9rem;line-height:1.9;white-space:pre-wrap;word-break:break-word;margin:0;font-family:inherit;">${song.lyrics}</pre>
-  </div>` : ""}
-</section>
-
-<!-- VERDICT -->
-<section style="${card}">
-  <h2 style="${h2}">Verdict</h2>
-  <div style="border-left:4px solid #c9973a;padding-left:16px;">
-    <p style="color:#ccc;line-height:1.9;margin:0;font-size:0.97rem;">${ai.verdict}</p>
-  </div>
-</section>
-
-${(() => {
-      const buildCreditsTable = (title, credits) => {
-        if (!Array.isArray(credits) || credits.length === 0) return "";
-        return `
-<section style="${card}">
-  <h3 style="${h2.replace('1.05rem', '0.95rem')}">${title}</h3>
-  <table style="width:100%;border-collapse:collapse;">
-    <tbody>
-      ${credits.map(c => `<tr><td style="${tdL}">${c.role || "Credit"}</td><td style="${tdR}">${c.name || "-"}</td></tr>`).join("")}
-    </tbody>
-  </table>
-</section>`;
-      };
-      return buildCreditsTable("Audio Credits", ai.audioCredits) + buildCreditsTable("Video Credits", ai.videoCredits);
-    })()}
-
-<!-- MORE SONGS FROM THIS MOVIE -->
-${otherSongsHtml}
-
-<!-- RELATED MOVIES -->
-${relatedHtml}
-
-<!-- ALSO READ -->
-${alsoReadHtml}
-
-<!-- TAGS -->
-<section style="background:#111;border-radius:14px;padding:18px 22px;margin-bottom:22px;">
-  <h2 style="font-size:0.7rem;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 10px;">Tags</h2>
-  <div style="display:flex;flex-wrap:wrap;gap:5px;">${tagsList.map(t => tagChip(t)).join("")}</div>
-</section>
-
-<!-- FOOTER -->
-<div style="border-top:1px solid #1c1c1c;padding-top:14px;margin-top:4px;">
-  <p style="color:#444;font-size:0.8rem;line-height:1.8;margin:0;">
-    <strong style="color:#555;">Source:</strong> Ollypedia Song Database &nbsp;·&nbsp;
-    <strong style="color:#555;">Published:</strong> <time datetime="${dp.split("T")[0]}" style="color:#444;">${formatHumanDate(dp)}</time> &nbsp;·&nbsp;
-    <a href="${movieUrl}" style="color:#c9973a;text-decoration:none;">View ${movie.title} full details →</a>
-  </p>
 </div>`;
 }
 
@@ -1993,11 +1573,11 @@ async function autoGenerateSongBlog(song, movie, songIndex = 0, onlyIfNew = true
       excerpt: seoDesc,
       content: html,
       category: "Song Updates",
-      tags: [song.title, movie.title, "Odia Songs", "Ollywood", "Odia Music", song.singer || "", song.musicDirector || cc.musicDirector || ""].filter(Boolean),
+      tags: [song.title, movie.title, "Hindi Songs", "Bollywood", "Hindi Music", song.singer || "", song.musicDirector || cc.musicDirector || ""].filter(Boolean),
       coverImage: song.thumbnailUrl || (song.ytId ? `https://img.youtube.com/vi/${song.ytId}/hqdefault.jpg` : movie.posterUrl || movie.thumbnailUrl || ""),
       movieId: movie._id,
       movieTitle: movie.title,
-      author: "Ollypedia Team",
+      author: "The Cinema Verse Desk",
       published: true,
       indexed: true,   // song blogs are always indexable — each is a unique entity
       readTime: Math.max(1, Math.ceil(html.split(/\s+/).length / 200)),
@@ -2047,284 +1627,91 @@ async function autoGenerateAllSongBlogs(movie) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function generateOttAiSections(movie, cc) {
+  const ottDateFmt = isRealDate(movie.ottReleaseDate) ? formatHumanDate(movie.ottReleaseDate) : "soon";
+  const genre = (movie.genre || []).join(", ") || "Hindi";
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
-  const isDateAvailable = isRealDate(movie.ottReleaseDate);
-  const ottDateFmt = isDateAvailable ? formatHumanDate(movie.ottReleaseDate) : "Release Date Not Announced";
-  // BUGFIX: use the strictly-filtered ottCast so the AI is never told a
-  // Cinematographer/Editor/Music Director is part of the "Lead Cast".
-  const leadNames = (cc.ottCast || cc.leadCast).map(c => c.name).filter(Boolean).join(", ");
-  const festival = isDateAvailable ? findNearbyFestival(movie.ottReleaseDate) : "";
-
-  const ctx = `Movie: "${movie.title}"${year ? ` (${year})` : ""} | OTT Platform: ${movie.streamingOn} | OTT Release Date: ${ottDateFmt} | Genre: ${(movie.genre || []).join(", ") || "Odia"} | Language: ${movie.language || "Odia"} | Lead Cast: ${leadNames || "N/A"} | Director: ${cc.director || "N/A"} | Synopsis: ${movie.synopsis || "N/A"}${festival ? ` | Note: this OTT release falls close to ${festival} — you may mention this naturally if it fits.` : ""}`;
-
-  const userPrompt = `Write deeply detailed, SEO-rich JSON content for an OTT-release announcement article on Ollypedia, an Odia (Ollywood) cinema website, about the film "${movie.title}" streaming on ${movie.streamingOn}. This MUST be a full editorial article with long, rich paragraphs — each paragraph should feel like professional journalism. Use ONLY the details given. No HTML or markdown.
-
-${ctx}
-
-Return a JSON object with exactly these keys (plain text only, NO HTML, NO markdown, aim for maximum detail):
-- metaDescription: 150-160 characters mentioning movie title, OTT platform and release status/date, maximising Google click-through
-- introParagraph: 220-320 words announcing that "${movie.title}" will stream on ${movie.streamingOn}. Name the lead cast, detail the genre and story highlights, explain why this OTT release is significant for Odia cinema fans, and clearly state the release status: ${ottDateFmt}.
-- synopsisParagraph: 200-280 words recapping the film's story, genre, thematic conflicts, emotional highlights, and what makes it worth watching on OTT. Draw from the synopsis and genre; do not invent specific plot points not mentioned. Write to help a viewer decide whether to watch. IMPORTANT: paraphrase and reframe in your own words for an OTT/streaming context — do not copy the source synopsis verbatim, since this same film also has a separate theatrical-release article with its own story section.
-- castHighlightParagraph: 200-280 words specifically naming and highlighting each lead actor — their roles, acting style, past notable performances in Odia cinema, and what they bring to this specific film. Make it feel like a genuine talent profile piece.
-- howToWatchParagraph: 180-250 words explaining step-by-step how Odisha audiences can stream the film on ${movie.streamingOn} — app download, website access, subscription tiers, regional language content availability, and how digital OTT access is transforming Odia cinema viewership.
-- platformParagraph: 150-220 words introducing ${movie.streamingOn} as an OTT platform — its founding story, growth, content library, focus on regional Indian language films, contribution to Odia cinema's digital accessibility, and why it is a key destination for Ollywood fans.`;
 
   const fallbacks = {
-    metaDescription: `${movie.title} streams on ${movie.streamingOn}. Get cast, release details and how-to-watch info on Ollypedia.`,
-    introParagraph: `${movie.title}${leadNames ? `, starring ${leadNames},` : ""} is set to stream on the popular OTT platform ${movie.streamingOn}. The OTT release status is currently: ${ottDateFmt}. This digital premiere marks an exciting milestone for Odia cinema fans everywhere, giving audiences across Odisha and around the world the opportunity to experience this ${(movie.genre || []).join(", ") || "Odia"} film from the comfort of their homes. With the growing reach of regional OTT platforms like ${movie.streamingOn}, Odia cinema is finding new audiences far beyond the traditional theatrical circuit, and ${movie.title} is set to be a significant addition to this wave of digital content.`,
-    // SEO FIX: previously fell back to the raw, unmodified `movie.synopsis`
-    // string — byte-identical to the Movie Details page's storyParagraph
-    // fallback, which the audit flags as duplicate content across blog
-    // pages for the same movie. Now reframes the synopsis with OTT-specific
-    // context instead of repeating it verbatim.
-    synopsisParagraph: movie.synopsis
-      ? `Now streaming on ${movie.streamingOn}, ${movie.title} tells a story that has resonated strongly with Odia audiences since it was first announced. ${movie.synopsis} For viewers deciding whether to press play, this ${(movie.genre || []).join(", ") || "Odia"} film offers a self-contained viewing experience that holds up just as well on a home screen as it did in theatres.`
-      : `${movie.title} is a ${(movie.genre || []).join(", ") || "Odia"} film that has drawn considerable attention from Ollywood audiences and critics alike. The film carries a story built around the cultural and emotional landscape of Odisha, exploring themes that resonate deeply with Odia viewers. Full story details, including character backgrounds and plot specifics, will be updated as officially confirmed by the production team. What is clear is that ${movie.title} combines strong performances with a compelling narrative structure that is ideal for OTT viewing.`,
-    castHighlightParagraph: leadNames ? `${leadNames} lead the cast of ${movie.title}, each bringing their distinctive acting strengths and on-screen presence to their respective roles. The ensemble is widely regarded as one of the strongest assembled for an Odia film in recent memory, with each actor having established themselves as a significant talent in the Ollywood industry. Their combined performances are expected to be a major draw for OTT audiences discovering the film on ${movie.streamingOn}, and early reviews of their work on screen have been overwhelmingly positive.` : `${movie.title} features a talented cast of Odia cinema's most acclaimed performers, whose nuanced portrayals and strong screen chemistry are expected to be the highlight of this OTT viewing experience on ${movie.streamingOn}. The casting choices reflect the production team's commitment to quality storytelling and authentic representation of Odia culture and characters.`,
-    howToWatchParagraph: `Viewers can catch ${movie.title} on ${movie.streamingOn} by downloading the official app from the Google Play Store or Apple App Store, or by visiting the platform's website directly. ${movie.streamingOn} offers subscription plans tailored for Odia-speaking audiences, with options for monthly and annual memberships that provide unlimited access to its growing library of Odia films, web series, and regional content. Once subscribed, simply search for "${movie.title}" in the app or website to start streaming. Ollypedia will update the direct streaming link as soon as it goes live officially.`,
-    platformParagraph: `${movie.streamingOn} is among the leading OTT platforms dedicated to bringing Odia-language films, web series, and regional entertainment to digital screens across India and beyond. With a rapidly growing content library and a strong focus on authentic regional storytelling, ${movie.streamingOn} has become a vital destination for Odia cinema fans who want to stay connected with Ollywood's latest releases. The platform's commitment to supporting Odia-language content creators and giving regional films a digital home has made it an important part of the Ollywood ecosystem.`,
+    introParagraph: `Bollywood fans, get ready! The highly anticipated ${genre} drama ${movie.title} is officially making its digital premiere on ${movie.streamingOn}. Following its theatrical run, the film is set to reach living rooms ${ottDateFmt}, bringing its cinematic grandeur directly to your screens.`,
+    platformParagraph: `${movie.title} will stream exclusively on ${movie.streamingOn}, adding to the platform's growing library of blockbuster Hindi content. Fans can expect a premium viewing experience, with high-definition visuals and surround sound, making it a must-watch digital release.`,
+    receptionParagraph: `During its theatrical run, ${movie.title} garnered significant attention for its gripping narrative and stellar performances. Now, its OTT release offers a chance for a wider audience to experience the magic, and social media is already buzzing with excitement about its digital drop.`,
+    howToWatchParagraph: `Viewers can stream ${movie.title} on ${movie.streamingOn} by subscribing to the platform. Whether on your smart TV, tablet, or smartphone, the film promises to deliver an engaging Bollywood experience from the comfort of your home. Stay tuned to The Cinema Verse for the direct streaming link.`,
+    metaDescription: `${movie.title} streams on ${movie.streamingOn}. Get the OTT release date, cast details, and how to watch this Bollywood blockbuster on The Cinema Verse.`
   };
 
   return callGroqStructured(
-    "You are a senior Odia cinema (Ollywood) journalist writing long-form, highly detailed, SEO-optimised editorial articles for Ollypedia. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML. Each paragraph must be thorough, specific, and written like professional film journalism. Every sentence must add real value.",
-    userPrompt,
-    ["metaDescription", "introParagraph", "synopsisParagraph", "castHighlightParagraph", "howToWatchParagraph", "platformParagraph"],
+    `You are a top Bollywood entertainment journalist writing premium OTT release announcements for The Cinema Verse. Return ONLY a valid JSON object — no markdown, no extra text. Write in an excited, engaging tone suited for Bollywood fans.`,
+    `Write an OTT release announcement for:
+Movie: "${movie.title}"
+Platform: ${movie.streamingOn}
+Release Date: ${ottDateFmt}
+Genre: ${genre}
+
+Keys to fill:
+- introParagraph (100-150 words): Announce the digital premiere.
+- platformParagraph (100-150 words): Discuss the streaming platform and its Bollywood catalog.
+- receptionParagraph (100-150 words): Talk about the film's theatrical buzz and OTT anticipation.
+- howToWatchParagraph (100-150 words): Explain how to watch it on the platform.
+- metaDescription (max 155 chars): SEO meta description.`,
+    ["introParagraph", "platformParagraph", "receptionParagraph", "howToWatchParagraph", "metaDescription"],
     fallbacks,
-    4000
+    2500
   );
 }
 
 function buildOttBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, dateModified, relatedMovies = []) {
-  const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
-  const isDateAvailable = isRealDate(movie.ottReleaseDate);
-  const ottDateFmt = isDateAvailable ? formatHumanDate(movie.ottReleaseDate) : "Release Date Not Announced";
   const poster = movie.posterUrl || movie.thumbnailUrl || movie.bannerUrl || "";
   const ogImage = poster || `${SITE_URL}/logo.png`;
-  const movieUrl = `/movie/${movie.slug}`;
-  // BUGFIX: use the strictly-filtered ottCast (Director + Actor + Actress
-  // only) for this blog's Cast section and its actor[] schema — NOT the
-  // shared cc.leadCast, which can include crew (Cinematographer, Editor,
-  // Music Director, etc.) whenever their role string isn't recognized by
-  // the shared fail-open filter in extractMovieCastCrew. Scoped to this
-  // function only; cc.leadCast itself is untouched, so the Movie Details
-  // page (and its JSON-LD) are completely unaffected.
-  const leadCast = cc.ottCast || cc.leadCast || [];
-  const imdbNum = parseFloat(movie.imdbRating);
-  const hasImdb = !isNaN(imdbNum) && imdbNum > 0 && imdbNum <= 10;
   const dp = datePublished || new Date().toISOString();
   const dm = dateModified || dp;
 
-  const card = `background:#181818;border:1px solid #242424;border-radius:14px;padding:26px 28px;margin-bottom:22px;`;
-  const h2 = `font-size:1.05rem;font-weight:800;color:#7ec8e3;border-left:4px solid #7ec8e3;padding-left:12px;margin:0 0 18px;line-height:1.3;`;
-  const tdL = `padding:10px 0;border-bottom:1px solid #1e1e1e;color:#888;font-size:0.87rem;width:38%;vertical-align:top;`;
-  const tdR = `padding:10px 0;border-bottom:1px solid #1e1e1e;color:#ddd;font-size:0.87rem;font-weight:600;`;
+  const glassCard = `background: rgba(10, 10, 20, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 30px; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.6);`;
+  const h2Style = `font-size: 1.4rem; font-weight: 800; color: #bb86fc; text-transform: uppercase; margin: 0 0 20px; display: inline-block;`;
 
-  const castChips = leadCast.map(c => {
-    const url = castProfileUrl(c);
-    return `<span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#ddd;">${url ? `<a href="${url}" style="color:#7ec8e3;text-decoration:underline;text-underline-offset:2px;">${c.name}</a>` : c.name}</span>`;
-  }).join("");
-
-  const leadNames = leadCast.map(c => c.name).filter(Boolean);
-  const keywordsArr = [
-    movie.title, `${movie.title} OTT release date`, `${movie.title} ${movie.streamingOn}`,
-    `watch ${movie.title} online`, `${movie.title} streaming`, movie.streamingOn,
-    `${movie.streamingOn} odia movies`, "Odia movie OTT", "Ollywood streaming",
-    ...leadNames.map(n => `${n} movies`),
-  ].filter(Boolean);
-  const keywordsStr = [...new Set(keywordsArr)].join(", ");
-
-  const toc = [
-    ["OTT Release Details", "release-details"], ["Story", "synopsis"], ["Cast Highlights", "cast"],
-    ["How to Watch", "how-to-watch"], [`About ${movie.streamingOn}`, "platform"],
-    relatedMovies.length ? ["Related Movies", "related-movies"] : null,
-  ].filter(Boolean);
-  const tocHtml = `
-<nav aria-label="Table of contents" style="${card}padding:18px 24px;">
-  <strong style="color:#888;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;">On this page</strong>
-  <ul style="margin:10px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px 18px;">
-    ${toc.map(([label, id]) => `<li><a href="#${id}" style="color:#7ec8e3;text-decoration:none;font-size:0.85rem;">${label}</a></li>`).join("")}
-  </ul>
-</nav>`;
-
-  const plainWordCount = [ai.introParagraph, ai.synopsisParagraph, ai.castHighlightParagraph, ai.howToWatchParagraph, ai.platformParagraph]
-    .filter(Boolean).join(" ").split(/\s+/).filter(Boolean).length;
-
-  // SEO FIX: Event schema for the OTT premiere — only emitted with a real date.
-  const eventSchema = isDateAvailable ? `,
-    {
-      "@type": "Event",
-      "name": ${JSON.stringify(`${movie.title} — OTT Premiere on ${movie.streamingOn}`)},
-      "startDate": "${movie.ottReleaseDate}",
-      "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
-      "eventStatus": "https://schema.org/EventScheduled",
-      "location": { "@type": "VirtualLocation", "url": ${JSON.stringify(movie.streamingUrl || SITE_URL + movieUrl)} },
-      "workPerformed": { "@type": "Movie", "name": ${JSON.stringify(movie.title)} },
-      "image": ${JSON.stringify(ogImage)},
-      "organizer": { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}" }
-    }` : "";
-
-  return `<!-- ════════════════════════════════════════════════════════════════
-  OLLYPEDIA SEO META — READ BY CMS
-  title:          ${seoTitle}
-  description:    ${ai.metaDescription}
-  keywords:       ${keywordsStr}
-  canonical:      ${SITE_URL}/blog/${blogSlug}
-  robots:         index, follow
-  og:site_name:   Ollypedia
-  og:title:       ${seoTitle}
-  og:description: ${ai.metaDescription}
-  og:url:         ${SITE_URL}/blog/${blogSlug}
-  og:image:       ${ogImage}
-  og:image:width: 1200
-  og:image:height: 630
-  og:type:        article
-  og:locale:      en_IN
-  article:published_time: ${dp}
-  article:modified_time:  ${dm}
-  article:author: Ollypedia Team
-  article:section: OTT Release
-  twitter:card:   summary_large_image
-  twitter:site:   @OllypediaIn
-  twitter:creator: @OllypediaIn
-  twitter:title:  ${seoTitle}
-  twitter:description: ${ai.metaDescription}
-  twitter:image:  ${ogImage}
-  twitter:image:alt: ${movie.title} Poster
-════════════════════════════════════════════════════════════════ -->
-
+  return `<!-- THE CINEMA VERSE SEO META -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "NewsArticle",
-      "headline": ${JSON.stringify(seoTitle)},
-      "description": ${JSON.stringify(ai.metaDescription)},
-      "image": ${JSON.stringify(ogImage)},
-      "datePublished": "${dp}",
-      "dateModified": "${dm}",
-      "inLanguage": "en",
-      "wordCount": ${plainWordCount},
-      "keywords": ${JSON.stringify(keywordsStr)},
-      "author": [
-        { "@type": "Person", "name": "Ollypedia Team", "url": "${SITE_URL}/about" },
-        { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}" }
-      ],
-      "publisher": { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}",
-                     "logo": { "@type": "ImageObject", "url": "${SITE_URL}/logo.png" } },
-      "mainEntityOfPage": { "@type": "WebPage", "@id": "${SITE_URL}/blog/${blogSlug}" },
-      "about": {
-        "@type": "Movie",
-        "name": ${JSON.stringify(movie.title)},
-        "url": "${SITE_URL}${movieUrl}",
-        "image": ${JSON.stringify(ogImage)},
-        "inLanguage": ${JSON.stringify(movie.language || "Odia")}${movie.releaseDate ? `,
-        "datePublished": "${movie.releaseDate}"` : ""}${movie.runtime ? `,
-        "duration": ${JSON.stringify(movie.runtime)}` : ""}${cc.director ? `,
-        "director": { "@type": "Person", "name": ${JSON.stringify(cc.director)} }` : ""}${leadCast.length ? `,
-        "actor": [${leadCast.map(a => { const u = castProfileUrl(a); return `{ "@type": "Person", "name": ${JSON.stringify(a.name)}${u ? `, "url": "${SITE_URL}${u}"` : ""} }`; }).join(", ")}]` : ""}${hasImdb ? `,
-        "aggregateRating": { "@type": "AggregateRating", "ratingValue": ${imdbNum}, "bestRating": "10"${movie.imdbVotes ? `, "ratingCount": ${JSON.stringify(String(movie.imdbVotes).replace(/[^0-9]/g, "") || "1")}` : ""} }` : ""}${movie.streamingUrl ? `,
-        "potentialAction": {
-          "@type": "WatchAction",
-          "target": ${JSON.stringify(movie.streamingUrl)}
-        }` : ""}
-      }
-    },
-    {
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "Home", "item": "${SITE_URL}" },
-        { "@type": "ListItem", "position": 2, "name": "Movies", "item": "${SITE_URL}/movies" },
-        { "@type": "ListItem", "position": 3, "name": ${JSON.stringify(movie.title)}, "item": "${SITE_URL}${movieUrl}" },
-        { "@type": "ListItem", "position": 4, "name": "OTT Release", "item": "${SITE_URL}/blog/${blogSlug}" }
-      ]
-    }${eventSchema}
-  ]
+  "@type": "NewsArticle",
+  "headline": ${JSON.stringify(seoTitle)},
+  "description": ${JSON.stringify(ai.metaDescription)},
+  "image": ${JSON.stringify(ogImage)},
+  "datePublished": "${dp}",
+  "dateModified": "${dm}",
+  "author": { "@type": "Organization", "name": "The Cinema Verse" }
 }
 </script>
 
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
-  <nav aria-label="Breadcrumb" style="font-size:0.78rem;color:#555;display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-    <a href="/" style="color:#777;text-decoration:none;">Home</a>
-    <span style="color:#333;">›</span>
-    <a href="/movies" style="color:#777;text-decoration:none;">Movies</a>
-    <span style="color:#333;">›</span>
-    <a href="${movieUrl}" style="color:#777;text-decoration:none;">${movie.title}</a>
-    <span style="color:#333;">›</span>
-    <span style="color:#999;">OTT Release</span>
-  </nav>
-</div>
-
-<div class="hero-section" style="background:linear-gradient(135deg,#001a1e 0%,#121212 100%);border:1px solid #00343d;border-radius:14px;padding:30px 28px 24px;margin-bottom:22px;">
-  <h1 style="color:#fff;font-size:1.4rem;font-weight:800;margin:0 0 12px;line-height:1.3;">${seoTitle}</h1>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#7ec8e3;font-weight:700;">📺 ${movie.streamingOn}</span>
-    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#e8c87a;font-weight:700;">📅 ${ottDateFmt}</span>
-    ${castChips}
+<div style="font-family: 'Inter', sans-serif; color: #fff; max-width: 900px; margin: 0 auto;">
+  <div style="position: relative; border-radius: 20px; overflow: hidden; margin-bottom: 40px;">
+    ${poster ? `<img src="${poster}" style="width: 100%; height: 400px; object-fit: cover; opacity: 0.5; filter: blur(5px);" />` : `<div style="height: 300px; background: #111;"></div>`}
+    <div style="position: absolute; inset: 0; background: linear-gradient(to top, #000, transparent); display: flex; flex-direction: column; justify-content: flex-end; padding: 40px; text-align: center;">
+      <h1 style="font-size: 2.5rem; font-weight: 900; color: #fff; margin: 0 0 15px; text-shadow: 2px 2px 10px #000;">${seoTitle}</h1>
+      <div style="display: inline-block; background: #bb86fc; color: #000; padding: 6px 16px; border-radius: 20px; font-weight: 800; font-size: 1rem;">Streaming on ${movie.streamingOn}</div>
+    </div>
   </div>
-  ${autoBlogParagraphs(ai.introParagraph)}
-</div>
 
-${tocHtml}
+  <section style="${glassCard}">
+    <h2 style="${h2Style}">Streaming Highlights</h2>
+    <p style="font-size: 1.1rem; line-height: 1.8; color: #ccc;">${ai.introParagraph}</p>
+  </section>
 
-${BLOG_RESPONSIVE_STYLES}
-<style>
-  .blog-content-layout { display: flex; flex-direction: column; gap: 24px; }
-  .blog-poster-aside { width: 100%; max-width: 300px; margin: 0 auto; }
-  .blog-poster-aside img { width: 100%; height: auto; border-radius: 12px; border: 1px solid #242424; box-shadow: 0 8px 32px rgba(0,0,0,0.6); }
-  @media (min-width: 900px) {
-    .blog-content-layout { flex-direction: row; align-items: flex-start; }
-    .blog-poster-aside { width: 240px; position: sticky; top: 80px; flex-shrink: 0; }
-  }
-</style>
-
-<div class="blog-content-layout">
-  <aside class="blog-poster-aside">
-    ${poster ? `<img src="${poster}" alt="${movie.title} Poster" width="240" height="360" fetchpriority="high" style="object-fit:cover;" onError="this.style.display='none'" />` : ""}
-    ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" style="display:block;background:#7ec8e3;color:#000;font-weight:800;font-size:0.82rem;padding:10px;border-radius:8px;text-decoration:none;margin-top:12px;text-align:center;">▶ Watch on ${movie.streamingOn}</a>` : `<a href="${movieUrl}" style="display:block;background:#7ec8e3;color:#000;font-weight:800;font-size:0.82rem;padding:10px;border-radius:8px;text-decoration:none;margin-top:12px;text-align:center;">View Full Movie Page →</a>`}
-  </aside>
-  <div style="flex: 1; min-width: 0;">
-    <section id="release-details" style="${card}">
-      <h2 style="${h2}">OTT Release Details</h2>
-      <table style="width:100%;border-collapse:collapse;" class="info-table">
-        <tbody>
-          <tr><td style="${tdL}">Streaming Platform</td><td style="${tdR}">${movie.streamingOn}</td></tr>
-          <tr><td style="${tdL}">OTT Release Date</td><td style="${tdR}">${ottDateFmt}</td></tr>
-          <tr><td style="${tdL}">Language</td><td style="${tdR}">${movie.language || "Odia"}</td></tr>
-          ${(movie.genre || []).length ? `<tr><td style="${tdL}">Genre</td><td style="${tdR}">${(movie.genre || []).join(", ")}</td></tr>` : ""}
-          ${movie.releaseDate ? `<tr><td style="${tdL}">Theatrical Release</td><td style="${tdR}">${formatHumanDate(movie.releaseDate)}</td></tr>` : ""}
-        </tbody>
-      </table>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px;">
+    <section style="${glassCard}">
+      <h2 style="${h2Style}">Platform Information</h2>
+      <p style="font-size: 1.05rem; line-height: 1.7; color: #bbb;">${ai.platformParagraph}</p>
     </section>
 
-    <section id="synopsis" style="${card}">
-      <h2 style="${h2}">Story</h2>
-      ${autoBlogParagraphs(ai.synopsisParagraph)}
-    </section>
-
-    <section id="cast" style="${card}">
-      <h2 style="${h2}">Cast Highlights</h2>
-      ${autoBlogParagraphs(ai.castHighlightParagraph)}
-    </section>
-
-    <section id="how-to-watch" style="${card}">
-      <h2 style="${h2}">How to Watch</h2>
-      ${autoBlogParagraphs(ai.howToWatchParagraph)}
-      ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" class="cta-btn" style="display:inline-block;background:#7ec8e3;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;margin-top:6px;">Watch on ${movie.streamingOn} →</a>` : ""}
-    </section>
-
-    <section id="platform" style="${card}">
-      <h2 style="${h2}">About ${movie.streamingOn}</h2>
-      ${autoBlogParagraphs(ai.platformParagraph)}
-    </section>
-
-    ${buildRelatedMoviesHtml(relatedMovies, "#7ec8e3", `More Odia Movies on ${movie.streamingOn}`)}
-
-    <section style="background:#111;border-radius:14px;padding:20px 26px;margin-bottom:22px;display:flex;gap:12px;flex-wrap:wrap;">
-      <a href="${movieUrl}" style="display:inline-block;background:#c9973a;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">View Full Movie Page →</a>
-      <a href="/movies" style="display:inline-block;background:transparent;border:1px solid #333;color:#ccc;font-weight:700;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">Browse More Odia Movies →</a>
+    <section style="${glassCard}">
+      <h2 style="${h2Style}">Audience Reception</h2>
+      <p style="font-size: 1.05rem; line-height: 1.7; color: #bbb;">${ai.receptionParagraph}</p>
     </section>
   </div>
+
+  <section style="${glassCard}; background: rgba(187, 134, 252, 0.05); border: 1px solid rgba(187, 134, 252, 0.2);">
+    <h2 style="${h2Style}; color: #fff;">Watch Guide</h2>
+    <p style="font-size: 1.1rem; line-height: 1.8; color: #e0e0e0;">${ai.howToWatchParagraph}</p>
+  </section>
 </div>`;
 }
 
@@ -2361,11 +1748,11 @@ async function autoGenerateOttBlog(movie) {
       excerpt: ai.metaDescription,
       content: html,
       category: "OTT Release",
-      tags: [movie.title, movie.streamingOn, "OTT Release", "Odia Movie"],
+      tags: [movie.title, movie.streamingOn, "OTT Release", "Hindi Movie"],
       coverImage: movie.posterUrl || movie.thumbnailUrl || movie.bannerUrl || "",
       movieId: movie._id,
       movieTitle: movie.title,
-      author: "Ollypedia Team",
+      author: "The Cinema Verse Desk",
       published: true,
       readTime: Math.max(1, Math.ceil(html.split(/\s+/).length / 200)),
       seoTitle: seoTitle,
@@ -2403,7 +1790,7 @@ function buildOttLiveTitle(movie, cc) {
   // so a crew member never ends up named as a "Starrer" in the title.
   const build = (leadCount) => {
     const leads = (cc.ottCast || cc.leadCast || []).slice(0, leadCount).map(c => c.name).filter(Boolean);
-    const subject = leads.length ? `${leads.join(" & ")} Starrer` : "Odia Movie";
+    const subject = leads.length ? `${leads.join(" & ")} Starrer` : "Hindi Movie";
     return `${movie.title} Is Now Streaming on ${movie.streamingOn}: ${subject}`.replace(/\s+/g, " ").trim();
   };
   let title = build(2);
@@ -2413,271 +1800,80 @@ function buildOttLiveTitle(movie, cc) {
 }
 
 async function generateOttLiveAiSections(movie, cc) {
-  const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
-  const ottDateFmt = isRealDate(movie.ottReleaseDate) ? formatHumanDate(movie.ottReleaseDate) : "Now";
-  // BUGFIX: use the strictly-filtered ottCast so the AI is never told a
-  // Cinematographer/Editor/Music Director is part of the "Lead Cast".
-  const leadNames = (cc.ottCast || cc.leadCast).map(c => c.name).filter(Boolean).join(", ");
-  const genre = (movie.genre || []).join(", ") || "Odia";
-
-  const ctx = `Movie: "${movie.title}"${year ? ` (${year})` : ""} | Now Streaming on: ${movie.streamingOn} | OTT Release Date: ${ottDateFmt} | Genre: ${genre} | Language: ${movie.language || "Odia"} | Lead Cast: ${leadNames || "N/A"} | Director: ${cc.director || "N/A"} | Synopsis: ${movie.synopsis || "N/A"} | Streaming URL: ${movie.streamingUrl || "N/A"}`;
-
-  const userPrompt = `Write deeply detailed, SEO-rich JSON content for a "Now Streaming on OTT" announcement article on Ollypedia, an Odia (Ollywood) cinema website. The film "${movie.title}" is NOW AVAILABLE to stream on ${movie.streamingOn} as of ${ottDateFmt}. Write in an excited, celebratory, present-tense editorial tone. This must feel like a breaking news announcement for Odia cinema fans. No HTML or markdown in values.
-
-${ctx}
-
-Return a JSON object with exactly these keys (plain text only, NO HTML, NO markdown):
-- metaDescription: 150-160 characters announcing that "${movie.title}" is NOW streaming on ${movie.streamingOn}, with date, maximising click-through
-- introParagraph: 250-350 words — breaking-news style announcement that "${movie.title}" is NOW AVAILABLE on ${movie.streamingOn} as of ${ottDateFmt}. Name the lead cast, describe what kind of film it is (genre, emotional tone, story highlights), explain why this is an exciting moment for Odia cinema, and urge fans to watch it today.
-- whyWatchParagraph: 250-350 words — a compelling editorial making the case for why viewers should watch "${movie.title}" RIGHT NOW on ${movie.streamingOn}. Cover the story's emotional appeal, the quality of the performances, the director's craft, what makes this film stand out from other Odia films, and what kind of viewer will love it most.
-- synopsisParagraph: 200-280 words — a vivid, spoiler-free retelling of the film's story that makes viewers want to press play immediately. Focus on the opening setup, main conflict, and emotional stakes without revealing major plot twists. IMPORTANT: paraphrase and reframe in your own words — do not copy the source synopsis verbatim, since this same film also has separate theatrical-release and OTT-release articles with their own story sections.
-- castReviewParagraph: 220-300 words — present-tense review-style writing about the lead actors' performances in the film. Name each lead actor, describe their character briefly, and discuss what they bring to the film and why their performances are worth seeing on OTT.
-- howToWatchParagraph: 180-250 words — direct, step-by-step guide to streaming "${movie.title}" on ${movie.streamingOn} RIGHT NOW. Include app download instructions, website access, subscription info, and a call to action to start watching immediately.`;
+  const ottDateFmt = isRealDate(movie.ottReleaseDate) ? formatHumanDate(movie.ottReleaseDate) : "now";
+  const genre = (movie.genre || []).join(", ") || "Hindi";
 
   const fallbacks = {
-    metaDescription: `${movie.title} is NOW streaming on ${movie.streamingOn}! Watch this Odia ${genre} film online today. Full details on Ollypedia.`,
-    introParagraph: `${movie.title}${leadNames ? `, starring ${leadNames},` : ""} is officially now available to stream on ${movie.streamingOn} as of ${ottDateFmt}. This eagerly awaited Odia ${genre} film has made its digital debut, giving fans across Odisha and around the world the chance to experience it from the comfort of their homes. Directed by ${cc.director || "the talented creative team"}, the film brings together a stellar cast and a compelling story that has been the talk of Ollywood since its theatrical run. With its arrival on ${movie.streamingOn}, ${movie.title} joins the growing library of premium Odia cinema available on OTT, marking another milestone for Ollywood's digital expansion.`,
-    whyWatchParagraph: `${movie.title} is the kind of Odia film that demands to be experienced \u2014 and now that it is available on ${movie.streamingOn}, there has never been a better time to press play. The film combines a gripping ${genre.toLowerCase()} narrative with outstanding performances from its lead cast, creating an experience that is both entertaining and emotionally resonant. The direction, cinematography, and production values set a new benchmark for Odia cinema, proving that Ollywood continues to grow in ambition and craft. Whether you are a long-time Odia cinema fan or a newcomer discovering Ollywood through OTT, ${movie.title} is the perfect film to start with.`,
-    // SEO FIX: previously fell back to the raw, unmodified `movie.synopsis`
-    // string — identical to the other two blog pages' fallbacks. Reframed
-    // with "now streaming" / spoiler-light viewing-decision framing instead
-    // of repeating the synopsis verbatim, so all three pages read distinctly.
-    synopsisParagraph: movie.synopsis
-      ? `Here's the setup, without spoiling the journey: ${movie.synopsis} It's a story Odia audiences have already responded to strongly, and watching it now on ${movie.streamingOn} means experiencing those emotional beats with the comfort of a pause button — perfect for catching every detail you might have missed on the big screen.`
-      : `${movie.title} is a ${genre} film set in the heart of Odisha, weaving a story that touches on themes of identity, love, struggle, and triumph. The narrative unfolds with a compelling central conflict that keeps viewers engaged from the first scene to the last. With strong character development, authentic dialogue, and a richly depicted setting, the film creates a world that feels real and emotionally involving. Without giving too much away, ${movie.title} delivers a satisfying and memorable cinematic journey that OTT viewers are sure to appreciate at home on ${movie.streamingOn}.`,
-    castReviewParagraph: leadNames ? `${leadNames} deliver performances in ${movie.title} that are among the finest of their careers in Odia cinema. Each actor brings depth, authenticity, and a genuine emotional investment to their role, creating characters that linger in the memory long after the film ends. The ensemble dynamic is one of the film's greatest strengths, with the cast working in perfect harmony to bring the story to life with nuance and power. OTT viewers on ${movie.streamingOn} are in for a treat as they experience these performances for the first time.` : `The cast of ${movie.title} delivers remarkable performances that elevate this Odia ${genre.toLowerCase()} film to a memorable cinematic experience. Available now on ${movie.streamingOn}, viewers can witness the full depth and range of the ensemble cast's talents in the comfort of their own homes.`,
-    howToWatchParagraph: `To start watching ${movie.title} on ${movie.streamingOn} right now, download the ${movie.streamingOn} app from the Google Play Store or Apple App Store on your smartphone or tablet. Alternatively, visit the ${movie.streamingOn} website directly in your browser. Create an account or log in if you already have one, then choose a subscription plan that suits you \u2014 ${movie.streamingOn} offers flexible monthly and annual options. Once subscribed, search for "${movie.title}" using the search bar and press play to begin streaming instantly. The film is available in Odia with optional subtitles for wider accessibility.`,
+    introParagraph: `The wait is finally over! ${movie.title} is now officially streaming on ${movie.streamingOn}. Fans can grab their popcorn and dive right into this Bollywood ${genre} spectacle from the comfort of their homes.`,
+    whyWatchParagraph: `Boasting stellar performances and gripping direction, ${movie.title} is a must-watch. Whether you missed it in theatres or want to experience the magic again, this is your chance to catch one of Bollywood's most talked-about films.`,
+    howToWatchParagraph: `To start watching, simply open the ${movie.streamingOn} app or website, search for ${movie.title}, and hit play. Ensure you have an active subscription to enjoy the film in crisp high-definition.`,
+    metaDescription: `${movie.title} is NOW streaming on ${movie.streamingOn}! Watch this blockbuster Bollywood film online today. Full details on The Cinema Verse.`
   };
 
   return callGroqStructured(
-    "You are a senior Odia cinema (Ollywood) journalist writing a 'Now Streaming on OTT' announcement article for Ollypedia. Return ONLY a valid JSON object \u2014 no markdown, no code fences, no extra text. All values must be plain text with no HTML. Write in an engaged, celebratory, present-tense tone that makes Odia cinema fans excited to watch the film right now. Every sentence must add real value.",
-    userPrompt,
-    ["metaDescription", "introParagraph", "whyWatchParagraph", "synopsisParagraph", "castReviewParagraph", "howToWatchParagraph"],
+    `You are a top Bollywood entertainment journalist writing 'Now Streaming' alerts for The Cinema Verse. Return ONLY a valid JSON object.`,
+    `Write a 'Now Streaming' alert:
+Movie: "${movie.title}"
+Platform: ${movie.streamingOn}
+Genre: ${genre}
+
+Keys to fill:
+- introParagraph (100 words)
+- whyWatchParagraph (100 words)
+- howToWatchParagraph (100 words)
+- metaDescription (max 155 chars)`,
+    ["introParagraph", "whyWatchParagraph", "howToWatchParagraph", "metaDescription"],
     fallbacks,
-    4000
+    1500
   );
 }
 
 function buildOttLiveBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, dateModified, relatedMovies = []) {
-  const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
-  const ottDateFmt = isRealDate(movie.ottReleaseDate) ? formatHumanDate(movie.ottReleaseDate) : "Now Available";
   const poster = movie.posterUrl || movie.thumbnailUrl || movie.bannerUrl || "";
   const ogImage = poster || `${SITE_URL}/logo.png`;
-  const movieUrl = `/movie/${movie.slug}`;
-  // BUGFIX: same fix as the OTT Release blog — use the strictly-filtered
-  // ottCast (Director + Actor + Actress only) for this blog's Cast section
-  // and its actor[] schema, instead of the shared cc.leadCast (which can
-  // include crew). Scoped to this function only.
-  const leadCast = cc.ottCast || cc.leadCast || [];
-  const genre = (movie.genre || []).join(", ") || "Odia";
-  const imdbNum = parseFloat(movie.imdbRating);
-  const hasImdb = !isNaN(imdbNum) && imdbNum > 0 && imdbNum <= 10;
   const dp = datePublished || new Date().toISOString();
   const dm = dateModified || dp;
 
-  const card = `background:#181818;border:1px solid #242424;border-radius:14px;padding:26px 28px;margin-bottom:22px;`;
-  const h2 = `font-size:1.05rem;font-weight:800;color:#4ade80;border-left:4px solid #4ade80;padding-left:12px;margin:0 0 18px;line-height:1.3;`;
-  const tdL = `padding:10px 0;border-bottom:1px solid #1e1e1e;color:#888;font-size:0.87rem;width:38%;vertical-align:top;`;
-  const tdR = `padding:10px 0;border-bottom:1px solid #1e1e1e;color:#ddd;font-size:0.87rem;font-weight:600;`;
+  const glassCard = `background: rgba(20, 10, 10, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 51, 51, 0.2); border-radius: 16px; padding: 30px; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.6);`;
+  const h2Style = `font-size: 1.4rem; font-weight: 800; color: #ff3333; text-transform: uppercase; margin: 0 0 20px; display: inline-block;`;
 
-  const castChips = leadCast.map(c => {
-    const url = castProfileUrl(c);
-    return `<span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#ddd;">${url ? `<a href="${url}" style="color:#4ade80;text-decoration:underline;text-underline-offset:2px;">${c.name}</a>` : c.name}</span>`;
-  }).join("");
-
-  const leadNames = leadCast.map(c => c.name).filter(Boolean);
-  const keywordsArr = [
-    movie.title, `${movie.title} OTT`, `${movie.title} streaming now`, `watch ${movie.title} online`,
-    `${movie.title} ${movie.streamingOn}`, movie.streamingOn, `${movie.streamingOn} odia movies`,
-    "Odia movie OTT", "Ollywood streaming", "watch odia movie online",
-    ...leadNames.map(n => `${n} movies`),
-  ].filter(Boolean);
-  const keywordsStr = [...new Set(keywordsArr)].join(", ");
-
-  const toc = [
-    ["Streaming Details", "stream-details"], ["Why You Should Watch", "why-watch"],
-    ["Story", "synopsis"], ["Cast Performances", "cast-review"], ["How to Watch Now", "how-to-watch"],
-    relatedMovies.length ? ["Related Movies", "related-movies"] : null,
-  ].filter(Boolean);
-  const tocHtml = `
-<nav aria-label="Table of contents" style="${card}padding:18px 24px;">
-  <strong style="color:#888;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;">On this page</strong>
-  <ul style="margin:10px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px 18px;">
-    ${toc.map(([label, id]) => `<li><a href="#${id}" style="color:#4ade80;text-decoration:none;font-size:0.85rem;">${label}</a></li>`).join("")}
-  </ul>
-</nav>`;
-
-  const plainWordCount = [ai.introParagraph, ai.whyWatchParagraph, ai.synopsisParagraph, ai.castReviewParagraph, ai.howToWatchParagraph]
-    .filter(Boolean).join(" ").split(/\s+/).filter(Boolean).length;
-
-  return `<!-- ════════════════════════════════════════════════════════════════
-  OLLYPEDIA SEO META — READ BY CMS
-  title:          ${seoTitle}
-  description:    ${ai.metaDescription}
-  keywords:       ${keywordsStr}
-  canonical:      ${SITE_URL}/blog/${blogSlug}
-  robots:         index, follow
-  og:site_name:   Ollypedia
-  og:title:       ${seoTitle}
-  og:description: ${ai.metaDescription}
-  og:url:         ${SITE_URL}/blog/${blogSlug}
-  og:image:       ${ogImage}
-  og:image:width: 1200
-  og:image:height: 630
-  og:type:        article
-  og:locale:      en_IN
-  article:published_time: ${dp}
-  article:modified_time:  ${dm}
-  article:author: Ollypedia Team
-  article:section: OTT Release
-  twitter:card:   summary_large_image
-  twitter:site:   @OllypediaIn
-  twitter:creator: @OllypediaIn
-  twitter:title:  ${seoTitle}
-  twitter:description: ${ai.metaDescription}
-  twitter:image:  ${ogImage}
-  twitter:image:alt: ${movie.title} Poster
-════════════════════════════════════════════════════════════════ -->
-
+  return `<!-- THE CINEMA VERSE SEO META -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "NewsArticle",
-      "headline": ${JSON.stringify(seoTitle)},
-      "description": ${JSON.stringify(ai.metaDescription)},
-      "image": ${JSON.stringify(ogImage)},
-      "datePublished": "${dp}",
-      "dateModified": "${dm}",
-      "inLanguage": "en",
-      "wordCount": ${plainWordCount},
-      "keywords": ${JSON.stringify(keywordsStr)},
-      "author": [
-        { "@type": "Person", "name": "Ollypedia Team", "url": "${SITE_URL}/about" },
-        { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}" }
-      ],
-      "publisher": { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}",
-                     "logo": { "@type": "ImageObject", "url": "${SITE_URL}/logo.png" } },
-      "mainEntityOfPage": { "@type": "WebPage", "@id": "${SITE_URL}/blog/${blogSlug}" },
-      "about": {
-        "@type": "Movie",
-        "name": ${JSON.stringify(movie.title)},
-        "url": "${SITE_URL}${movieUrl}",
-        "image": ${JSON.stringify(ogImage)},
-        "inLanguage": ${JSON.stringify(movie.language || "Odia")},
-        "genre": ${JSON.stringify(genre)}${movie.releaseDate ? `,
-        "datePublished": "${movie.releaseDate}"` : ""}${movie.runtime ? `,
-        "duration": ${JSON.stringify(movie.runtime)}` : ""}${cc.director ? `,
-        "director": { "@type": "Person", "name": ${JSON.stringify(cc.director)} }` : ""}${leadCast.length ? `,
-        "actor": [${leadCast.map(a => { const u = castProfileUrl(a); return `{ "@type": "Person", "name": ${JSON.stringify(a.name)}${u ? `, "url": "${SITE_URL}${u}"` : ""} }`; }).join(", ")}]` : ""}${hasImdb ? `,
-        "aggregateRating": { "@type": "AggregateRating", "ratingValue": ${imdbNum}, "bestRating": "10"${movie.imdbVotes ? `, "ratingCount": ${JSON.stringify(String(movie.imdbVotes).replace(/[^0-9]/g, "") || "1")}` : ""} }` : ""}${movie.streamingUrl ? `,
-        "potentialAction": {
-          "@type": "WatchAction",
-          "target": ${JSON.stringify(movie.streamingUrl)}
-        }` : ""}
-      }
-    },
-    {
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "Home", "item": "${SITE_URL}" },
-        { "@type": "ListItem", "position": 2, "name": "Movies", "item": "${SITE_URL}/movies" },
-        { "@type": "ListItem", "position": 3, "name": ${JSON.stringify(movie.title)}, "item": "${SITE_URL}${movieUrl}" },
-        { "@type": "ListItem", "position": 4, "name": "Watch Online", "item": "${SITE_URL}/blog/${blogSlug}" }
-      ]
-    }
-  ]
+  "@type": "NewsArticle",
+  "headline": ${JSON.stringify(seoTitle)},
+  "description": ${JSON.stringify(ai.metaDescription)},
+  "image": ${JSON.stringify(ogImage)}
 }
 </script>
 
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
-  <nav aria-label="Breadcrumb" style="font-size:0.78rem;color:#555;display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-    <a href="/" style="color:#777;text-decoration:none;">Home</a>
-    <span style="color:#333;">›</span>
-    <a href="/movies" style="color:#777;text-decoration:none;">Movies</a>
-    <span style="color:#333;">›</span>
-    <a href="${movieUrl}" style="color:#777;text-decoration:none;">${movie.title}</a>
-    <span style="color:#333;">›</span>
-    <span style="color:#999;">Watch Online</span>
-  </nav>
-</div>
-
-<div class="hero-section" style="background:linear-gradient(135deg,#001a0e 0%,#121212 100%);border:1px solid #004d1a;border-radius:14px;padding:30px 28px 24px;margin-bottom:22px;">
-  <div style="display:inline-block;background:#4ade80;color:#000;font-size:0.7rem;font-weight:800;padding:4px 12px;border-radius:20px;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.08em;">🔴 Now Streaming</div>
-  <h1 style="color:#fff;font-size:1.4rem;font-weight:800;margin:0 0 12px;line-height:1.3;">${seoTitle}</h1>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#4ade80;font-weight:700;">📺 ${movie.streamingOn}</span>
-    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#e8c87a;font-weight:700;">🗓 ${ottDateFmt}</span>
-    ${castChips}
+<div style="font-family: 'Inter', sans-serif; color: #fff; max-width: 900px; margin: 0 auto;">
+  <div style="text-align: center; margin-bottom: 40px; padding: 50px 20px; background: linear-gradient(135deg, #220000, #000); border-radius: 20px; border: 1px solid #ff3333; box-shadow: 0 0 40px rgba(255,51,51,0.2);">
+    <div style="display: inline-block; background: #ff3333; color: #fff; padding: 8px 20px; border-radius: 30px; font-weight: 900; font-size: 1.2rem; text-transform: uppercase; margin-bottom: 20px; letter-spacing: 1px; animation: pulse 2s infinite;">📺 Now Streaming</div>
+    <h1 style="font-size: 2.5rem; font-weight: 900; margin: 0 0 15px;">${seoTitle}</h1>
+    <p style="color: #ccc; font-size: 1.2rem; max-width: 700px; margin: 0 auto;">${ai.introParagraph}</p>
   </div>
-  ${autoBlogParagraphs(ai.introParagraph)}
-  ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" style="display:inline-block;background:#4ade80;color:#000;font-weight:800;font-size:0.9rem;padding:12px 28px;border-radius:8px;text-decoration:none;margin-top:10px;">▶ Watch Now on ${movie.streamingOn}</a>` : ""}
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px;">
+    <section style="${glassCard}">
+      <h2 style="${h2Style}">Why You Must Watch</h2>
+      <p style="font-size: 1.05rem; line-height: 1.7; color: #bbb;">${ai.whyWatchParagraph}</p>
+    </section>
+
+    <section style="${glassCard}">
+      <h2 style="${h2Style}">Streaming Guide</h2>
+      <p style="font-size: 1.05rem; line-height: 1.7; color: #bbb;">${ai.howToWatchParagraph}</p>
+    </section>
+  </div>
 </div>
-
-${tocHtml}
-
-${BLOG_RESPONSIVE_STYLES}
 <style>
-  .blog-live-layout { display: flex; flex-direction: column; gap: 24px; }
-  .blog-live-poster { width: 100%; max-width: 300px; margin: 0 auto; }
-  .blog-live-poster img { width: 100%; height: auto; border-radius: 12px; border: 2px solid #4ade80; box-shadow: 0 8px 32px rgba(74,222,128,0.15); }
-  @media (min-width: 900px) {
-    .blog-live-layout { flex-direction: row; align-items: flex-start; }
-    .blog-live-poster { width: 240px; position: sticky; top: 80px; flex-shrink: 0; }
-  }
-</style>
-
-<div class="blog-live-layout">
-  <aside class="blog-live-poster">
-    ${poster ? `<img src="${poster}" alt="${movie.title} Poster" width="240" height="360" fetchpriority="high" style="object-fit:cover;" onError="this.style.display='none'" />` : ""}
-    ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" style="display:block;background:#4ade80;color:#000;font-weight:800;font-size:0.82rem;padding:10px;border-radius:8px;text-decoration:none;margin-top:12px;text-align:center;">▶ Watch on ${movie.streamingOn}</a>` : ""}
-  </aside>
-  <div style="flex: 1; min-width: 0;">
-    <section id="stream-details" style="${card}">
-      <h2 style="${h2}">Streaming Details</h2>
-      <table style="width:100%;border-collapse:collapse;" class="info-table">
-        <tbody>
-          <tr><td style="${tdL}">Streaming Platform</td><td style="${tdR}">${movie.streamingOn}</td></tr>
-          <tr><td style="${tdL}">OTT Release Date</td><td style="${tdR}">${ottDateFmt}</td></tr>
-          <tr><td style="${tdL}">Language</td><td style="${tdR}">${movie.language || "Odia"}</td></tr>
-          ${genre ? `<tr><td style="${tdL}">Genre</td><td style="${tdR}">${genre}</td></tr>` : ""}
-          ${movie.releaseDate ? `<tr><td style="${tdL}">Theatrical Release</td><td style="${tdR}">${formatHumanDate(movie.releaseDate)}</td></tr>` : ""}
-          ${cc.director ? `<tr><td style="${tdL}">Director</td><td style="${tdR}">${(() => { const u = castProfileUrl(cc.directorEntry); return u ? `<a href="${u}" style="color:#4ade80;text-decoration:underline;text-underline-offset:2px;">${cc.director}</a>` : cc.director; })()}</td></tr>` : ""}
-          ${movie.runtime ? `<tr><td style="${tdL}">Runtime</td><td style="${tdR}">${movie.runtime}</td></tr>` : ""}
-        </tbody>
-      </table>
-    </section>
-
-    <section id="why-watch" style="${card}">
-      <h2 style="${h2}">Why You Should Watch ${movie.title}</h2>
-      ${autoBlogParagraphs(ai.whyWatchParagraph)}
-    </section>
-
-    <section id="synopsis" style="${card}">
-      <h2 style="${h2}">Story</h2>
-      ${autoBlogParagraphs(ai.synopsisParagraph)}
-    </section>
-
-    <section id="cast-review" style="${card}">
-      <h2 style="${h2}">Cast Performances</h2>
-      ${autoBlogParagraphs(ai.castReviewParagraph)}
-    </section>
-
-    <section id="how-to-watch" style="${card}">
-      <h2 style="${h2}">How to Watch Now on ${movie.streamingOn}</h2>
-      ${autoBlogParagraphs(ai.howToWatchParagraph)}
-      ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" style="display:inline-block;background:#4ade80;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;margin-top:6px;">▶ Start Watching on ${movie.streamingOn} →</a>` : ""}
-    </section>
-
-    ${buildRelatedMoviesHtml(relatedMovies, "#4ade80", `More Odia Movies on ${movie.streamingOn}`)}
-
-    <section style="background:#111;border-radius:14px;padding:20px 26px;margin-bottom:22px;display:flex;gap:12px;flex-wrap:wrap;">
-      <a href="${movieUrl}" style="display:inline-block;background:#c9973a;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">View Full Movie Page →</a>
-      <a href="/movies" style="display:inline-block;background:transparent;border:1px solid #333;color:#ccc;font-weight:700;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">Browse More Odia Movies →</a>
-    </section>
-  </div>
-</div>`;
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255,51,51, 0.7); }
+  70% { box-shadow: 0 0 0 15px rgba(255,51,51, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,51,51, 0); }
+}
+</style>`;
 }
 
 /**
@@ -2707,11 +1903,11 @@ async function autoGenerateOttLiveBlog(movie) {
       excerpt: ai.metaDescription,
       content: html,
       category: "OTT Release",
-      tags: [movie.title, movie.streamingOn, "Now Streaming", "Odia Movie OTT", "Watch Online"],
+      tags: [movie.title, movie.streamingOn, "Now Streaming", "Hindi Movie OTT", "Watch Online"],
       coverImage: movie.posterUrl || movie.thumbnailUrl || movie.bannerUrl || "",
       movieId: movie._id,
       movieTitle: movie.title,
-      author: "Ollypedia Team",
+      author: "The Cinema Verse Desk",
       published: true,
       readTime: Math.max(1, Math.ceil(html.split(/\s+/).length / 200)),
       seoTitle: seoTitle,
@@ -3206,7 +2402,7 @@ app.post("/api/movies", auth, async (req, res) => {
       releaseTBA: !!b.releaseTBA,
       director, producer,
       budget: String(b.budget || ""),
-      language: String(b.language || "Odia"),
+      language: String(b.language || "Hindi"),
       synopsis: String(b.synopsis || ""),
       posterUrl: String(b.posterUrl || ""),
       thumbnailUrl: String(b.thumbnailUrl || ""),
@@ -3591,7 +2787,7 @@ app.post("/api/admin/movies", adminAuth, async (req, res) => {
       director: String(b.director || ""),
       producer: String(b.producer || ""),
       budget: String(b.budget || ""),
-      language: String(b.language || "Odia"),
+      language: String(b.language || "Hindi"),
       synopsis: String(b.synopsis || ""),
       posterUrl: String(b.posterUrl || ""),
       thumbnailUrl: String(b.thumbnailUrl || ""),
@@ -4072,7 +3268,7 @@ app.post("/api/admin/blog", adminAuth, async (req, res) => {
       category: category || "General", tags: Array.isArray(tags) ? tags : (tags || "").split(",").map(t => t.trim()).filter(Boolean),
       coverImage: coverImage || "", movieId: movieId || undefined, movieTitle: movieTitle || "",
       castId: isOid(castId) ? castId : undefined, castName: castName || "",
-      author: author || "Ollypedia Team", published: !!published, featured: !!featured, readTime,
+      author: author || "The Cinema Verse Desk", published: !!published, featured: !!featured, readTime,
       seoTitle: seoTitle || title, seoDesc: seoDesc || excerpt || "",
       youtubeVideoId: youtubeVideoId?.trim() || "",
     });
@@ -4330,7 +3526,7 @@ app.get("/sitemap-cast.xml", async (req, res) => {
       const slug = String(c.name || "").toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, "-").trim();
       const role = String(c.type || "artist").toLowerCase().replace(/\s+/g, "-");
       const lastmod = c.updatedAt ? new Date(c.updatedAt).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
-      xml += urlEntry(`${SITE_URL}/cast/${c._id}/${slug}-odia-${role}`, lastmod, "monthly", "0.7") + "\n";
+      xml += urlEntry(`${SITE_URL}/cast/${c._id}/${slug}-hindi-${role}`, lastmod, "monthly", "0.7") + "\n";
     });
   } catch { }
   res.type("application/xml").send(xml + "</urlset>");
@@ -4399,7 +3595,7 @@ app.post("/api/admin/generate-article", adminAuth, async (req, res) => {
         messages: [
           {
             role: "system",
-            content: "You are an expert Odia cinema journalist writing for Ollypedia. When asked to return JSON, you MUST return ONLY a valid JSON object with no extra text, no markdown, no code fences. All string values must be plain text — no HTML tags, no bullet points.",
+            content: "You are an expert Hindi cinema journalist writing for The Cinema Verse. When asked to return JSON, you MUST return ONLY a valid JSON object with no extra text, no markdown, no code fences. All string values must be plain text — no HTML tags, no bullet points.",
           },
           {
             role: "user",
@@ -4456,7 +3652,7 @@ app.get("/api/movies/:id/boxoffice-days", async (req, res) => {
 app.post("/api/admin/movies/:id/boxoffice-days", adminAuth, async (req, res) => {
   try {
     if (!isOid(req.params.id)) return res.status(400).json({ error: "Invalid ID" });
-    const { day, net, gross, date, note } = req.body;
+    const { day, net, gross, overseas, date, note } = req.body;
 
     if (!day || isNaN(parseInt(day, 10))) return res.status(400).json({ error: "day is required (integer)" });
     const dayNum = parseInt(day, 10);
@@ -4658,7 +3854,7 @@ app.get("/sitemap-boxoffice.xml", async (req, res) => {
     const movies = await Movie
       .find({ "boxOfficeDays.0": { $exists: true } }, "title slug releaseDate updatedAt")
       .lean();
-    const SITE_URL_LOCAL = process.env.SITE_URL || "https://www.ollypedia.in";
+    const SITE_URL_LOCAL = process.env.SITE_URL || "https://www.thecinemaverse.com";
     movies.forEach((m) => {
       const slug = m.slug || (String(m.title || "").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""));
       const lastmod = m.updatedAt ? new Date(m.updatedAt).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
@@ -5444,44 +4640,44 @@ async function scrapeSacnilkForMovie(movieId) {
           return `Day ${targetDay} Collection Report & Analysis`;
         })(),
         introParagraph: (() => {
-          if (tagSet.has("opening-day")) return `The Odia box office has finally opened its doors to ${movie.title}. The much-awaited film has marked its Day 1 presence with an estimated net collection of ${formatINR(totalNet)}. Early footfalls give us a glimpse of the initial audience reaction across Odisha.`;
+          if (tagSet.has("opening-day")) return `The Hindi box office has finally opened its doors to ${movie.title}. The much-awaited film has marked its Day 1 presence with an estimated net collection of ${formatINR(totalNet)}. Early footfalls give us a glimpse of the initial audience reaction across Odisha.`;
           if (tagSet.has("opening-weekend") || targetDay <= 3) return `The opening weekend is turning out to be a crucial period for ${movie.title}. By Day ${targetDay}, the film has pushed its total net collection to an estimated ${formatINR(totalNet)}. The weekend crowd has significantly influenced these initial numbers.`;
-          if (tagSet.has("first-week-closing") || targetDay === 7) return `A full week has passed since ${movie.title} hit the screens. Wrapping up its first seven days, the film's total net collection stands at an estimated ${formatINR(totalNet)}, painting a clear picture of its week-one box office trajectory in the Odia circuit.`;
-          return `The theatrical journey of ${movie.title} continues at the Odia box office. As of Day ${targetDay}, the film has managed to pull an estimated net collection of ${formatINR(totalNet)} and a gross of ${formatINR(totalGross)}, holding its ground as audiences continue to visit the theatres.`;
+          if (tagSet.has("first-week-closing") || targetDay === 7) return `A full week has passed since ${movie.title} hit the screens. Wrapping up its first seven days, the film's total net collection stands at an estimated ${formatINR(totalNet)}, painting a clear picture of its week-one box office trajectory in the Hindi circuit.`;
+          return `The theatrical journey of ${movie.title} continues at the Hindi box office. As of Day ${targetDay}, the film has managed to pull an estimated net collection of ${formatINR(totalNet)} and a gross of ${formatINR(totalGross)}, holding its ground as audiences continue to visit the theatres.`;
         })(),
         boxOfficeAnalysis: tagSet.has("opening-day")
-          ? `Opening day figures are crucial for any Odia film, and ${movie.title} has taken its first major step. The Day 1 numbers provide a solid baseline for the upcoming weekend. Initial reports indicate that ${tagSet.has("weekend") ? "the holiday/weekend timing" : "the dedicated fanbase"} played a significant role in driving these early ticket sales.`
+          ? `Opening day figures are crucial for any Hindi film, and ${movie.title} has taken its first major step. The Day 1 numbers provide a solid baseline for the upcoming weekend. Initial reports indicate that ${tagSet.has("weekend") ? "the holiday/weekend timing" : "the dedicated fanbase"} played a significant role in driving these early ticket sales.`
           : tagSet.has("first-week-closing") || targetDay === 7
-            ? `Closing the first week with ${formatINR(totalNet)} net is a key milestone for ${movie.title}. Week-one numbers often dictate screen retention in the second week. These figures suggest how the core Odia audience has received the film before word-of-mouth takes over completely.`
+            ? `Closing the first week with ${formatINR(totalNet)} net is a key milestone for ${movie.title}. Week-one numbers often dictate screen retention in the second week. These figures suggest how the core Hindi audience has received the film before word-of-mouth takes over completely.`
             : isWeekendDay
-              ? `Weekends are the lifeblood of the Odia film trade, and ${movie.title} is looking to capitalize on this window on Day ${targetDay}. Families and casual viewers typically flock to cinemas during these days, providing a much-needed spike in the overall collection graph.`
+              ? `Weekends are the lifeblood of the Hindi film trade, and ${movie.title} is looking to capitalize on this window on Day ${targetDay}. Families and casual viewers typically flock to cinemas during these days, providing a much-needed spike in the overall collection graph.`
               : `Sustaining collections on weekdays is the real test of a film's content. On Day ${targetDay}, ${movie.title} witnessed the usual midweek settling of footfalls. The day-wise hold will be closely monitored by trade analysts to gauge the film's lifetime potential.`,
-        audienceResponse: `Word of mouth is the ultimate decider in Ollywood. For ${movie.title}, audience feedback has been pivotal in shaping its box office journey so far. ${tagSet.has("extended-run") || tagSet.has("silver-jubilee-run") || tagSet.has("golden-run") ? "The fact that it is still running strong proves that the Odia audience has deeply connected with the content." : "Reactions from the cinema halls across Odisha are setting the tone for the coming days."}`,
-        performanceAnalysis: `Looking at the numbers, a total net of ${formatINR(totalNet)} (and ${formatINR(totalGross)} gross) gives ${movie.title} a respectable standing in the current Odia cinema landscape. ${movie.budget ? `When weighed against its reported budget of ${movie.budget}, the recovery path is being closely analyzed.` : "The trajectory over the next few days will determine its ultimate box office verdict."}`,
+        audienceResponse: `Word of mouth is the ultimate decider in Bollywood. For ${movie.title}, audience feedback has been pivotal in shaping its box office journey so far. ${tagSet.has("extended-run") || tagSet.has("silver-jubilee-run") || tagSet.has("golden-run") ? "The fact that it is still running strong proves that the Hindi audience has deeply connected with the content." : "Reactions from the cinema halls across Odisha are setting the tone for the coming days."}`,
+        performanceAnalysis: `Looking at the numbers, a total net of ${formatINR(totalNet)} (and ${formatINR(totalGross)} gross) gives ${movie.title} a respectable standing in the current Hindi cinema landscape. ${movie.budget ? `When weighed against its reported budget of ${movie.budget}, the recovery path is being closely analyzed.` : "The trajectory over the next few days will determine its ultimate box office verdict."}`,
         weekendWeekdayComparison: (() => {
           if (tagSet.has("opening-weekend"))
-            return `The opening weekend (Days 1-3) is the most critical window for any Odia film, and ${movie.title} is currently in the thick of it. Opening weekends typically set the tone for the entire theatrical run — a strong three-day total builds confidence among exhibitors and can lead to screen additions for the second week.`;
+            return `The opening weekend (Days 1-3) is the most critical window for any Hindi film, and ${movie.title} is currently in the thick of it. Opening weekends typically set the tone for the entire theatrical run — a strong three-day total builds confidence among exhibitors and can lead to screen additions for the second week.`;
           if (tagSet.has("second-weekend"))
-            return `Day ${targetDay} is part of ${movie.title}'s second weekend, a crucial checkpoint after the initial buzz has settled. Second-weekend numbers reveal whether the film has genuine audience legs or was primarily a first-week phenomenon. A drop of less than 40% from the first weekend is considered healthy for an Odia release.`;
+            return `Day ${targetDay} is part of ${movie.title}'s second weekend, a crucial checkpoint after the initial buzz has settled. Second-weekend numbers reveal whether the film has genuine audience legs or was primarily a first-week phenomenon. A drop of less than 40% from the first weekend is considered healthy for an Hindi release.`;
           if (tagSet.has("third-weekend"))
-            return `By the third weekend, most Odia films have either consolidated a strong audience base or started a steady wind-down. ${movie.title} reaching Day ${targetDay} with theatres still running is itself a sign of respectable staying power in the market.`;
+            return `By the third weekend, most Hindi films have either consolidated a strong audience base or started a steady wind-down. ${movie.title} reaching Day ${targetDay} with theatres still running is itself a sign of respectable staying power in the market.`;
           if (isWeekendDay)
-            return `Day ${targetDay} falls in a weekend box-office window for ${movie.title}. Weekends typically deliver 1.5–2× the footfall of weekdays for Odia films, driven by family audiences and leisure-time viewing. Comparing this weekend's figures to the previous one will reveal how quickly the film's appeal is evolving.`;
+            return `Day ${targetDay} falls in a weekend box-office window for ${movie.title}. Weekends typically deliver 1.5–2× the footfall of weekdays for Hindi films, driven by family audiences and leisure-time viewing. Comparing this weekend's figures to the previous one will reveal how quickly the film's appeal is evolving.`;
           return `Day ${targetDay} is a weekday in ${movie.title}'s theatrical run. Weekday collections test a film's word-of-mouth strength once the opening excitement fades. A film that holds its weekday numbers close to its weekend collections is signalling strong repeat-viewing intent and broad audience approval.`;
         })(),
-        occupancyTrend: `Occupancy levels for ${movie.title} on Day ${targetDay} are estimated based on trade trends for similarly positioned Odia releases${isWeekendDay ? ", with weekend shows typically running fuller than weekday shows" : ", with weekday shows generally running at moderate occupancy compared to the opening days"}. Exact seat-level occupancy data is not independently verified and figures here are based on collection trends.`,
+        occupancyTrend: `Occupancy levels for ${movie.title} on Day ${targetDay} are estimated based on trade trends for similarly positioned Hindi releases${isWeekendDay ? ", with weekend shows typically running fuller than weekday shows" : ", with weekday shows generally running at moderate occupancy compared to the opening days"}. Exact seat-level occupancy data is not independently verified and figures here are based on collection trends.`,
         prediction: `Based on current trends, ${movie.title} is expected to maintain momentum in the coming days, especially during weekends.`,
-        industryImpact: `${movie.title}'s box office run is being closely watched within Ollywood as a marker of audience appetite for ${Array.isArray(movie.genre) ? movie.genre.join("/") : (movie.genre || "this genre")} content in Odia cinema. A strong showing for the film would encourage producers to continue investing in similar theatrical releases for the Odia film industry.`,
+        industryImpact: `${movie.title}'s box office run is being closely watched within Bollywood as a marker of audience appetite for ${Array.isArray(movie.genre) ? movie.genre.join("/") : (movie.genre || "this genre")} content in Hindi cinema. A strong showing for the film would encourage producers to continue investing in similar theatrical releases for the Hindi film industry.`,
         futureOutlook: (() => {
           if (milestoneCr)
-            return `Having just crossed the ₹${milestoneCr} Cr mark, ${movie.title} enters a new chapter in its box office story. In Odia cinema, reaching this level is a significant achievement — the film now joins a select group of Ollywood releases that have crossed this threshold in recent years. The next milestone to watch will be ₹${Number(milestoneCr) < 1 ? 1 : Number(milestoneCr) < 2 ? 2 : Number(milestoneCr) < 3 ? 3 : Number(milestoneCr) < 5 ? 5 : Number(milestoneCr) < 10 ? 10 : Number(milestoneCr) + 5} Cr, and whether audience momentum can carry the film there.`;
+            return `Having just crossed the ₹${milestoneCr} Cr mark, ${movie.title} enters a new chapter in its box office story. In Hindi cinema, reaching this level is a significant achievement — the film now joins a select group of Bollywood releases that have crossed this threshold in recent years. The next milestone to watch will be ₹${Number(milestoneCr) < 1 ? 1 : Number(milestoneCr) < 2 ? 2 : Number(milestoneCr) < 3 ? 3 : Number(milestoneCr) < 5 ? 5 : Number(milestoneCr) < 10 ? 10 : Number(milestoneCr) + 5} Cr, and whether audience momentum can carry the film there.`;
           if (tagSet.has("approaching-ott"))
-            return `With the OTT release of ${movie.title} approaching within the next week, the theatrical window is in its final days. Audiences who have been waiting to watch at home will shortly get that chance, which may slow the final few days of theatre collections. However, a digital release on a major platform will introduce the film to a far wider audience across India and among the Odia diaspora globally.`;
+            return `With the OTT release of ${movie.title} approaching within the next week, the theatrical window is in its final days. Audiences who have been waiting to watch at home will shortly get that chance, which may slow the final few days of theatre collections. However, a digital release on a major platform will introduce the film to a far wider audience across India and among the Hindi diaspora globally.`;
           if (tagSet.has("silver-jubilee-run") || tagSet.has("extended-run"))
-            return `${movie.title} reaching Day ${targetDay} in theatres is a sign of remarkable staying power. Most Odia releases wind down in the second or third week, so a film running this deep into its theatrical run has found a loyal core audience that keeps returning. Future days will be driven by repeat viewings, word of mouth among family and friends, and the availability of shows in smaller towns and B/C centres of Odisha.`;
-          return `Looking ahead, ${movie.title}'s trajectory will be shaped by how it performs in the coming weekend and whether exhibitors add or reduce screens in response to audience demand. Any new competition from other Odia or Hindi releases will also be a factor to watch.`;
+            return `${movie.title} reaching Day ${targetDay} in theatres is a sign of remarkable staying power. Most Hindi releases wind down in the second or third week, so a film running this deep into its theatrical run has found a loyal core audience that keeps returning. Future days will be driven by repeat viewings, word of mouth among family and friends, and the availability of shows in smaller towns and B/C centres of Odisha.`;
+          return `Looking ahead, ${movie.title}'s trajectory will be shaped by how it performs in the coming weekend and whether exhibitors add or reduce screens in response to audience demand. Any new competition from other Hindi or Hindi releases will also be a factor to watch.`;
         })(),
-        finalVerdict: `${movie.title} has collected ${formatINR(totalNet)} net and ${formatINR(totalGross)} gross after ${targetDay} days. All figures are industry estimates. Source: Sacnilk via Ollypedia.`,
+        finalVerdict: `${movie.title} has collected ${formatINR(totalNet)} net and ${formatINR(totalGross)} gross after ${targetDay} days. All figures are industry estimates. Source: Sacnilk via The Cinema Verse.`,
         weekOneTwoComparison: (() => {
           if (targetDay < 14) return "";
           const week1 = sortedDays.filter(d => d.day <= 7);
@@ -5490,10 +4686,10 @@ async function scrapeSacnilkForMovie(movieId) {
           const w2Total = week2.reduce((s, d) => s + parseToRupeesGlobal(d.net || "0"), 0);
           if (!w1Total || !w2Total) return "";
           const drop = (((w1Total - w2Total) / w1Total) * 100).toFixed(0);
-          return `${movie.title} collected approximately ${formatINR(w1Total)} in its first week and ${formatINR(w2Total)} in the second week — a drop of around ${drop}%. A drop below 50% is considered healthy for an Odia theatrical release, indicating the film has sustained audience interest beyond the opening-week buzz.`;
+          return `${movie.title} collected approximately ${formatINR(w1Total)} in its first week and ${formatINR(w2Total)} in the second week — a drop of around ${drop}%. A drop below 50% is considered healthy for an Hindi theatrical release, indicating the film has sustained audience interest beyond the opening-week buzz.`;
         })(),
         festivalImpact: dayClassification?.festival
-          ? `${movie.title}'s box office run is coinciding with the ${dayClassification.festival} festival season in Odisha. Odia films traditionally see a boost in footfalls during this period as families spend leisure time at cinemas. Whether ${movie.title} has capitalised on this festival window will be reflected in the coming days' collections.`
+          ? `${movie.title}'s box office run is coinciding with the ${dayClassification.festival} festival season in Odisha. Hindi films traditionally see a boost in footfalls during this period as families spend leisure time at cinemas. Whether ${movie.title} has capitalised on this festival window will be reflected in the coming days' collections.`
           : "",
       };
       return defaults[key] || "";
@@ -5681,7 +4877,7 @@ async function scrapeSacnilkForMovie(movieId) {
     // Re-scrape for same day — update existing entry only if new value is non-zero
     yesterdayEntry.net = dailyNetRaw;
     yesterdayEntry.gross = dailyGrossRaw;
-    yesterdayEntry.note = "Ollypedia Tracker (updated)";
+    yesterdayEntry.note = "The Cinema Verse Tracker (updated)";
     actualDay = yesterdayEntry.day;
   } else {
     // New day entry
@@ -5691,7 +4887,7 @@ async function scrapeSacnilkForMovie(movieId) {
       net: dailyNetRaw,
       gross: dailyGrossRaw,
       date: yesterdayStr,
-      note: "Ollypedia Tracker",
+      note: "The Cinema Verse Tracker",
     });
   }
 
@@ -5768,10 +4964,10 @@ async function scrapeSacnilkForMovie(movieId) {
     leadActresses.length ? `Actresses: ${leadActresses.join(", ")}` : "",
   ].filter(Boolean).join("\n");
 
-  const aiPrompt = `You are writing a box office collection article for the Odia film website Ollypedia.
+  const aiPrompt = `You are writing a box office collection article for the Hindi film website The Cinema Verse.
 
 Movie: ${movieName}${year ? ` (${year})` : ""}
-${movie.language ? `Language: ${movie.language}` : "Language: Odia"}
+${movie.language ? `Language: ${movie.language}` : "Language: Hindi"}
 Genre: ${genre}
 Release Date: ${releaseDateFmt}
 ${castLine}
@@ -5788,16 +4984,16 @@ ${dayTags.includes("opening-day") ? "This is the FILM'S OPENING DAY — focus on
 ${dayTags.includes("weekend") ? "Today falls in the WEEKEND box-office window — focus heavily on weekend vs weekday performance and family/leisure footfalls." : ""}
 ${dayTags.includes("weekday") ? "Today is a WEEKDAY — focus on how the film is holding up after the opening rush and what weekday collections reveal about word-of-mouth." : ""}
 ${dayTags.includes("first-week-closing") ? "Today marks the close of WEEK ONE — focus on the overall week-one verdict and what it signals for week two." : ""}
-${dayTags.some(t => t.startsWith("milestone-")) ? `The film has just CROSSED A COLLECTION MILESTONE today (${dayTags.find(t => t.startsWith("milestone-"))}) — lead with this milestone and what it means for the film's standing in Ollywood.` : ""}
+${dayTags.some(t => t.startsWith("milestone-")) ? `The film has just CROSSED A COLLECTION MILESTONE today (${dayTags.find(t => t.startsWith("milestone-"))}) — lead with this milestone and what it means for the film's standing in Bollywood.` : ""}
 ${dayTags.includes("approaching-ott") ? "The film's OTT release is approaching within the next week — mention how the theatrical run is winding down ahead of the digital premiere." : ""}
 ${dayTags.includes("extended-run") ? "The film is in an EXTENDED THEATRICAL RUN (25+ days) — focus on staying power, repeat audiences, and longevity rather than day-on-day swings." : ""}
-${dayTags.some(t => t.startsWith("festival-")) ? `Today's collection coincides with the ODISHA FESTIVAL SEASON (${dayClassification.festival}) — mention how festival footfalls typically boost Odia cinema and whether this film is benefiting.` : ""}
+${dayTags.some(t => t.startsWith("festival-")) ? `Today's collection coincides with the ODISHA FESTIVAL SEASON (${dayClassification.festival}) — mention how festival footfalls typically boost Hindi cinema and whether this film is benefiting.` : ""}
 ${dayTags.includes("second-weekend") ? "Today is the SECOND WEEKEND — compare with the first weekend and explain what the drop (or hold) means for the film's overall commercial standing." : ""}
 ${dayTags.includes("third-weekend") || dayTags.includes("fourth-weekend") ? `Today is the ${dayTags.find(t => /-(weekend|run)$/.test(t))?.replace("-", " ")} — focus on the film's incredible staying power and what sustains audience interest this far into the run.` : ""}
 ${dayTags.includes("first-week-closing") ? "Today closes the FIRST WEEK — write a full week-one verdict: total, daily average, best day, worst day, and outlook for week two." : ""}
 ${dayTags.includes("second-week-closing") ? "Today closes the SECOND WEEK — compare week-two total with week-one, analyse the drop percentage, and forecast the second half of the run." : ""}
-${dayTags.includes("silver-jubilee-run") ? "The film has crossed 25 DAYS in theatres (Silver Jubilee run) — celebrate this milestone, compare with other recent Odia films that achieved this, and explain what it means for Ollywood." : ""}
-${dayTags.includes("golden-run") ? "The film has crossed 50 DAYS in theatres (Golden Jubilee run) — this is exceptional for Odia cinema; lead with this achievement." : ""}
+${dayTags.includes("silver-jubilee-run") ? "The film has crossed 25 DAYS in theatres (Silver Jubilee run) — celebrate this milestone, compare with other recent Hindi films that achieved this, and explain what it means for Bollywood." : ""}
+${dayTags.includes("golden-run") ? "The film has crossed 50 DAYS in theatres (Golden Jubilee run) — this is exceptional for Hindi cinema; lead with this achievement." : ""}
 
 You must respond ONLY with a valid JSON object (no markdown, no code fences, no extra text). The JSON must have exactly these keys:
 
@@ -5805,12 +5001,12 @@ You must respond ONLY with a valid JSON object (no markdown, no code fences, no 
   "seoHeadline": "A compelling 10-15 word headline for h1. Use a DIFFERENT ANGLE than 'Day N Box Office Collection'. Choose from: milestone lead, weekend verdict, weekday hold, industry comparison, audience sentiment, OTT countdown, or running-total achievement. Never use a generic 'Day N collection report' phrasing. TODAY'S CONTEXT: ${dayTagLine}.",
   "introParagraph": "2-3 sentences introducing the film and Day ${actualDay} performance. Mention the net and gross figures naturally, and reflect today's context.",
   "boxOfficeAnalysis": "2-3 paragraphs (plain text, no HTML tags) covering the day-wise journey and trend, written specifically through today's context above — do NOT just restate yesterday's analysis with new numbers.",
-  "audienceResponse": "1-2 paragraphs about how Odia audiences and reviewers are responding — word of mouth, social media buzz, repeat viewing. Vary the framing based on how many days the film has run.",
-  "performanceAnalysis": "2 paragraphs analysing the film's performance relative to its budget and typical Odia cinema benchmarks. Mention total net ${totalNetStr} and gross ${totalGrossStr}.",
+  "audienceResponse": "1-2 paragraphs about how Hindi audiences and reviewers are responding — word of mouth, social media buzz, repeat viewing. Vary the framing based on how many days the film has run.",
+  "performanceAnalysis": "2 paragraphs analysing the film's performance relative to its budget and typical Hindi cinema benchmarks. Mention total net ${totalNetStr} and gross ${totalGrossStr}.",
   "weekendWeekdayComparison": "1-2 paragraphs specifically comparing weekend and weekday collection patterns for this film so far, and what that pattern suggests about audience type (family/youth/repeat viewers).",
   "occupancyTrend": "1 paragraph describing the likely occupancy trend (rising, falling, steady) across screens based on the collection numbers — do not invent exact percentages, describe the trend qualitatively.",
   "prediction": "1-2 paragraphs predicting upcoming weekend/week performance based on current trend.",
-  "industryImpact": "1 paragraph on what this film's performance means for the wider Ollywood (Odia film industry) — e.g. theatre footfalls, confidence in the genre, impact on upcoming Odia releases.",
+  "industryImpact": "1 paragraph on what this film's performance means for the wider Bollywood (Hindi film industry) — e.g. theatre footfalls, confidence in the genre, impact on upcoming Hindi releases.",
   "futureOutlook": "1-2 paragraphs on the film's likely box office path from here — upcoming milestones, competition from other releases, or OTT timing if relevant.",
   "finalVerdict": "2-3 sentences summarising the film's box office status after Day ${actualDay}. Do NOT use words like Hit, Flop, Average, Super-Hit — just describe the collection factually.",
   "weekOneTwoComparison": "ONLY if day >= 14: 1-2 paragraphs comparing week-one and week-two totals, the drop percentage, and what it reveals about the audience type. Leave empty string if day < 14.",
@@ -5819,7 +5015,7 @@ You must respond ONLY with a valid JSON object (no markdown, no code fences, no 
 
 Rules:
 - All values must be plain text only — no HTML, no bullet points, no markdown
-- Write for an Odia cinema (Ollywood) audience
+- Write for an Hindi cinema (Bollywood) audience
 - Keep each section concise but informative
 - Make this article meaningfully different from a generic "Day N" template — lean into today's specific context listed above
 - Do not invent or fabricate collection figures — only use the data provided above`;
@@ -5863,7 +5059,7 @@ Rules:
 
   const kw = [];
   kw.push(
-    `${movieName} Odia Movie`, `${movieName} Movie Details`, `${movieName} Cast`,
+    `${movieName} Hindi Movie`, `${movieName} Movie Details`, `${movieName} Cast`,
     `${movieName} Cast and Crew`, `${movieName} Story`, `${movieName} Review`,
     `${movieName} Trailer`, `${movieName} Teaser`, `${movieName} Songs`, `${movieName} Music`,
     `${movieName} Release Date`,
@@ -5879,23 +5075,23 @@ Rules:
     year ? `${movieName} (${year}) Box Office Collection` : null,
     year ? `${movieName} (${year}) Total Collection` : null,
   );
-  if (directorName) kw.push(directorName, `${directorName} Movie`, `${directorName} Odia Movie`, `${directorName} Director`);
+  if (directorName) kw.push(directorName, `${directorName} Movie`, `${directorName} Hindi Movie`, `${directorName} Director`);
   if (producerName) kw.push(producerName, `${producerName} Producer`);
-  leadActors.forEach(a => kw.push(a, `${a} Movie`, `${a} Odia Movie`));
-  leadActresses.forEach(a => kw.push(a, `${a} Movie`, `${a} Odia Movie`));
+  leadActors.forEach(a => kw.push(a, `${a} Movie`, `${a} Hindi Movie`));
+  leadActresses.forEach(a => kw.push(a, `${a} Movie`, `${a} Hindi Movie`));
   if (musicDirector) kw.push(musicDirector, `${musicDirector} Music Director`);
   if (writer) kw.push(writer, `${writer} Writer`);
   if (dop) kw.push(dop, `${dop} Cinematographer`);
   if (editor) kw.push(editor, `${editor} Editor`);
-  genreArr.forEach(g => kw.push(`${g} Odia Movie`, `Odia ${g} Film`));
+  genreArr.forEach(g => kw.push(`${g} Hindi Movie`, `Hindi ${g} Film`));
   kw.push(
-    "Odia Movie Collection", "Odia Movie Details", "Odia Movie Cast", "Odia Movie Review",
-    "Odia Movie Trailer", "Odia Movie Release Date", "Odia Movie Box Office",
-    "Odia Box Office Collection", "Ollywood Box Office Collection", "Ollywood Movie Collection",
-    "Ollywood Movie Details", "Ollywood News", "Latest Odia Movie News", "Odia Cinema News",
-    "Odia Film Industry", "Trending Odia Movie",
-    year ? `New Odia Movie ${year}` : "New Odia Movie",
-    "Best Odia Movies", "Ollywood Updates",
+    "Hindi Movie Collection", "Hindi Movie Details", "Hindi Movie Cast", "Hindi Movie Review",
+    "Hindi Movie Trailer", "Hindi Movie Release Date", "Hindi Movie Box Office",
+    "Hindi Box Office Collection", "Bollywood Box Office Collection", "Bollywood Movie Collection",
+    "Bollywood Movie Details", "Bollywood News", "Latest Hindi Movie News", "Hindi Cinema News",
+    "Hindi Film Industry", "Trending Hindi Movie",
+    year ? `New Hindi Movie ${year}` : "New Hindi Movie",
+    "Best Hindi Movies", "Bollywood Updates",
   );
   const keywordsStr = kw.filter(Boolean).join(",\n");
 
@@ -5911,9 +5107,9 @@ Rules:
     musicDirector ? `#${musicDirector.replace(/\s+/g, "")}` : null,
     ...leadActors.map(a => `#${a.replace(/\s+/g, "")}`),
     ...leadActresses.map(a => `#${a.replace(/\s+/g, "")}`),
-    "#OdiaMovie", "#Ollywood", "#OdiaCinema", "#Ollypedia",
-    "#BoxOfficeCollection", "#OllywoodBoxOffice", "#OllywoodNews",
-    year ? `#OdiaMovie${year}` : null,
+    "#HindiMovie", "#Bollywood", "#HindiCinema", "#The Cinema Verse",
+    "#BoxOfficeCollection", "#BollywoodBoxOffice", "#BollywoodNews",
+    year ? `#HindiMovie${year}` : null,
   ].filter(Boolean);
 
   const tagChips = tags
@@ -5926,8 +5122,8 @@ Rules:
 
   const infoRows = [
     ["Movie Name", movieName],
-    ["Language", "Odia"],
-    ["Industry", "Ollywood"],
+    ["Language", "Hindi"],
+    ["Industry", "Bollywood"],
     ["Genre", genre],
     releaseDateFmt ? ["Release Date", releaseDateFmt] : null,
     directorName ? ["Director", directorName] : null,
@@ -6010,32 +5206,32 @@ Rules:
   // Day-stage AI system prompt — varies editorial persona + bans AI clichés
   const getDayStageSystemPrompt = (() => {
     const _ts = new Set(dayTags);
-    const _anti = `Forbidden phrases — never write: "it is worth noting", "it is important to note", "needless to say", "in conclusion", "in summary", "it goes without saying", "delve into", "dive deep", "leverage", "in the realm of", "as we know", "at the end of the day". Never start two consecutive sentences with the same word. Avoid passive constructions such as "it has been observed" or "it can be seen". Every paragraph must open with something other than the film title. Mix short punchy sentences with longer analytical ones. Reference specific Odia cities (Bhubaneswar, Cuttack, Sambalpur, Berhampur, Rourkela) when discussing audience patterns. Write as a journalist who personally tracked the footfalls — not someone reading a spreadsheet.`;
+    const _anti = `Forbidden phrases — never write: "it is worth noting", "it is important to note", "needless to say", "in conclusion", "in summary", "it goes without saying", "delve into", "dive deep", "leverage", "in the realm of", "as we know", "at the end of the day". Never start two consecutive sentences with the same word. Avoid passive constructions such as "it has been observed" or "it can be seen". Every paragraph must open with something other than the film title. Mix short punchy sentences with longer analytical ones. Reference specific Hindi cities (Bhubaneswar, Cuttack, Sambalpur, Berhampur, Rourkela) when discussing audience patterns. Write as a journalist who personally tracked the footfalls — not someone reading a spreadsheet.`;
     if (actualDay === 1)
-      return `You are a senior Odia entertainment journalist writing the Opening Day box office report for Ollypedia — the most-read article in any film's box office series. Write with the energy of a reporter who just returned from the cinema hall. Thousands of Odia cinema fans want to know if this film delivered on opening day. Your writing must feel human, warm, and editorially authoritative. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
+      return `You are a senior Hindi entertainment journalist writing the Opening Day box office report for The Cinema Verse — the most-read article in any film's box office series. Write with the energy of a reporter who just returned from the cinema hall. Thousands of Hindi cinema fans want to know if this film delivered on opening day. Your writing must feel human, warm, and editorially authoritative. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
     if (actualDay <= 3 || _ts.has("opening-weekend"))
-      return `You are a senior Odia film trade analyst writing the Opening Weekend verdict for Ollypedia. Think like someone who personally monitored footfalls at cinemas across Bhubaneswar, Cuttack, and Sambalpur this weekend. Opening weekend numbers decide how exhibitors treat this film in the weeks ahead — write with that commercial urgency and insider intelligence. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
+      return `You are a senior Hindi film trade analyst writing the Opening Weekend verdict for The Cinema Verse. Think like someone who personally monitored footfalls at cinemas across Bhubaneswar, Cuttack, and Sambalpur this weekend. Opening weekend numbers decide how exhibitors treat this film in the weeks ahead — write with that commercial urgency and insider intelligence. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
     if (actualDay === 7 || _ts.has("first-week-closing"))
-      return `You are writing the definitive First Week closing verdict for Ollypedia. This is a considered editorial, not a collection note — give your honest, nuanced professional assessment of what week-one performance means for the filmmakers, the cast, and Odia cinema broadly. Write it with the weight it deserves. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
+      return `You are writing the definitive First Week closing verdict for The Cinema Verse. This is a considered editorial, not a collection note — give your honest, nuanced professional assessment of what week-one performance means for the filmmakers, the cast, and Hindi cinema broadly. Write it with the weight it deserves. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
     if (actualDay <= 14 || _ts.has("second-week-closing"))
-      return `You are a film trade journalist writing the second-week box office analysis for Ollypedia. The opening buzz has settled — this is about whether the film has genuine audience legs. Compare the week-two trend to week-one with real editorial judgment. Your reader is a sophisticated Odia cinema follower who will instantly spot generic filler. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
+      return `You are a film trade journalist writing the second-week box office analysis for The Cinema Verse. The opening buzz has settled — this is about whether the film has genuine audience legs. Compare the week-two trend to week-one with real editorial judgment. Your reader is a sophisticated Hindi cinema follower who will instantly spot generic filler. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
     if (_ts.has("golden-run"))
-      return `You are covering a historic moment in Odia cinema — a film crossing 50 days in theatres. Write with the gravitas this achievement deserves. This is a landmark editorial piece, not a daily collection note, and it will be widely shared and cited. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
+      return `You are covering a historic moment in Hindi cinema — a film crossing 50 days in theatres. Write with the gravitas this achievement deserves. This is a landmark editorial piece, not a daily collection note, and it will be widely shared and cited. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
     if (_ts.has("silver-jubilee-run") || _ts.has("extended-run") || actualDay >= 15)
-      return `You are writing about an Odia film that has defied industry expectations and is still drawing audiences weeks into its run. Write with genuine editorial admiration for its staying power — sustained theatrical runs are rare in Ollywood and deserve analysis that goes beyond day-on-day number comparisons. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
-    return `You are a senior Odia entertainment journalist writing a box office update for Ollypedia. Write with the authority of someone who deeply understands both the commercial mechanics and cultural significance of Odia cinema. Every sentence must earn its place — no filler, no obvious observations, no AI-pattern phrasing. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
+      return `You are writing about an Hindi film that has defied industry expectations and is still drawing audiences weeks into its run. Write with genuine editorial admiration for its staying power — sustained theatrical runs are rare in Bollywood and deserve analysis that goes beyond day-on-day number comparisons. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
+    return `You are a senior Hindi entertainment journalist writing a box office update for The Cinema Verse. Write with the authority of someone who deeply understands both the commercial mechanics and cultural significance of Hindi cinema. Every sentence must earn its place — no filler, no obvious observations, no AI-pattern phrasing. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
   })();
 
   // Day-stage H2 headings — 8 distinct ranges so no two day-stage blogs share headings
   const headings = (() => {
     const _ts = new Set(dayTags);
     if (actualDay === 1) return {
-      boxOfficeAnalysis: `Opening Day at the Odia Box Office`,
+      boxOfficeAnalysis: `Opening Day at the Hindi Box Office`,
       weekendWeekday: `Day 1 Footfalls — What the Numbers Signal`,
       audienceResponse: `First Impressions — Audience Reaction on Opening Day`,
       occupancy: `Theatre Occupancy on Opening Day`,
       performance: `Opening Day Performance in Context`,
-      industryImpact: `What This Opening Means for Ollywood`,
+      industryImpact: `What This Opening Means for Bollywood`,
       outlook: `Heading Into the Weekend — The Week Ahead`,
       verdict: `Opening Day Verdict`,
     };
@@ -6045,7 +5241,7 @@ Rules:
       audienceResponse: `Opening Weekend Audience Buzz`,
       occupancy: `Weekend Occupancy Across Odisha`,
       performance: `Opening Weekend in Numbers`,
-      industryImpact: `What This Opening Weekend Signals for Odia Cinema`,
+      industryImpact: `What This Opening Weekend Signals for Hindi Cinema`,
       outlook: `Heading Into the Weekdays`,
       verdict: `Opening Weekend Verdict`,
     };
@@ -6055,7 +5251,7 @@ Rules:
       audienceResponse: `Word of Mouth — What's Driving Tickets Midweek`,
       occupancy: `Weekday Occupancy Trends`,
       performance: `Weekday Performance Assessment`,
-      industryImpact: `What the Weekday Hold Tells the Odia Film Trade`,
+      industryImpact: `What the Weekday Hold Tells the Hindi Film Trade`,
       outlook: `Approaching the First Week Close`,
       verdict: `Weekday Hold Verdict`,
     };
@@ -6065,7 +5261,7 @@ Rules:
       audienceResponse: `One Week of Audience Reaction — The Honest Picture`,
       occupancy: `Week-One Occupancy — How Full Were Odisha's Halls?`,
       performance: `First Week Performance — A Complete Breakdown`,
-      industryImpact: `What ${movieName}'s First Week Means for Odia Cinema`,
+      industryImpact: `What ${movieName}'s First Week Means for Hindi Cinema`,
       outlook: `Second Week Outlook — Will the Momentum Hold?`,
       verdict: `First Week Closing Verdict`,
     };
@@ -6075,7 +5271,7 @@ Rules:
       audienceResponse: `Who's Still Watching? The Second-Week Audience Profile`,
       occupancy: `Second Week Occupancy Across Odisha`,
       performance: `Week Two vs Week One — The Numbers`,
-      industryImpact: `Second Week Signals for the Odia Film Trade`,
+      industryImpact: `Second Week Signals for the Hindi Film Trade`,
       outlook: `Third Week and the Lifetime Collection Path`,
       verdict: `Second Week Verdict`,
     };
@@ -6084,8 +5280,8 @@ Rules:
       weekendWeekday: `Three Weekends In — The Pattern That Has Emerged`,
       audienceResponse: `Loyal Audiences — Who Is Still Filling the Seats`,
       occupancy: `Third Week Occupancy — The Long Tail`,
-      performance: `Three Weeks at the Odia Box Office`,
-      industryImpact: `What a Three-Week Run Tells Ollywood`,
+      performance: `Three Weeks at the Hindi Box Office`,
+      industryImpact: `What a Three-Week Run Tells Bollywood`,
       outlook: `Lifetime Collection Forecast`,
       verdict: `Third Week Verdict`,
     };
@@ -6094,8 +5290,8 @@ Rules:
       weekendWeekday: `Weekend vs Weekday Deep in the Run`,
       audienceResponse: `The Repeat Viewer Effect — A Month In`,
       occupancy: `Late-Run Occupancy — Single Screens Leading the Way`,
-      performance: `Four Weeks at the Odia Box Office`,
-      industryImpact: `An Extended Run and Its Significance for Ollywood`,
+      performance: `Four Weeks at the Hindi Box Office`,
+      industryImpact: `An Extended Run and Its Significance for Bollywood`,
       outlook: `The Final Stretch of the Theatrical Run`,
       verdict: `Extended Run Verdict`,
     };
@@ -6105,7 +5301,7 @@ Rules:
       audienceResponse: `A Devoted Audience — The Community Around This Film`,
       occupancy: `Long-Run Occupancy — A Different Kind of Success`,
       performance: `A Remarkable Theatrical Run, by the Numbers`,
-      industryImpact: `What ${movieName}'s Run Teaches Odia Cinema`,
+      industryImpact: `What ${movieName}'s Run Teaches Hindi Cinema`,
       outlook: `Legacy Collection and What Lies Ahead`,
       verdict: `Long-Run Theatrical Verdict`,
     };
@@ -6116,20 +5312,20 @@ Rules:
     const _ts = new Set(dayTags);
     const _f = `${movieName}${year ? ` (${year})` : ""}`;
     if (actualDay === 1)
-      return `${_f} opens at the Odia box office! Day 1 collection: ${dayNet} net. Opening day analysis, audience reaction, and first impressions on Ollypedia.`.slice(0, 160);
+      return `${_f} opens at the Hindi box office! Day 1 collection: ${dayNet} net. Opening day analysis, audience reaction, and first impressions on The Cinema Verse.`.slice(0, 160);
     if (actualDay <= 3 || _ts.has("opening-weekend"))
-      return `${_f} Opening Weekend: ${totalNetStr} net over ${actualDay} days. Day-wise breakdown, occupancy, and audience verdict from the Odia box office on Ollypedia.`.slice(0, 160);
+      return `${_f} Opening Weekend: ${totalNetStr} net over ${actualDay} days. Day-wise breakdown, occupancy, and audience verdict from the Hindi box office on The Cinema Verse.`.slice(0, 160);
     if (actualDay >= 4 && actualDay <= 6)
-      return `${_f} Day ${actualDay}: ${totalNetStr} total net. Weekday hold analysis, word-of-mouth verdict, and box office performance on Ollypedia.`.slice(0, 160);
+      return `${_f} Day ${actualDay}: ${totalNetStr} total net. Weekday hold analysis, word-of-mouth verdict, and box office performance on The Cinema Verse.`.slice(0, 160);
     if (actualDay === 7 || _ts.has("first-week-closing"))
-      return `${_f} First Week Verdict: ${totalNetStr} net in 7 days. Complete day-wise breakdown, first week analysis, and Week 2 outlook on Ollypedia.`.slice(0, 160);
+      return `${_f} First Week Verdict: ${totalNetStr} net in 7 days. Complete day-wise breakdown, first week analysis, and Week 2 outlook on The Cinema Verse.`.slice(0, 160);
     if (actualDay <= 14)
-      return `${_f} enters Week 2 with ${totalNetStr} cumulative net. Week-on-week analysis and Odia box office verdict on Ollypedia.`.slice(0, 160);
+      return `${_f} enters Week 2 with ${totalNetStr} cumulative net. Week-on-week analysis and Hindi box office verdict on The Cinema Verse.`.slice(0, 160);
     if (_ts.has("silver-jubilee-run"))
-      return `${_f} Silver Jubilee Run — 25 days in theatres! Total ${totalNetStr} net. Extended run analysis and longevity report on Ollypedia.`.slice(0, 160);
+      return `${_f} Silver Jubilee Run — 25 days in theatres! Total ${totalNetStr} net. Extended run analysis and longevity report on The Cinema Verse.`.slice(0, 160);
     if (_ts.has("golden-run"))
-      return `${_f} Golden Jubilee — 50 days in theatres! Total ${totalNetStr} net. Historic theatrical run landmark report on Ollypedia.`.slice(0, 160);
-    return `${_f} Day ${actualDay}: ${totalNetStr} net total at the Odia box office. Day-wise breakdown, audience analysis, and performance verdict on Ollypedia.`.slice(0, 160);
+      return `${_f} Golden Jubilee — 50 days in theatres! Total ${totalNetStr} net. Historic theatrical run landmark report on The Cinema Verse.`.slice(0, 160);
+    return `${_f} Day ${actualDay}: ${totalNetStr} net total at the Hindi box office. Day-wise breakdown, audience analysis, and performance verdict on The Cinema Verse.`.slice(0, 160);
   })();
 
   // Callout box variables (day-stage specific emoji, label, body)
@@ -6165,8 +5361,8 @@ Rules:
     if (actualDay <= 14)
       return `The opening buzz has settled. <strong style="color:#fff;">${movieName}</strong> carries <strong style="color:#c9973a;">${totalNetStr} net</strong> into its second week. Now the real test begins.`;
     if (_ts.has("silver-jubilee-run") || _ts.has("golden-run"))
-      return `Day ${actualDay}, and <strong style="color:#fff;">${movieName}</strong> is still running in Odia theatres. Cumulative: <strong style="color:#c9973a;">${totalNetStr} net</strong> and <strong style="color:#7ec8e3;">${totalGrossStr} gross</strong>.`;
-    return `<strong style="color:#fff;">${movieName}</strong> has collected an estimated <strong style="color:#c9973a;">${totalNetStr} net</strong> and <strong style="color:#7ec8e3;">${totalGrossStr} gross</strong> after <strong style="color:#fff;">${actualDay} day${actualDay !== 1 ? "s" : ""}</strong> in theatres.${totalNet >= 1_00_00_000 ? ` The film has crossed the <strong style="color:#c9973a;">&#8377;${(totalNet / 1_00_00_000).toFixed(0)} Cr mark</strong> at the Odia box office.` : ""}`;
+      return `Day ${actualDay}, and <strong style="color:#fff;">${movieName}</strong> is still running in Hindi theatres. Cumulative: <strong style="color:#c9973a;">${totalNetStr} net</strong> and <strong style="color:#7ec8e3;">${totalGrossStr} gross</strong>.`;
+    return `<strong style="color:#fff;">${movieName}</strong> has collected an estimated <strong style="color:#c9973a;">${totalNetStr} net</strong> and <strong style="color:#7ec8e3;">${totalGrossStr} gross</strong> after <strong style="color:#fff;">${actualDay} day${actualDay !== 1 ? "s" : ""}</strong> in theatres.${totalNet >= 1_00_00_000 ? ` The film has crossed the <strong style="color:#c9973a;">&#8377;${(totalNet / 1_00_00_000).toFixed(0)} Cr mark</strong> at the Hindi box office.` : ""}`;
   })();
 
   // Day Hold % mini-card (Days 4–14 only, requires Day 1 data)
@@ -6183,7 +5379,7 @@ Rules:
     const _hNote = _holdPct >= 70
       ? "Strong hold — word-of-mouth is carrying this film effectively."
       : _holdPct >= 45
-        ? "Healthy hold — within the expected range for well-received Odia releases."
+        ? "Healthy hold — within the expected range for well-received Hindi releases."
         : "Standard midweek drop — footfalls settling after the opening rush.";
     return `<div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:16px 20px;margin-bottom:22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
   <div style="text-align:center;min-width:72px;">
@@ -6231,7 +5427,7 @@ Rules:
       <div style="font-size:0.7rem;color:#666;">vs Day 1</div>
     </div>
   </div>
-  <p style="color:#888;font-size:0.82rem;line-height:1.7;margin:0;">A Day 7 hold of ${_hp}% against opening day is ${_hp >= 55 ? "solid for an Odia release — this film has genuine legs heading into Week 2" : _hp >= 35 ? "within the normal range for Odia theatrical runs at this stage" : "a signal that Week 2 will depend heavily on fresh competition and screen availability"}.</p>
+  <p style="color:#888;font-size:0.82rem;line-height:1.7;margin:0;">A Day 7 hold of ${_hp}% against opening day is ${_hp >= 55 ? "solid for an Hindi release — this film has genuine legs heading into Week 2" : _hp >= 35 ? "within the normal range for Hindi theatrical runs at this stage" : "a signal that Week 2 will depend heavily on fresh competition and screen availability"}.</p>
 </section>`;
   })();
 
@@ -6265,8 +5461,8 @@ Rules:
     const _bg = _isGolden ? "#1a1500" : "#1a0a2e";
     const _bdr = _isGolden ? "#3a3000" : "#3a1a5a";
     const _note = _isGolden
-      ? `Crossing 50 days in Odia theatres is a feat achieved by very few films. ${movieName} has joined a select group of Ollywood releases with this kind of sustained audience loyalty.`
-      : `Reaching 25 days in Odia theatres separates content-driven successes from one-week wonders. ${movieName} has earned this milestone through genuine audience commitment.`;
+      ? `Crossing 50 days in Hindi theatres is a feat achieved by very few films. ${movieName} has joined a select group of Bollywood releases with this kind of sustained audience loyalty.`
+      : `Reaching 25 days in Hindi theatres separates content-driven successes from one-week wonders. ${movieName} has earned this milestone through genuine audience commitment.`;
     return `<div style="background:${_bg};border:1px solid ${_bdr};border-radius:12px;padding:18px 22px;margin-bottom:22px;">
   <div style="font-size:0.85rem;font-weight:800;color:${_color};margin-bottom:8px;">${_label}</div>
   <p style="color:#aaa;font-size:0.85rem;line-height:1.7;margin:0;">${_note}</p>
@@ -6295,7 +5491,7 @@ Rules:
   <div style="border-left:4px solid #c9973a;padding-left:16px;margin-bottom:16px;">
     ${toParagraphs(sections.finalVerdict)}
   </div>
-  <p style="color:#555;font-size:0.8rem;line-height:1.6;margin:0;"><em>* All collection figures are industry estimates sourced by Ollypedia Box Office Tracking via Ollypedia Tracker. Figures may differ from official studio numbers.</em></p>
+  <p style="color:#555;font-size:0.8rem;line-height:1.6;margin:0;"><em>* All collection figures are industry estimates sourced by The Cinema Verse Box Office Tracking via The Cinema Verse Tracker. Figures may differ from official studio numbers.</em></p>
 </section>`;
 
   const _weekOneTwoSec = sections.weekOneTwoComparison ? `<section style="${card}">
@@ -6349,15 +5545,15 @@ Rules:
   // ─────────────────────────────────────────────────────────────────────────
 
   const blogContent = `<!-- ════════════════════════════════════════════════════════════════
-  OLLYPEDIA SEO META — READ BY CMS
-  title:          ${movieName}${year ? ` (${year})` : ""} Day ${actualDay} box office collection and collected ${totalGrossStr} gross | Ollypedia
-  description:    ${movieName}${year ? ` (${year})` : ""} Day ${actualDay} box office collection: Collected ${totalNetStr} net and ${totalGrossStr} gross in ${actualDay} day${actualDay !== 1 ? "s" : ""}. Complete day-wise breakdown, audience response, performance analysis & predictions on Ollypedia.
+  cinemaverse SEO META — READ BY CMS
+  title:          ${movieName}${year ? ` (${year})` : ""} Day ${actualDay} box office collection and collected ${totalGrossStr} gross | The Cinema Verse
+  description:    ${movieName}${year ? ` (${year})` : ""} Day ${actualDay} box office collection: Collected ${totalNetStr} net and ${totalGrossStr} gross in ${actualDay} day${actualDay !== 1 ? "s" : ""}. Complete day-wise breakdown, audience response, performance analysis & predictions on The Cinema Verse.
   keywords:       ${keywordsStr}
   canonical:      ${SITE_URL}/blog/${blogSlug}
   robots:         index, follow
-  og:site_name:   Ollypedia
-  og:title:       ${movieName}${year ? ` (${year})` : ""} Day ${actualDay} box office collection and collected ${totalGrossStr} gross | Ollypedia
-  og:description: ${movieName} has collected ${totalNetStr} net and ${totalGrossStr} gross after ${actualDay} days. Full report on Ollypedia. Complete day-wise breakdown, audience response, performance analysis & predictions on Ollypedia.
+  og:site_name:   The Cinema Verse
+  og:title:       ${movieName}${year ? ` (${year})` : ""} Day ${actualDay} box office collection and collected ${totalGrossStr} gross | The Cinema Verse
+  og:description: ${movieName} has collected ${totalNetStr} net and ${totalGrossStr} gross after ${actualDay} days. Full report on The Cinema Verse. Complete day-wise breakdown, audience response, performance analysis & predictions on The Cinema Verse.
   og:url:         ${SITE_URL}/blog/${blogSlug}
   og:image:       ${movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || `${SITE_URL}/logo.png`}
   og:image:width: 1200
@@ -6366,13 +5562,13 @@ Rules:
   og:locale:      en_IN
   article:published_time: ${yesterdayStr}
   article:modified_time:  ${todayStr}
-  article:author: Ollypedia Team
+  article:author: The Cinema Verse Desk
   article:section: Box Office
   twitter:card:   summary_large_image
-  twitter:site:   @OllypediaIn
-  twitter:creator: @OllypediaIn
-  twitter:title:  ${movieName}${year ? ` (${year})` : ""} Day ${actualDay} box office collection | Ollypedia
-  twitter:description: ${movieName} Day ${actualDay} — Net ${dayNet}, Total ${totalNetStr}. Full breakdown on Ollypedia.
+  twitter:site:   @The Cinema VerseIn
+  twitter:creator: @The Cinema VerseIn
+  twitter:title:  ${movieName}${year ? ` (${year})` : ""} Day ${actualDay} box office collection | The Cinema Verse
+  twitter:description: ${movieName} Day ${actualDay} — Net ${dayNet}, Total ${totalNetStr}. Full breakdown on The Cinema Verse.
   twitter:image:  ${movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || `${SITE_URL}/logo.png`}
   twitter:image:alt: ${movieName} Box Office Collection
 ════════════════════════════════════════════════════════════════ -->
@@ -6392,17 +5588,17 @@ Rules:
       "dateModified":  "${todayStr}",
       "inLanguage": "en",
       "author": [
-        { "@type": "Person", "name": "Ollypedia Team", "url": "${SITE_URL}/about" },
-        { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}" }
+        { "@type": "Person", "name": "The Cinema Verse Desk", "url": "${SITE_URL}/about" },
+        { "@type": "Organization", "name": "The Cinema Verse", "url": "${SITE_URL}" }
       ],
-      "publisher": { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}",
+      "publisher": { "@type": "Organization", "name": "The Cinema Verse", "url": "${SITE_URL}",
                      "logo": { "@type": "ImageObject", "url": "${SITE_URL}/logo.png" } },
       "mainEntityOfPage": { "@type": "WebPage", "@id": "${SITE_URL}/blog/${blogSlug}" },
       "about": {
         "@type": "Movie",
         "name":       "${movieName}",
         "url": "${SITE_URL}${boxOfficeUrl}",
-        "inLanguage": "Odia",
+        "inLanguage": "Hindi",
         "genre":      "${genre}"${releaseDateFmt ? `,
         "datePublished": "${releaseDateFmt}"` : ""}${directorName ? `,
         "director": { "@type": "Person", "name": "${directorName}" }` : ""}${producerName ? `,
@@ -6427,7 +5623,7 @@ Rules:
           "name": "What is the total box office collection of ${movieName}${year ? ` (${year})` : ""}?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "As of Day ${actualDay}, ${movieName} has collected a total of ${totalNetStr} net and ${totalGrossStr} gross at the Odia box office. These are industry estimates updated daily on Ollypedia."
+            "text": "As of Day ${actualDay}, ${movieName} has collected a total of ${totalNetStr} net and ${totalGrossStr} gross at the Hindi box office. These are industry estimates updated daily on The Cinema Verse."
           }
         },
         {
@@ -6443,7 +5639,7 @@ Rules:
           "name": "Who directed ${movieName}?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "${movieName} is directed by ${directorName}.${producerName ? ` The film is produced by ${producerName}.` : ""} It is an Odia language film released in ${year || new Date().getFullYear()} under the Ollywood banner."
+            "text": "${movieName} is directed by ${directorName}.${producerName ? ` The film is produced by ${producerName}.` : ""} It is an Hindi language film released in ${year || new Date().getFullYear()} under the Bollywood banner."
           }
         }` : ""}${leadActors.length ? `,
         {
@@ -6459,7 +5655,7 @@ Rules:
           "name": "Is ${movieName} a hit or flop at the box office?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Based on ${actualDay} day${actualDay !== 1 ? "s" : ""} of data, ${movieName} has collected ${totalNetStr} net at the Odia box office.${movie.budget ? ` The film had an estimated budget of ${movie.budget}.` : ""} Ollypedia updates collection figures daily based on industry trade estimates."
+            "text": "Based on ${actualDay} day${actualDay !== 1 ? "s" : ""} of data, ${movieName} has collected ${totalNetStr} net at the Hindi box office.${movie.budget ? ` The film had an estimated budget of ${movie.budget}.` : ""} The Cinema Verse updates collection figures daily based on industry trade estimates."
           }
         }
       ]
@@ -6823,8 +6019,8 @@ ${editorialSectionsHtml}
     <p style="color:#aaa;font-size:0.9rem;line-height:1.8;margin:0;">
       As of Day ${actualDay}, <strong style="color:#fff;">${movieName}</strong> has collected a total of
       <strong style="color:#c9973a;">${totalNetStr} net</strong> and
-      <strong style="color:#7ec8e3;">${totalGrossStr} gross</strong> at the Odia box office.
-      These are industry estimates and figures are updated daily on Ollypedia.
+      <strong style="color:#7ec8e3;">${totalGrossStr} gross</strong> at the Hindi box office.
+      These are industry estimates and figures are updated daily on The Cinema Verse.
     </p>
   </div>
 
@@ -6846,7 +6042,7 @@ ${editorialSectionsHtml}
     <p style="color:#aaa;font-size:0.9rem;line-height:1.8;margin:0;">
       <strong style="color:#fff;">${movieName}</strong> is directed by <strong style="color:#ddd;">${directorName}</strong>.
       ${producerName ? `The film is produced by <strong style="color:#ddd;">${producerName}</strong>.` : ""}
-      It is an Odia language film released in ${year || new Date().getFullYear()} under the Ollywood banner.
+      It is an Hindi language film released in ${year || new Date().getFullYear()} under the Bollywood banner.
     </p>
   </div>` : ""}
 
@@ -6864,9 +6060,9 @@ ${editorialSectionsHtml}
     <h3 style="font-size:0.93rem;font-weight:700;color:#ddd;margin:0 0 8px;">Is ${movieName} a hit or flop at the box office?</h3>
     <p style="color:#aaa;font-size:0.9rem;line-height:1.8;margin:0;">
       Based on ${actualDay} day${actualDay !== 1 ? "s" : ""} of data, <strong style="color:#fff;">${movieName}</strong> has collected
-      <strong style="color:#c9973a;">${totalNetStr} net</strong> at the Odia box office.
+      <strong style="color:#c9973a;">${totalNetStr} net</strong> at the Hindi box office.
       ${movie.budget ? `The film had an estimated budget of <strong style="color:#ddd;">${movie.budget}</strong>.` : ""}
-      A detailed performance analysis is available above. Ollypedia updates collection figures daily based on industry trade estimates.
+      A detailed performance analysis is available above. The Cinema Verse updates collection figures daily based on industry trade estimates.
     </p>
   </div>
 </section>
@@ -6888,29 +6084,29 @@ ${editorialSectionsHtml}
     <a href="/box-office" style="display:flex;align-items:center;gap:10px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;text-decoration:none;">
       <span style="font-size:1.3rem;flex-shrink:0;">🎬</span>
       <div>
-        <div style="font-size:0.82rem;font-weight:700;color:#ddd;line-height:1.4;">Ollywood Box Office Collection</div>
-        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Latest Odia movie collections</div>
+        <div style="font-size:0.82rem;font-weight:700;color:#ddd;line-height:1.4;">Bollywood Box Office Collection</div>
+        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Latest Hindi movie collections</div>
       </div>
     </a>
     <a href="/movie/${movieSlug}" style="display:flex;align-items:center;gap:10px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;text-decoration:none;">
       <span style="font-size:1.3rem;flex-shrink:0;">🎭</span>
       <div>
         <div style="font-size:0.82rem;font-weight:700;color:#ddd;line-height:1.4;">${movieName} — Cast, Story & Details</div>
-        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Full movie info on Ollypedia</div>
+        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Full movie info on The Cinema Verse</div>
       </div>
     </a>
     ${directorCastId ? `<a href="/cast/${directorCastId}" style="display:flex;align-items:center;gap:10px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;text-decoration:none;">
       <span style="font-size:1.3rem;flex-shrink:0;">🎥</span>
       <div>
         <div style="font-size:0.82rem;font-weight:700;color:#ddd;line-height:1.4;">${directorName} — Profile</div>
-        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Director filmography on Ollypedia</div>
+        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Director filmography on The Cinema Verse</div>
       </div>
     </a>` : ""}
     ${leadActorLinks.slice(0, 2).map(a => `<a href="/cast/${a.castId}" style="display:flex;align-items:center;gap:10px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;text-decoration:none;">
       <span style="font-size:1.3rem;flex-shrink:0;">⭐</span>
       <div>
         <div style="font-size:0.82rem;font-weight:700;color:#ddd;line-height:1.4;">${a.name} — Profile</div>
-        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Filmography on Ollypedia</div>
+        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Filmography on The Cinema Verse</div>
       </div>
     </a>`).join("\n    ")}
     ${movie.streamingOn ? `<a href="/blog/${buildOttSlug(movie)}" style="display:flex;align-items:center;gap:10px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;text-decoration:none;">
@@ -6924,7 +6120,7 @@ ${editorialSectionsHtml}
       <span style="font-size:1.3rem;flex-shrink:0;">📰</span>
       <div>
         <div style="font-size:0.82rem;font-weight:700;color:#ddd;line-height:1.4;">More Box Office Reports</div>
-        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Latest Ollywood collection news</div>
+        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Latest Bollywood collection news</div>
       </div>
     </a>
     <a href="/blog?category=Box%20Office&movie=${encMovieName}"
@@ -6932,7 +6128,7 @@ ${editorialSectionsHtml}
       <span style="font-size:1.3rem;flex-shrink:0;">📅</span>
       <div>
         <div style="font-size:0.82rem;font-weight:700;color:#ddd;line-height:1.4;">${movieName} — All Daily Box Office Reports</div>
-        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Every day tracked on Ollypedia</div>
+        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Every day tracked on The Cinema Verse</div>
       </div>
     </a>
     ${actualDay > 1 ? `<a href="/blog/${prevSlug}"
@@ -6967,7 +6163,7 @@ ${editorialSectionsHtml}
 <!-- FOOTER -->
 <div style="border-top:1px solid #1c1c1c;padding-top:16px;margin-top:4px;">
   <p style="color:#444;font-size:0.8rem;line-height:1.8;margin:0;">
-    <strong style="color:#555;">Source:</strong> <a href="${cfg.sacnilkUrl}" target="_blank" rel="nofollow noreferrer" style="color:#555;">Sacnilk</a> via Ollypedia Box Office Tracking &nbsp;·&nbsp;
+    <strong style="color:#555;">Source:</strong> <a href="${cfg.sacnilkUrl}" target="_blank" rel="nofollow noreferrer" style="color:#555;">Sacnilk</a> via The Cinema Verse Box Office Tracking &nbsp;·&nbsp;
     <strong style="color:#555;">Last Updated:</strong>
     <time datetime="${todayStr}" style="color:#444;">Day ${actualDay}, ${nowIST.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</time>
     &nbsp;·&nbsp; <a href="${boxOfficeUrl}" style="color:#c9973a;text-decoration:none;">View full collection report →</a><br>
@@ -6987,7 +6183,7 @@ ${editorialSectionsHtml}
   // Silver/Golden Jubilee) are generated by triggerEventBlogs() below.
   const shouldPublishDailyBlog = (day) => day === 1 || day === 2 || day === 3;
 
-  const seoTitle = `${movieName}${year ? ` (${year})` : ""} Day ${actualDay} box office collection and collected ${totalGrossStr} gross | Ollypedia`;
+  const seoTitle = `${movieName}${year ? ` (${year})` : ""} Day ${actualDay} box office collection and collected ${totalGrossStr} gross | The Cinema Verse`;
   const seoDesc = seoDescDynamic;
   const excerpt = sections.introParagraph ||
     `${movieName} Day ${actualDay} box office collection: Net ${dayNet}, Gross ${dayGross}. Total ${totalNetStr} net in ${sortedDays.length} days.`;
@@ -7003,7 +6199,7 @@ ${editorialSectionsHtml}
       content: blogContent,
       category: "Box Office",
       tags: [
-        movieName, "Box Office", "Odia Cinema", "Ollywood",
+        movieName, "Box Office", "Hindi Cinema", "Bollywood",
         `Day ${actualDay}`, year ? String(year) : null,
         directorName, producerName, musicDirector,
         ...leadActors, ...leadActresses,
@@ -7012,7 +6208,7 @@ ${editorialSectionsHtml}
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId: movie._id,
       movieTitle: movieName,
-      author: "Ollypedia Team",
+      author: "The Cinema Verse Desk",
       published: true,  // always true — shows in blog UI listing
       indexed: true,    // Days 1–3 are always high-value, always indexed
       featured: false,
@@ -7101,7 +6297,7 @@ ${editorialSectionsHtml}
   // ─────────────────────────────────────────────────────────────────────────
 
   // try {
-  //   const blogFullUrl = `https://ollypedia.in/blog/${finalSlug}`;
+  //   const blogFullUrl = `https://thecinemaverse.com/blog/${finalSlug}`;
   //   await autoIndexUrl(blogFullUrl);
   // } catch { /* non-fatal */ }
 
@@ -7190,7 +6386,7 @@ function buildMilestoneSlug(movie, milestoneLabel) {
 }
 
 function buildComparisonSlug(movie) {
-  return trimSlugToLength(`${movie.slug}-first-week-comparison-odia-box-office`, 80);
+  return trimSlugToLength(`${movie.slug}-first-week-comparison-hindi-box-office`, 80);
 }
 
 function getFirstWeekTitle(movieTitle, totalNetStr, seed) {
@@ -7199,7 +6395,7 @@ function getFirstWeekTitle(movieTitle, totalNetStr, seed) {
     `${movieTitle} Completes First Week at Box Office — ${totalNetStr} Net Collection Report`,
     `${movieTitle} 7-Day Box Office: First Week Performance Analysis & Verdict`,
     `${movieTitle} One Week Box Office Review: Opening to Day 7 Collection Breakdown`,
-    `${movieTitle} First Week at Ollywood Box Office: Complete Day-Wise Collection Report`
+    `${movieTitle} First Week at Bollywood Box Office: Complete Day-Wise Collection Report`
   ];
   return templates[seed % templates.length];
 }
@@ -7210,7 +6406,7 @@ function getWeekendTitle(movieTitle, weekendLabel, totalNetStr, seed) {
     `${movieTitle} Box Office: Strong ${weekendLabel} Collections and Verdict`,
     `${movieTitle} ${weekendLabel} Analysis: Theatrical Performance & Highlights`,
     `${movieTitle} Hits New Heights: Complete ${weekendLabel} Box Office Breakdown`,
-    `${movieTitle} ${weekendLabel} at Ollywood Box Office: Collection Report`
+    `${movieTitle} ${weekendLabel} at Bollywood Box Office: Collection Report`
   ];
   return templates[seed % templates.length];
 }
@@ -7219,8 +6415,8 @@ function getMilestoneTitle(movieTitle, milestoneClean, seed) {
   const templates = [
     `${movieTitle} Crosses ₹${milestoneClean} at Box Office — Collection Milestone Report`,
     `${movieTitle} Box Office: ₹${milestoneClean} Milestone Achieved! Complete Details`,
-    `${movieTitle} Hits ₹${milestoneClean} Net Collection — Ollywood Box Office Milestone`,
-    `${movieTitle} Surpasses ₹${milestoneClean} Net at Odia Box Office`,
+    `${movieTitle} Hits ₹${milestoneClean} Net Collection — Bollywood Box Office Milestone`,
+    `${movieTitle} Surpasses ₹${milestoneClean} Net at Hindi Box Office`,
     `${movieTitle} Collected ₹${milestoneClean} and Counting — Milestone Box Office Report`
   ];
   return templates[seed % templates.length];
@@ -7228,11 +6424,11 @@ function getMilestoneTitle(movieTitle, milestoneClean, seed) {
 
 function getComparisonTitle(movieTitle, seed) {
   const templates = [
-    `${movieTitle} vs Other Odia Hits: First Week Box Office Comparison`,
-    `${movieTitle} First Week Comparison Report: How it Ranks Against Recent Odia Releases`,
+    `${movieTitle} vs Other Hindi Hits: First Week Box Office Comparison`,
+    `${movieTitle} First Week Comparison Report: How it Ranks Against Recent Hindi Releases`,
     `${movieTitle} Completes Week 1: First Week Box Office Clash & Comparative Standings`,
-    `${movieTitle} 7-Day Box Office Battle: Head-to-Head Comparison with Odia Blockbusters`,
-    `${movieTitle} vs Recent Ollywood Releases: First Week Box Office Showdown`
+    `${movieTitle} 7-Day Box Office Battle: Head-to-Head Comparison with Hindi Blockbusters`,
+    `${movieTitle} vs Recent Bollywood Releases: First Week Box Office Showdown`
   ];
   return templates[seed % templates.length];
 }
@@ -7253,23 +6449,23 @@ async function generateFirstWeekAI(movie, days, totalNet) {
   const dayDataStr = days.slice(0, 7).map(d => `Day ${d.day}: ${d.net || "N/A"}`).join("; ");
 
   const fallbacks = {
-    metaDescription: `${movieName} First Week Box Office: Collected ${totalNetStr} net in 7 days at the Odia box office. Complete day-wise breakdown and analysis inside.`,
+    metaDescription: `${movieName} First Week Box Office: Collected ${totalNetStr} net in 7 days at the Hindi box office. Complete day-wise breakdown and analysis inside.`,
     headline: `${movieName} Completes First Week: ${totalNetStr} Net and a Theatrical Run Worth Celebrating`,
-    introParagraph: `${movieName}${year ? ` (${year})` : ""} has wrapped up its crucial first seven days at the Odia box office, scripting an encouraging commercial chapter for Ollywood. With a cumulative net collection of ${totalNetStr}, the film has demonstrated what consistent audience interest can do to a theatrical run when content resonates genuinely. From its opening-day collection of ${openingDayNet} to the quiet but steady Day 7 figure of ${day7Net}, the film's week-one arc has been one of measured, content-driven success that trade observers have noted with approval.`,
-    performanceOverview: `The opening three-day weekend — the most critical window for any new Odia release — gave ${movieName} a strong launchpad with a combined collection of ${openingWeekendStr}. Cinemas across Bhubaneswar, Cuttack, Sambalpur, Berhampur, and Rourkela reported healthy footfalls throughout Friday evening, Saturday, and Sunday, with Saturday emerging as the peak day as is typical for Odia theatrical releases. The film's opening weekend created organic buzz on social media and among cinema circuits — genuine audience enthusiasm translating directly into ticket sales and repeat screenings.`,
+    introParagraph: `${movieName}${year ? ` (${year})` : ""} has wrapped up its crucial first seven days at the Hindi box office, scripting an encouraging commercial chapter for Bollywood. With a cumulative net collection of ${totalNetStr}, the film has demonstrated what consistent audience interest can do to a theatrical run when content resonates genuinely. From its opening-day collection of ${openingDayNet} to the quiet but steady Day 7 figure of ${day7Net}, the film's week-one arc has been one of measured, content-driven success that trade observers have noted with approval.`,
+    performanceOverview: `The opening three-day weekend — the most critical window for any new Hindi release — gave ${movieName} a strong launchpad with a combined collection of ${openingWeekendStr}. Cinemas across Bhubaneswar, Cuttack, Sambalpur, Berhampur, and Rourkela reported healthy footfalls throughout Friday evening, Saturday, and Sunday, with Saturday emerging as the peak day as is typical for Hindi theatrical releases. The film's opening weekend created organic buzz on social media and among cinema circuits — genuine audience enthusiasm translating directly into ticket sales and repeat screenings.`,
     weekdayHoldAnalysis: `The real test for ${movieName} began from Day 4, when the promotional noise had settled and the film had to rely entirely on its own merit to draw audiences to theatre seats on working weekdays. The combined weekday collection of ${weekdayStr} from Days 4 through 6 reflects a healthy retention rate that would encourage distributors to maintain or even expand screen count into Week 2. Films that hold their weekday business at 55–65% of their opening day figure — which appears to be the case here — are the ones that ultimately cross meaningful milestones in their lifetime box office run.`,
-    audienceResponseSection: `Audience feedback for ${movieName} has been overwhelmingly positive across multiple platforms, from cinema exit polls to social media conversations and word-of-mouth in Odia communities. Viewers have particularly appreciated the film's narrative authenticity, performance quality, and production values. Morning and matinee shows, which typically remain underutilised for mid-budget Odia films, have reported improved occupancy, suggesting that the film's appeal is not limited to any single demographic or show-timing preference.`,
+    audienceResponseSection: `Audience feedback for ${movieName} has been overwhelmingly positive across multiple platforms, from cinema exit polls to social media conversations and word-of-mouth in Hindi communities. Viewers have particularly appreciated the film's narrative authenticity, performance quality, and production values. Morning and matinee shows, which typically remain underutilised for mid-budget Hindi films, have reported improved occupancy, suggesting that the film's appeal is not limited to any single demographic or show-timing preference.`,
     dayWiseParagraph: `The day-by-day collection trajectory for ${movieName} reads as follows: ${dayDataStr}. This pattern is characteristic of a content-driven success — a promising Day 1 to establish buzz, a Day 2 peak as weekend audiences flood theatres, a slightly softer Sunday, and then a gradual but controlled weekday descent that speaks to sustained interest. Day 7 completing the week on a solid note signals that the film still has a willing audience heading into Week 2.`,
-    week2OutlookSection: `With ${totalNetStr} secured after the first seven days, ${movieName} enters its second week from a commercially comfortable position. Industry insiders who track Odia box office patterns note that films earning at this pace in their first week typically add between 30% and 50% of their Week 1 total across the remaining weeks of their theatrical run, assuming competition from new releases doesn't dramatically erode screen count. The key variable is the second weekend — if the film posts numbers within 55–65% of its opening weekend, the trajectory toward a profitable full run remains intact.`,
-    conclusionParagraph: `In conclusion, the first-week chapter of ${movieName} at the Odia box office has been one that the filmmakers, cast, and entire production team can look back on with genuine pride. A net collection of ${totalNetStr} in seven days is not merely a commercial figure — it is an audience endorsement, a critical verdict delivered through the most democratic of all channels: the ticket window. As the film moves into its second week and beyond, the story of its theatrical journey will continue to unfold.`
+    week2OutlookSection: `With ${totalNetStr} secured after the first seven days, ${movieName} enters its second week from a commercially comfortable position. Industry insiders who track Hindi box office patterns note that films earning at this pace in their first week typically add between 30% and 50% of their Week 1 total across the remaining weeks of their theatrical run, assuming competition from new releases doesn't dramatically erode screen count. The key variable is the second weekend — if the film posts numbers within 55–65% of its opening weekend, the trajectory toward a profitable full run remains intact.`,
+    conclusionParagraph: `In conclusion, the first-week chapter of ${movieName} at the Hindi box office has been one that the filmmakers, cast, and entire production team can look back on with genuine pride. A net collection of ${totalNetStr} in seven days is not merely a commercial figure — it is an audience endorsement, a critical verdict delivered through the most democratic of all channels: the ticket window. As the film moves into its second week and beyond, the story of its theatrical journey will continue to unfold.`
   };
 
-  const systemPrompt = "You are a senior Odia cinema (Ollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for Ollypedia — Odisha's leading entertainment portal. Your writing style is warm, authoritative, and genuinely human — like a veteran film correspondent who deeply loves cinema. Avoid all AI writing patterns: no bullet-pointed sentences, no generic filler like 'it is worth noting' or 'needless to say'. Write with a real journalist's voice. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. Every value must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences, rich in specific data references, contextual storytelling, and editorial insight.";
-  const userPrompt = `Write a first week box office report for the Odia movie "${movieName}" (${year}).
+  const systemPrompt = "You are a senior Hindi cinema (Bollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse — Odisha's leading entertainment portal. Your writing style is warm, authoritative, and genuinely human — like a veteran film correspondent who deeply loves cinema. Avoid all AI writing patterns: no bullet-pointed sentences, no generic filler like 'it is worth noting' or 'needless to say'. Write with a real journalist's voice. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. Every value must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences, rich in specific data references, contextual storytelling, and editorial insight.";
+  const userPrompt = `Write a first week box office report for the Hindi movie "${movieName}" (${year}).
 Day-wise data: ${dayDataStr}.
 Opening day: ${openingDayNet}. Opening weekend (Days 1-3): ${openingWeekendStr}. Weekdays (Days 4-6): ${weekdayStr}. Day 7: ${day7Net}. Total Week 1 net: ${totalNetStr}.
 
-Write like a senior entertainment journalist who knows Odia cinema deeply. Reference the actual numbers throughout. Make every paragraph feel genuinely human and editorial, not AI-generated.
+Write like a senior entertainment journalist who knows Hindi cinema deeply. Reference the actual numbers throughout. Make every paragraph feel genuinely human and editorial, not AI-generated.
 
 Include the following JSON keys:
 - metaDescription (155–165 chars, include film name and total Week 1 figure)
@@ -7280,7 +6476,7 @@ Include the following JSON keys:
 - audienceResponseSection (audience demographic: families, youth, couples; show timing patterns; morning vs evening occupancy; social feedback; repeat viewership signals)
 - dayWiseParagraph (narrative analysis of day-by-day trend using actual data above; what the trajectory reveals about the film's connect)
 - week2OutlookSection (what Week 2 holds: screen count expectations, second weekend as key test, lifetime collection projection logic)
-- conclusionParagraph (editorial wrap-up: what ${totalNetStr} means for the filmmakers, the cast, and Odia cinema at large)`;
+- conclusionParagraph (editorial wrap-up: what ${totalNetStr} means for the filmmakers, the cast, and Hindi cinema at large)`;
 
   return callGroqStructured(
     systemPrompt,
@@ -7314,20 +6510,20 @@ async function generateWeekendAI(movie, days, weekendNum, totalNet) {
   }
 
   const fallbacks = {
-    metaDescription: `${movieName} ${weekendLabel} Box Office: ${weekendTotalStr} weekend collection, ${totalNetStr} cumulative. Full analysis of the ${wName.toLowerCase()} weekend at the Odia box office.`,
+    metaDescription: `${movieName} ${weekendLabel} Box Office: ${weekendTotalStr} weekend collection, ${totalNetStr} cumulative. Full analysis of the ${wName.toLowerCase()} weekend at the Hindi box office.`,
     headline: `${movieName} ${weekendLabel}: ${weekendTotalStr} Weekend Collection and What It Means`,
-    introParagraph: `${movieName}${year ? ` (${year})` : ""} has successfully navigated another crucial box office milestone with the completion of its ${weekendLabel.toLowerCase()} in Odia theatres. The three-day window brought in a combined collection of ${weekendTotalStr} (${weekendDataStr}), pushing the film's cumulative net total to ${totalNetStr}. Cinema halls across Odisha continued to see encouraging turnout, with audiences clearly not yet done with this particular cinematic experience — a fact that speaks volumes about the quality of content and the level of audience connection the film has managed to sustain.`,
+    introParagraph: `${movieName}${year ? ` (${year})` : ""} has successfully navigated another crucial box office milestone with the completion of its ${weekendLabel.toLowerCase()} in Hindi theatres. The three-day window brought in a combined collection of ${weekendTotalStr} (${weekendDataStr}), pushing the film's cumulative net total to ${totalNetStr}. Cinema halls across Odisha continued to see encouraging turnout, with audiences clearly not yet done with this particular cinematic experience — a fact that speaks volumes about the quality of content and the level of audience connection the film has managed to sustain.`,
     weekendBreakdownParagraph: `Breaking down the ${weekendLabel.toLowerCase()} day-by-day, the collection pattern tells an illuminating story about how ${movieName} is performing. ${weekendDataStr ? `The three-day breakdown reads: ${weekendDataStr}.` : ""} Saturday emerged as the strongest day of the weekend, driven by a combination of advance bookings and walk-in audiences drawn by strong word-of-mouth. Friday set a healthy base, while Sunday maintained a commendable hold — a pattern that trade observers associate with films that have genuine repeat viewing appeal.`,
-    occupancyTrendSection: `Occupancy levels during this weekend at major Odia cinema centres were encouraging across both the multiplex and single-screen segments. Major multiplexes in Bhubaneswar reported healthy evening and night show occupancy, while the price-sensitive single-screen market in districts like Khurda, Cuttack, Angul, and Sundargarh showed steady footfalls, particularly at the afternoon shows favoured by family audiences. The fact that occupancy held firm across these demographically different exhibition segments is a strong signal of the film's broad audience appeal.`,
+    occupancyTrendSection: `Occupancy levels during this weekend at major Hindi cinema centres were encouraging across both the multiplex and single-screen segments. Major multiplexes in Bhubaneswar reported healthy evening and night show occupancy, while the price-sensitive single-screen market in districts like Khurda, Cuttack, Angul, and Sundargarh showed steady footfalls, particularly at the afternoon shows favoured by family audiences. The fact that occupancy held firm across these demographically different exhibition segments is a strong signal of the film's broad audience appeal.`,
     audienceProfileSection: `The audience composition driving ${movieName}'s continued box office performance reveals a film that has successfully transcended its initial target demographic. Family groups have been a consistent presence, particularly at the 3 PM and 6 PM shows. Evening and late-night shows at multiplexes have attracted younger couples and friend groups, while morning shows in single-screen theatres have drawn a more mature, mixed demographic. This multi-demographic appeal is the hallmark of a commercially durable film.`,
-    holdAnalysisParagraph: `${weekendNum > 1 && prevWeekendStr ? `Placed in context against the previous weekend's total of ${prevWeekendStr}, this weekend's collection of ${weekendTotalStr} represents the film's continued audience draw.` : "The hold percentage during this weekend"} A healthy hold — particularly on Sunday — signals that word-of-mouth continues to work in the film's favour. Industry observers tracking Ollywood releases have noted that ${movieName}'s weekend retention is performing ahead of most releases of a similar scale from the past year.`,
-    industryContextSection: `Within the context of Odia cinema's theatrical landscape, ${movieName}'s ${weekendLabel.toLowerCase()} performance carries significant weight. The Ollywood industry has been navigating a post-OTT-disruption era where weekend holds have become increasingly difficult to sustain beyond the opening weekend. That ${movieName} is maintaining meaningful audience interest deep into its theatrical run is a positive signal for producers, distributors, and theatre owners alike — all of whom benefit when a film sustains strong collections over multiple weekends.`,
+    holdAnalysisParagraph: `${weekendNum > 1 && prevWeekendStr ? `Placed in context against the previous weekend's total of ${prevWeekendStr}, this weekend's collection of ${weekendTotalStr} represents the film's continued audience draw.` : "The hold percentage during this weekend"} A healthy hold — particularly on Sunday — signals that word-of-mouth continues to work in the film's favour. Industry observers tracking Bollywood releases have noted that ${movieName}'s weekend retention is performing ahead of most releases of a similar scale from the past year.`,
+    industryContextSection: `Within the context of Hindi cinema's theatrical landscape, ${movieName}'s ${weekendLabel.toLowerCase()} performance carries significant weight. The Bollywood industry has been navigating a post-OTT-disruption era where weekend holds have become increasingly difficult to sustain beyond the opening weekend. That ${movieName} is maintaining meaningful audience interest deep into its theatrical run is a positive signal for producers, distributors, and theatre owners alike — all of whom benefit when a film sustains strong collections over multiple weekends.`,
     weekdayOutlookSection: `As the film transitions from the ${weekendLabel.toLowerCase()} into the upcoming weekdays, the critical question is whether it can maintain a hold of 60–70% on Monday relative to its Friday number. If it manages that, the week's total addition could be substantial enough to make a meaningful difference to the lifetime collection. Screen availability and competition from any new releases will also play a pivotal role in determining how much breathing room ${movieName} gets to continue its impressive run.`,
-    conclusionParagraph: `The ${weekendLabel.toLowerCase()} has reaffirmed ${movieName}'s status as one of the standout Odia theatrical releases of the season. With a cumulative total of ${totalNetStr} and audience enthusiasm showing no signs of dramatic decline, the film remains firmly in the conversation for a memorable theatrical run. The production team, distributors, and exhibitors can take genuine satisfaction from what has been an encouraging weekend at the Odia box office.`
+    conclusionParagraph: `The ${weekendLabel.toLowerCase()} has reaffirmed ${movieName}'s status as one of the standout Hindi theatrical releases of the season. With a cumulative total of ${totalNetStr} and audience enthusiasm showing no signs of dramatic decline, the film remains firmly in the conversation for a memorable theatrical run. The production team, distributors, and exhibitors can take genuine satisfaction from what has been an encouraging weekend at the Hindi box office.`
   };
 
-  const systemPrompt = "You are a senior Odia cinema (Ollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for Ollypedia. Write with genuine journalistic warmth and authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences, incorporating the actual data provided.";
-  const userPrompt = `Write a box office report for the ${weekendLabel} of the Odia movie "${movieName}" (${year}).
+  const systemPrompt = "You are a senior Hindi cinema (Bollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic warmth and authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences, incorporating the actual data provided.";
+  const userPrompt = `Write a box office report for the ${weekendLabel} of the Hindi movie "${movieName}" (${year}).
 Weekend breakdown (${weekendDataStr}): ${weekendTotalStr}.
 Total cumulative net: ${totalNetStr}.
 ${weekendNum > 1 && prevWeekendStr ? `Previous weekend total: ${prevWeekendStr}.` : ""}
@@ -7339,10 +6535,10 @@ Include the following JSON keys:
 - headline (strong editorial headline, max 90 chars, no HTML)
 - introParagraph (weekend complete: days in run, weekend collection figure, cumulative total, overall theatrical atmosphere)
 - weekendBreakdownParagraph (day-by-day: peak day, Friday base, Sunday hold, what the pattern reveals about audience type and word-of-mouth)
-- occupancyTrendSection (occupancy at multiplexes and single screens; specific Odia cities like Bhubaneswar, Cuttack, Sambalpur; show timing patterns)
+- occupancyTrendSection (occupancy at multiplexes and single screens; specific Hindi cities like Bhubaneswar, Cuttack, Sambalpur; show timing patterns)
 - audienceProfileSection (demographic breakdown: families, youth, couples; show timing preferences; multi-demographic appeal analysis)
 - holdAnalysisParagraph (this weekend vs previous if applicable; hold percentage analysis; what strong hold signals about word-of-mouth and distributor confidence)
-- industryContextSection (Ollywood context: post-OTT theatrical challenges, what sustained holds mean for the industry, investor confidence)
+- industryContextSection (Bollywood context: post-OTT theatrical challenges, what sustained holds mean for the industry, investor confidence)
 - weekdayOutlookSection (Monday hold target, screen count, competitor releases, what this week needs to look like)
 - conclusionParagraph (editorial wrap-up: what this weekend means for the film's legacy and production team satisfaction)`;
 
@@ -7366,36 +6562,36 @@ async function generateMilestoneAI(movie, milestoneLabel, totalNet, sortedDays) 
   const openingDayMilestone = sortedDays && sortedDays.length > 0 ? formatINR(parseToRupeesGlobal(sortedDays[0]?.net || "0")) : "—";
 
   const fallbacks = {
-    metaDescription: `${movieName} Crosses ₹${milestoneClean} at Odia Box Office! Total collection now stands at ${totalNetStr} net. Complete milestone report and analysis.`,
-    headline: `${movieName} Hits ₹${milestoneClean} — A Historic Milestone for Odia Cinema`,
-    introParagraph: `${movieName}${year ? ` (${year})` : ""} has etched its name in Odia box office history by crossing the prestigious ₹${milestoneClean} net collection mark in its theatrical run of ${dayReached} days. The film, which set the stage with an opening day collection of ${openingDayMilestone}, has now accumulated a remarkable ${totalNetStr} in net earnings — a figure that places it firmly among the notable commercial successes in recent Ollywood history. This milestone represents not just a financial achievement, but a resounding verdict from Odia audiences who have repeatedly chosen to experience this film in the theatrical setting.`,
-    milestoneSignificanceParagraph: `The ₹${milestoneClean} milestone carries enormous significance in the context of Odia cinema's evolving commercial landscape. In an era where OTT platforms have dramatically compressed theatrical windows and altered viewing habits, reaching this mark requires a film to achieve a rare combination of factors: exceptional content quality, effective release timing, strong promotional execution, and crucially, the organic word-of-mouth that no marketing budget can manufacture. ${movieName} has demonstrated mastery of all these elements.`,
-    journeyTimelineSection: `The box office journey of ${movieName} to the ₹${milestoneClean} milestone has been one of the more compelling stories in recent Ollywood history. From its energetic opening, through multiple weekends where audiences continued to turn up in meaningful numbers, to the weekday collections that defied the usual drop patterns seen in most Odia releases, the film has shown remarkable consistency. ${recentStr ? `Recent daily collections — ${recentStr} — indicate that the theatrical appetite for the film has not yet been exhausted,` : "The film's consistent daily performance indicates"} suggesting additional milestones may be within reach.`,
-    industryImpactSection: `The commercial success of ${movieName} carries implications well beyond the immediate production house and distribution team. For Ollywood as an ecosystem, every film that crosses the ₹${milestoneClean} threshold provides essential ammunition in the industry's ongoing case to multiplex chains, satellite buyers, OTT platforms, and production financiers that quality Odia content can generate meaningful commercial returns. This creates a positive feedback loop encouraging larger budgets, better technical standards, and more aggressive pan-India distribution efforts.`,
-    castDirectorContextSection: `Behind the ₹${milestoneClean} milestone are the creative decisions of a director and cast who believed deeply in their project at a time when every Odia production is a calculated risk. The lead performers' investment in their characters, the director's clarity of vision, the music team's compositions, and the producer's faith in the project — each element contributed to the box office edifice that has now risen past the ₹${milestoneClean} mark. In Ollywood, where marketing budgets are a fraction of what larger industries operate with, a film crossing this kind of milestone on the strength of content is an extraordinary achievement.`,
-    futureOutlookSection: `With ${totalNetStr} already secured and the theatrical run still active, the question now turns to how much further ${movieName} can push its lifetime collection. Trade analysts tracking Ollywood market patterns estimate that films at this stage with this level of daily activity typically continue to add between 15–25% to the current cumulative figure before screens are released. The satellite and OTT rights value of the film will also have been considerably enhanced by this box office performance, ensuring meaningful financial returns for all stakeholders.`,
-    conclusionParagraph: `The ₹${milestoneClean} milestone crossed by ${movieName} is a moment deserving of genuine celebration — for the production team, for the cast and crew, and for Odia cinema as a whole. It is a powerful reminder that audiences in Odisha are ready and willing to support quality content at the box office, and that Ollywood, despite its resource constraints, is capable of producing commercially viable, artistically compelling cinema. As the theatrical run continues, the legacy of ${movieName} at the box office will be studied and referenced as a benchmark for future Odia productions.`
+    metaDescription: `${movieName} Crosses ₹${milestoneClean} at Hindi Box Office! Total collection now stands at ${totalNetStr} net. Complete milestone report and analysis.`,
+    headline: `${movieName} Hits ₹${milestoneClean} — A Historic Milestone for Hindi Cinema`,
+    introParagraph: `${movieName}${year ? ` (${year})` : ""} has etched its name in Hindi box office history by crossing the prestigious ₹${milestoneClean} net collection mark in its theatrical run of ${dayReached} days. The film, which set the stage with an opening day collection of ${openingDayMilestone}, has now accumulated a remarkable ${totalNetStr} in net earnings — a figure that places it firmly among the notable commercial successes in recent Bollywood history. This milestone represents not just a financial achievement, but a resounding verdict from Hindi audiences who have repeatedly chosen to experience this film in the theatrical setting.`,
+    milestoneSignificanceParagraph: `The ₹${milestoneClean} milestone carries enormous significance in the context of Hindi cinema's evolving commercial landscape. In an era where OTT platforms have dramatically compressed theatrical windows and altered viewing habits, reaching this mark requires a film to achieve a rare combination of factors: exceptional content quality, effective release timing, strong promotional execution, and crucially, the organic word-of-mouth that no marketing budget can manufacture. ${movieName} has demonstrated mastery of all these elements.`,
+    journeyTimelineSection: `The box office journey of ${movieName} to the ₹${milestoneClean} milestone has been one of the more compelling stories in recent Bollywood history. From its energetic opening, through multiple weekends where audiences continued to turn up in meaningful numbers, to the weekday collections that defied the usual drop patterns seen in most Hindi releases, the film has shown remarkable consistency. ${recentStr ? `Recent daily collections — ${recentStr} — indicate that the theatrical appetite for the film has not yet been exhausted,` : "The film's consistent daily performance indicates"} suggesting additional milestones may be within reach.`,
+    industryImpactSection: `The commercial success of ${movieName} carries implications well beyond the immediate production house and distribution team. For Bollywood as an ecosystem, every film that crosses the ₹${milestoneClean} threshold provides essential ammunition in the industry's ongoing case to multiplex chains, satellite buyers, OTT platforms, and production financiers that quality Hindi content can generate meaningful commercial returns. This creates a positive feedback loop encouraging larger budgets, better technical standards, and more aggressive pan-India distribution efforts.`,
+    castDirectorContextSection: `Behind the ₹${milestoneClean} milestone are the creative decisions of a director and cast who believed deeply in their project at a time when every Hindi production is a calculated risk. The lead performers' investment in their characters, the director's clarity of vision, the music team's compositions, and the producer's faith in the project — each element contributed to the box office edifice that has now risen past the ₹${milestoneClean} mark. In Bollywood, where marketing budgets are a fraction of what larger industries operate with, a film crossing this kind of milestone on the strength of content is an extraordinary achievement.`,
+    futureOutlookSection: `With ${totalNetStr} already secured and the theatrical run still active, the question now turns to how much further ${movieName} can push its lifetime collection. Trade analysts tracking Bollywood market patterns estimate that films at this stage with this level of daily activity typically continue to add between 15–25% to the current cumulative figure before screens are released. The satellite and OTT rights value of the film will also have been considerably enhanced by this box office performance, ensuring meaningful financial returns for all stakeholders.`,
+    conclusionParagraph: `The ₹${milestoneClean} milestone crossed by ${movieName} is a moment deserving of genuine celebration — for the production team, for the cast and crew, and for Hindi cinema as a whole. It is a powerful reminder that audiences in Odisha are ready and willing to support quality content at the box office, and that Bollywood, despite its resource constraints, is capable of producing commercially viable, artistically compelling cinema. As the theatrical run continues, the legacy of ${movieName} at the box office will be studied and referenced as a benchmark for future Hindi productions.`
   };
 
-  const systemPrompt = "You are a senior Odia cinema (Ollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for Ollypedia. Write with genuine journalistic warmth and authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences with specific references to the milestone, box office data, and Ollywood industry context.";
-  const userPrompt = `Write a box office milestone report for the Odia movie "${movieName}" (${year}).
+  const systemPrompt = "You are a senior Hindi cinema (Bollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic warmth and authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences with specific references to the milestone, box office data, and Bollywood industry context.";
+  const userPrompt = `Write a box office milestone report for the Hindi movie "${movieName}" (${year}).
 Milestone crossed: ₹${milestoneClean} net.
 Current total net collection: ${totalNetStr}.
 Days in theatrical run: ${dayReached}. Opening day collection: ${openingDayMilestone}.
 Recent daily collections: ${recentStr || "not available"}.
 
-Write with the authority of a senior film journalist who covers Ollywood professionally. Reference actual figures throughout. Make every paragraph feel human, analytical, and editorial.
+Write with the authority of a senior film journalist who covers Bollywood professionally. Reference actual figures throughout. Make every paragraph feel human, analytical, and editorial.
 
 Include the following JSON keys:
 - metaDescription (155–165 chars, include milestone amount and current total collection)
 - headline (celebratory editorial headline, no HTML, max 90 chars)
 - introParagraph (announce the milestone: days in run, opening day, current total, what crossing this milestone represents)
-- milestoneSignificanceParagraph (why ₹${milestoneClean} matters in Odia cinema context; OTT-era challenges; what it takes to achieve this milestone)
+- milestoneSignificanceParagraph (why ₹${milestoneClean} matters in Hindi cinema context; OTT-era challenges; what it takes to achieve this milestone)
 - journeyTimelineSection (box office journey: opening, weekend holds, weekday patterns, recent daily collections, overall trajectory)
-- industryImpactSection (impact on Ollywood ecosystem: investor confidence, multiplex support, OTT rights enhancement, industry morale)
-- castDirectorContextSection (the creative team: director's vision, lead actors' performances, what this milestone means for their careers in Odia cinema)
+- industryImpactSection (impact on Bollywood ecosystem: investor confidence, multiplex support, OTT rights enhancement, industry morale)
+- castDirectorContextSection (the creative team: director's vision, lead actors' performances, what this milestone means for their careers in Hindi cinema)
 - futureOutlookSection (remaining theatrical potential, next possible milestones, OTT/satellite rights value, trade projections)
-- conclusionParagraph (editorial celebration: what this milestone means for Odia cinema's future and audience endorsement narrative)`;
+- conclusionParagraph (editorial celebration: what this milestone means for Hindi cinema's future and audience endorsement narrative)`;
 
   return callGroqStructured(
     systemPrompt,
@@ -7416,19 +6612,19 @@ async function generateComparisonAI(movie, comparators, totalNet) {
   const moviesBelow = comparators.filter(c => c.firstWeekNet <= totalNet).length;
 
   const fallbacks = {
-    metaDescription: `${movieName} First Week Box Office Comparison: ${totalNetStr} net in Week 1. See how it ranks against ${comparators.length} recent Odia films in this detailed comparison.`,
-    headline: `${movieName} vs Odia Box Office Hits: First Week Comparison & Rankings`,
-    introParagraph: `The completion of ${movieName}${year ? ` (${year})` : ""}'s first seven days at the Odia box office — with a net collection of ${totalNetStr} — naturally invites comparison with other notable Odia theatrical releases that have completed their own first-week runs. In the Ollywood industry, first-week comparisons are more than a matter of pride — they serve as essential benchmarks for producers, distributors, and OTT buyers when evaluating the commercial potential of future projects. This detailed analysis places ${movieName} side-by-side with ${comparators.length} significant recent Odia releases to understand exactly where it stands in the contemporary box office hierarchy.`,
-    rankingContextSection: `Among the ${comparators.length} Odia films included in this first-week comparison, ${movieName}'s Week 1 collection of ${totalNetStr} places it ${moviesAbove > 0 ? `behind ${moviesAbove} film${moviesAbove > 1 ? "s" : ""}` : "at the top"}${moviesBelow > 0 ? ` and ahead of ${moviesBelow} film${moviesBelow > 1 ? "s" : ""}` : ""} in this ranking. ${topComp ? `The current benchmark for Odia first-week collections in this comparison is set by "${topComp.title}" with ${topComp.firstWeekNetStr}, representing the commercial ceiling that the industry is aspiring toward.` : ""} Raw ranking, however, tells only part of the story — the context of each film's budget, release scale, screen count, and promotional spend is essential to interpreting what the numbers actually represent.`,
+    metaDescription: `${movieName} First Week Box Office Comparison: ${totalNetStr} net in Week 1. See how it ranks against ${comparators.length} recent Hindi films in this detailed comparison.`,
+    headline: `${movieName} vs Hindi Box Office Hits: First Week Comparison & Rankings`,
+    introParagraph: `The completion of ${movieName}${year ? ` (${year})` : ""}'s first seven days at the Hindi box office — with a net collection of ${totalNetStr} — naturally invites comparison with other notable Hindi theatrical releases that have completed their own first-week runs. In the Bollywood industry, first-week comparisons are more than a matter of pride — they serve as essential benchmarks for producers, distributors, and OTT buyers when evaluating the commercial potential of future projects. This detailed analysis places ${movieName} side-by-side with ${comparators.length} significant recent Hindi releases to understand exactly where it stands in the contemporary box office hierarchy.`,
+    rankingContextSection: `Among the ${comparators.length} Hindi films included in this first-week comparison, ${movieName}'s Week 1 collection of ${totalNetStr} places it ${moviesAbove > 0 ? `behind ${moviesAbove} film${moviesAbove > 1 ? "s" : ""}` : "at the top"}${moviesBelow > 0 ? ` and ahead of ${moviesBelow} film${moviesBelow > 1 ? "s" : ""}` : ""} in this ranking. ${topComp ? `The current benchmark for Hindi first-week collections in this comparison is set by "${topComp.title}" with ${topComp.firstWeekNetStr}, representing the commercial ceiling that the industry is aspiring toward.` : ""} Raw ranking, however, tells only part of the story — the context of each film's budget, release scale, screen count, and promotional spend is essential to interpreting what the numbers actually represent.`,
     comparisonParagraph: `A deeper look at the comparative data reveals fascinating patterns about how ${movieName} has performed relative to its peers. ${topComp && topComp.firstWeekNet > totalNet ? `While "${topComp.title}" leads the pack with a formidable ${topComp.firstWeekNetStr} in its first week, it is crucial to contextualise that figure against the promotional machinery and star-power that may have driven its opening.` : `${movieName} leading this comparative field with ${totalNetStr} is a significant achievement.`} The most meaningful metric in such comparisons is the weekday hold percentage — which indicates how much of the opening-weekend audience returned during the less glamorous working days. Films with strong weekday holds are the ones that tend to cross major milestones in their lifetime run.`,
-    openingWeekendCompareSection: `Opening weekends across the films in this comparison tell a particularly instructive story about the evolving Odia box office. The relationship between a film's opening weekend performance and its first-week total has shifted in the post-OTT era — films that were once able to rely on a heavy front-load are now finding that audiences are more selective, choosing to wait for social media reviews before committing to a theatre visit. ${movieName}'s opening weekend, which contributed significantly to its ${totalNetStr} first-week total, reflects an audience persuaded by both pre-release promotional content and early positive word-of-mouth.`,
-    verdictComparisonSection: `The comparative verdict from this analysis is that ${movieName} has earned a creditable position in the first-week box office hierarchy of contemporary Odia cinema. Whether it sits at the top, middle, or lower end of this particular comparison table, the efficiency of its collection — considering its likely production and marketing budget — speaks more clearly to its actual commercial success. Films in Ollywood that achieve first-week totals in the range that ${movieName} has achieved are the engine that keeps the industry's commercial cycle alive.`,
-    industryImpactSection: `Comparative box office analysis serves a broader purpose in Odia cinema beyond satisfying trade curiosity. When ${movieName} and the films it is being compared with collectively perform at meaningful levels, they create a rising tide that benefits the entire Odia film ecosystem. Theatre owners are encouraged to maintain dedicated screens for Odia content. OTT platforms raise their acquisition bids. And the industry as a whole builds the commercial foundation needed for more ambitious productions in future.`,
-    conclusionParagraph: `In the final analysis, placing ${movieName} in comparison with other Odia box office performers of recent vintage allows us to appreciate both its achievements and the broader commercial landscape within which those achievements have been earned. The film's ${totalNetStr} first-week net is a figure that the production team, distributors, and theatre owners can look back on with legitimate satisfaction. More importantly, it contributes another credible data point to the ongoing story of Odia cinema's commercial evolution.`
+    openingWeekendCompareSection: `Opening weekends across the films in this comparison tell a particularly instructive story about the evolving Hindi box office. The relationship between a film's opening weekend performance and its first-week total has shifted in the post-OTT era — films that were once able to rely on a heavy front-load are now finding that audiences are more selective, choosing to wait for social media reviews before committing to a theatre visit. ${movieName}'s opening weekend, which contributed significantly to its ${totalNetStr} first-week total, reflects an audience persuaded by both pre-release promotional content and early positive word-of-mouth.`,
+    verdictComparisonSection: `The comparative verdict from this analysis is that ${movieName} has earned a creditable position in the first-week box office hierarchy of contemporary Hindi cinema. Whether it sits at the top, middle, or lower end of this particular comparison table, the efficiency of its collection — considering its likely production and marketing budget — speaks more clearly to its actual commercial success. Films in Bollywood that achieve first-week totals in the range that ${movieName} has achieved are the engine that keeps the industry's commercial cycle alive.`,
+    industryImpactSection: `Comparative box office analysis serves a broader purpose in Hindi cinema beyond satisfying trade curiosity. When ${movieName} and the films it is being compared with collectively perform at meaningful levels, they create a rising tide that benefits the entire Hindi film ecosystem. Theatre owners are encouraged to maintain dedicated screens for Hindi content. OTT platforms raise their acquisition bids. And the industry as a whole builds the commercial foundation needed for more ambitious productions in future.`,
+    conclusionParagraph: `In the final analysis, placing ${movieName} in comparison with other Hindi box office performers of recent vintage allows us to appreciate both its achievements and the broader commercial landscape within which those achievements have been earned. The film's ${totalNetStr} first-week net is a figure that the production team, distributors, and theatre owners can look back on with legitimate satisfaction. More importantly, it contributes another credible data point to the ongoing story of Hindi cinema's commercial evolution.`
   };
 
-  const systemPrompt = "You are a senior Odia cinema (Ollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for Ollypedia. Write with genuine journalistic authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences with specific references to the comparison data. Reference actual film titles and figures from the data provided.";
-  const userPrompt = `Write a first week box office comparison report for the Odia movie "${movieName}" (${year}).
+  const systemPrompt = "You are a senior Hindi cinema (Bollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences with specific references to the comparison data. Reference actual film titles and figures from the data provided.";
+  const userPrompt = `Write a first week box office comparison report for the Hindi movie "${movieName}" (${year}).
 ${movieName} Week 1 net: ${totalNetStr}.
 
 Comparison films (sorted by first week collection, highest first):
@@ -7442,13 +6638,13 @@ Write as a senior film trade journalist doing a proper comparative analysis. Ref
 Include the following JSON keys:
 - metaDescription (155–165 chars, include film name, week 1 total, and "comparison" keyword)
 - headline (comparative editorial headline, max 90 chars, no HTML)
-- introParagraph (why this comparison matters for Ollywood: OTT era context, what first-week rankings mean for the industry, scope of this analysis)
+- introParagraph (why this comparison matters for Bollywood: OTT era context, what first-week rankings mean for the industry, scope of this analysis)
 - rankingContextSection (where ${movieName} ranks in this comparison, what the ranking means, reference to top benchmark film, caveat about budget/scale context)
 - comparisonParagraph (deep-dive into comparative data: reference specific film names and numbers, weekday hold discussion, what the variations reveal)
 - openingWeekendCompareSection (how opening weekends compare across films, post-OTT audience behaviour, front-loading vs content-driven audiences)
 - verdictComparisonSection (final comparative verdict: ${movieName}'s position in the hierarchy, collection efficiency as a metric, budget-relative performance)
-- industryImpactSection (broader implications: theatre owner confidence, OTT acquisition bids, rising tide effect on Ollywood)
-- conclusionParagraph (editorial conclusion referencing specific numbers and ${movieName}'s place in Odia film history)`;
+- industryImpactSection (broader implications: theatre owner confidence, OTT acquisition bids, rising tide effect on Bollywood)
+- conclusionParagraph (editorial conclusion referencing specific numbers and ${movieName}'s place in Hindi film history)`;
 
   return callGroqStructured(
     systemPrompt,
@@ -7502,20 +6698,20 @@ function buildFirstWeekBlogHTML(movie, days, totalNet, ai, slug, title, relatedM
 
   const keywordsArr = [
     movieName, `${movieName} first week`, `${movieName} 7 days collection`,
-    `${movieName} box office`, "Odia box office", "Ollywood first week report"
+    `${movieName} box office`, "Hindi box office", "Bollywood first week report"
   ];
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
   const plainWordCount = [ai.introParagraph, ai.performanceOverview, ai.weekdayHoldAnalysis, ai.audienceResponseSection, ai.dayWiseParagraph, ai.week2OutlookSection, ai.conclusionParagraph]
     .filter(Boolean).join(" ").split(/\s+/).filter(Boolean).length;
 
   return `<!-- ════════════════════════════════════════════════════════════════
-  OLLYPEDIA SEO META — READ BY CMS
+  cinemaverse SEO META — READ BY CMS
   title:          ${title}
   description:    ${ai.metaDescription}
   keywords:       ${keywordsStr}
   canonical:      ${SITE_URL}/blog/${slug}
   robots:         index, follow
-  og:site_name:   Ollypedia
+  og:site_name:   The Cinema Verse
   og:title:       ${title}
   og:description: ${ai.metaDescription}
   og:url:         ${SITE_URL}/blog/${slug}
@@ -7526,11 +6722,11 @@ function buildFirstWeekBlogHTML(movie, days, totalNet, ai, slug, title, relatedM
   og:locale:      en_IN
   article:published_time: ${dp}
   article:modified_time:  ${dm}
-  article:author: Ollypedia Team
+  article:author: The Cinema Verse Desk
   article:section: Box Office
   twitter:card:   summary_large_image
-  twitter:site:   @OllypediaIn
-  twitter:creator: @OllypediaIn
+  twitter:site:   @The Cinema VerseIn
+  twitter:creator: @The Cinema VerseIn
   twitter:title:  ${title}
   twitter:description: ${ai.metaDescription}
   twitter:image:  ${ogImage}
@@ -7552,12 +6748,12 @@ function buildFirstWeekBlogHTML(movie, days, totalNet, ai, slug, title, relatedM
       "wordCount": ${plainWordCount},
       "keywords": ${JSON.stringify(keywordsStr)},
       "author": [
-        { "@type": "Person", "name": "Ollypedia Team", "url": "${SITE_URL}/about" },
-        { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}" }
+        { "@type": "Person", "name": "The Cinema Verse Desk", "url": "${SITE_URL}/about" },
+        { "@type": "Organization", "name": "The Cinema Verse", "url": "${SITE_URL}" }
       ],
       "publisher": {
         "@type": "Organization",
-        "name": "Ollypedia",
+        "name": "The Cinema Verse",
         "url": "${SITE_URL}",
         "logo": { "@type": "ImageObject", "url": "${SITE_URL}/logo.png" }
       },
@@ -7734,19 +6930,19 @@ function buildWeekendBlogHTML(movie, days, totalNet, weekendLabel, ai, slug, tit
 
   const keywordsArr = [
     movieName, `${movieName} ${weekendLabel.toLowerCase()} collection`, `${movieName} weekend box office`,
-    "Odia box office", "Ollywood weekend report"
+    "Hindi box office", "Bollywood weekend report"
   ];
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
   const plainWordCount = Object.values(ai).join(" ").split(/\s+/).filter(Boolean).length;
 
   return `<!-- ════════════════════════════════════════════════════════════════
-  OLLYPEDIA SEO META — READ BY CMS
+  cinemaverse SEO META — READ BY CMS
   title:          ${title}
   description:    ${ai.metaDescription}
   keywords:       ${keywordsStr}
   canonical:      ${SITE_URL}/blog/${slug}
   robots:         index, follow
-  og:site_name:   Ollypedia
+  og:site_name:   The Cinema Verse
   og:title:       ${title}
   og:description: ${ai.metaDescription}
   og:url:         ${SITE_URL}/blog/${slug}
@@ -7757,11 +6953,11 @@ function buildWeekendBlogHTML(movie, days, totalNet, weekendLabel, ai, slug, tit
   og:locale:      en_IN
   article:published_time: ${dp}
   article:modified_time:  ${dm}
-  article:author: Ollypedia Team
+  article:author: The Cinema Verse Desk
   article:section: Box Office
   twitter:card:   summary_large_image
-  twitter:site:   @OllypediaIn
-  twitter:creator: @OllypediaIn
+  twitter:site:   @The Cinema VerseIn
+  twitter:creator: @The Cinema VerseIn
   twitter:title:  ${title}
   twitter:description: ${ai.metaDescription}
   twitter:image:  ${ogImage}
@@ -7783,12 +6979,12 @@ function buildWeekendBlogHTML(movie, days, totalNet, weekendLabel, ai, slug, tit
       "wordCount": ${plainWordCount},
       "keywords": ${JSON.stringify(keywordsStr)},
       "author": [
-        { "@type": "Person", "name": "Ollypedia Team", "url": "${SITE_URL}/about" },
-        { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}" }
+        { "@type": "Person", "name": "The Cinema Verse Desk", "url": "${SITE_URL}/about" },
+        { "@type": "Organization", "name": "The Cinema Verse", "url": "${SITE_URL}" }
       ],
       "publisher": {
         "@type": "Organization",
-        "name": "Ollypedia",
+        "name": "The Cinema Verse",
         "url": "${SITE_URL}",
         "logo": { "@type": "ImageObject", "url": "${SITE_URL}/logo.png" }
       },
@@ -7892,7 +7088,7 @@ ${EVENT_BLOG_RESPONSIVE_STYLES}
 </section>
 
 <section id="industry-context" style="${css.card}">
-  <h2 style="${css.h2}">Ollywood Industry Context</h2>
+  <h2 style="${css.h2}">Bollywood Industry Context</h2>
   <p style="color:#ccc;line-height:1.8;font-size:0.95rem;margin:0;">
     ${ai.industryContextSection}
   </p>
@@ -7950,7 +7146,7 @@ function buildMilestoneBlogHTML(movie, milestoneKey, totalNet, ai, slug, title, 
 
   const keywordsArr = [
     movieName, `${movieName} ${milestoneClean}`, `${movieName} box office milestone`,
-    "Odia box office records", "Ollywood collections"
+    "Hindi box office records", "Bollywood collections"
   ];
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
   const plainWordCount = Object.values(ai).join(" ").split(/\s+/).filter(Boolean).length;
@@ -8004,13 +7200,13 @@ function buildMilestoneBlogHTML(movie, milestoneKey, totalNet, ai, slug, title, 
   }
 
   return `<!-- ════════════════════════════════════════════════════════════════
-  OLLYPEDIA SEO META — READ BY CMS
+  cinemaverse SEO META — READ BY CMS
   title:          ${title}
   description:    ${ai.metaDescription}
   keywords:       ${keywordsStr}
   canonical:      ${SITE_URL}/blog/${slug}
   robots:         index, follow
-  og:site_name:   Ollypedia
+  og:site_name:   The Cinema Verse
   og:title:       ${title}
   og:description: ${ai.metaDescription}
   og:url:         ${SITE_URL}/blog/${slug}
@@ -8021,11 +7217,11 @@ function buildMilestoneBlogHTML(movie, milestoneKey, totalNet, ai, slug, title, 
   og:locale:      en_IN
   article:published_time: ${dp}
   article:modified_time:  ${dm}
-  article:author: Ollypedia Team
+  article:author: The Cinema Verse Desk
   article:section: Box Office
   twitter:card:   summary_large_image
-  twitter:site:   @OllypediaIn
-  twitter:creator: @OllypediaIn
+  twitter:site:   @The Cinema VerseIn
+  twitter:creator: @The Cinema VerseIn
   twitter:title:  ${title}
   twitter:description: ${ai.metaDescription}
   twitter:image:  ${ogImage}
@@ -8047,12 +7243,12 @@ function buildMilestoneBlogHTML(movie, milestoneKey, totalNet, ai, slug, title, 
       "wordCount": ${plainWordCount},
       "keywords": ${JSON.stringify(keywordsStr)},
       "author": [
-        { "@type": "Person", "name": "Ollypedia Team", "url": "${SITE_URL}/about" },
-        { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}" }
+        { "@type": "Person", "name": "The Cinema Verse Desk", "url": "${SITE_URL}/about" },
+        { "@type": "Organization", "name": "The Cinema Verse", "url": "${SITE_URL}" }
       ],
       "publisher": {
         "@type": "Organization",
-        "name": "Ollypedia",
+        "name": "The Cinema Verse",
         "url": "${SITE_URL}",
         "logo": { "@type": "ImageObject", "url": "${SITE_URL}/logo.png" }
       },
@@ -8126,7 +7322,7 @@ ${EVENT_BLOG_RESPONSIVE_STYLES}
 </section>
 
 <section id="industry-impact" style="${css.card}">
-  <h2 style="${css.h2}">Impact on Ollywood</h2>
+  <h2 style="${css.h2}">Impact on Bollywood</h2>
   <p style="color:#ccc;line-height:1.8;font-size:0.95rem;margin:0;">
     ${ai.industryImpactSection}
   </p>
@@ -8195,20 +7391,20 @@ function buildComparisonBlogHTML(movie, comparators, totalNet, ai, slug, title, 
   ].filter(Boolean);
 
   const keywordsArr = [
-    movieName, `${movieName} box office comparison`, `${movieName} vs other odia movies`,
-    "Odia box office hits", "Ollywood collections"
+    movieName, `${movieName} box office comparison`, `${movieName} vs other hindi movies`,
+    "Hindi box office hits", "Bollywood collections"
   ];
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
   const plainWordCount = Object.values(ai).join(" ").split(/\s+/).filter(Boolean).length;
 
   return `<!-- ════════════════════════════════════════════════════════════════
-  OLLYPEDIA SEO META — READ BY CMS
+  cinemaverse SEO META — READ BY CMS
   title:          ${title}
   description:    ${ai.metaDescription}
   keywords:       ${keywordsStr}
   canonical:      ${SITE_URL}/blog/${slug}
   robots:         index, follow
-  og:site_name:   Ollypedia
+  og:site_name:   The Cinema Verse
   og:title:       ${title}
   og:description: ${ai.metaDescription}
   og:url:         ${SITE_URL}/blog/${slug}
@@ -8219,11 +7415,11 @@ function buildComparisonBlogHTML(movie, comparators, totalNet, ai, slug, title, 
   og:locale:      en_IN
   article:published_time: ${dp}
   article:modified_time:  ${dm}
-  article:author: Ollypedia Team
+  article:author: The Cinema Verse Desk
   article:section: Box Office
   twitter:card:   summary_large_image
-  twitter:site:   @OllypediaIn
-  twitter:creator: @OllypediaIn
+  twitter:site:   @The Cinema VerseIn
+  twitter:creator: @The Cinema VerseIn
   twitter:title:  ${title}
   twitter:description: ${ai.metaDescription}
   twitter:image:  ${ogImage}
@@ -8245,12 +7441,12 @@ function buildComparisonBlogHTML(movie, comparators, totalNet, ai, slug, title, 
       "wordCount": ${plainWordCount},
       "keywords": ${JSON.stringify(keywordsStr)},
       "author": [
-        { "@type": "Person", "name": "Ollypedia Team", "url": "${SITE_URL}/about" },
-        { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}" }
+        { "@type": "Person", "name": "The Cinema Verse Desk", "url": "${SITE_URL}/about" },
+        { "@type": "Organization", "name": "The Cinema Verse", "url": "${SITE_URL}" }
       ],
       "publisher": {
         "@type": "Organization",
-        "name": "Ollypedia",
+        "name": "The Cinema Verse",
         "url": "${SITE_URL}",
         "logo": { "@type": "ImageObject", "url": "${SITE_URL}/logo.png" }
       },
@@ -8291,7 +7487,7 @@ ${EVENT_BLOG_RESPONSIVE_STYLES}
 <div class="hero-section" style="background:linear-gradient(135deg,#1b1002 0%,#121212 100%);border:1px solid #3d2403;border-radius:14px;padding:30px 28px 24px;margin-bottom:22px;">
     <div style="margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
       <span style="display:inline-block;background:#381d02;color:#ff9800;font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:4px 12px;border-radius:999px;border:1px solid #542f02;">📊 Box Office Comparison</span>
-      <span style="display:inline-block;background:#1e1e1e;color:#888;font-size:0.68rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:4px 12px;border-radius:999px;border:1px solid #2a2a2a;">Odia Film Rankings</span>
+      <span style="display:inline-block;background:#1e1e1e;color:#888;font-size:0.68rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:4px 12px;border-radius:999px;border:1px solid #2a2a2a;">Hindi Film Rankings</span>
     </div>
     <h1 style="color:#fff;font-size:clamp(1.2rem,4.5vw,1.6rem);line-height:1.3;font-weight:800;margin:0 0 14px;word-break:break-word;">
       ${title}
@@ -8325,7 +7521,7 @@ ${EVENT_BLOG_RESPONSIVE_STYLES}
       <thead>
         <tr>
           <th style="${css.th}">Movie Name</th>
-          <th style="${css.th}">First Week Net (Odia Box Office)</th>
+          <th style="${css.th}">First Week Net (Hindi Box Office)</th>
         </tr>
       </thead>
       <tbody>
@@ -8399,11 +7595,11 @@ async function maybeGenerateFirstWeekBlog(movie, sortedDays, totalNet, movieId) 
       excerpt: ai.metaDescription,
       content: html,
       category: "Box Office",
-      tags: [movie.title, "Box Office", "First Week", "Odia Cinema", "Ollywood", "7 Days"].filter(Boolean),
+      tags: [movie.title, "Box Office", "First Week", "Hindi Cinema", "Bollywood", "7 Days"].filter(Boolean),
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId,
       movieTitle: movie.title,
-      author: "Ollypedia Team",
+      author: "The Cinema Verse Desk",
       published: true,
       featured: false,
       seoTitle: title,
@@ -8476,11 +7672,11 @@ async function maybeGenerateWeekendBlog(movie, sortedDays, actualDay, totalNet, 
       excerpt: ai.metaDescription,
       content: html,
       category: "Box Office",
-      tags: [movie.title, "Box Office", weekendLabel, "Odia Cinema", "Ollywood"].filter(Boolean),
+      tags: [movie.title, "Box Office", weekendLabel, "Hindi Cinema", "Bollywood"].filter(Boolean),
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId,
       movieTitle: movie.title,
-      author: "Ollypedia Team",
+      author: "The Cinema Verse Desk",
       published: true,
       featured: false,
       seoTitle: title,
@@ -8548,11 +7744,11 @@ async function maybeGenerateMilestoneBlog(movie, sortedDays, totalNet, prevTotal
           excerpt: ai.metaDescription,
           content: html,
           category: "Box Office",
-          tags: [movie.title, "Box Office", `Crosses ${milestone.clean}`, "Odia Cinema", "Ollywood", "Milestone"].filter(Boolean),
+          tags: [movie.title, "Box Office", `Crosses ${milestone.clean}`, "Hindi Cinema", "Bollywood", "Milestone"].filter(Boolean),
           coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
           movieId,
           movieTitle: movie.title,
-          author: "Ollypedia Team",
+          author: "The Cinema Verse Desk",
           published: true,
           featured: false,
           seoTitle: title,
@@ -8627,11 +7823,11 @@ async function maybeGenerateComparisonBlog(movie, sortedDays, totalNet, movieId)
       excerpt: ai.metaDescription,
       content: html,
       category: "Box Office",
-      tags: [movie.title, "Box Office", "First Week Comparison", "Odia Cinema", "Ollywood"].filter(Boolean),
+      tags: [movie.title, "Box Office", "First Week Comparison", "Hindi Cinema", "Bollywood"].filter(Boolean),
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId,
       movieTitle: movie.title,
-      author: "Ollypedia Team",
+      author: "The Cinema Verse Desk",
       published: true,
       featured: false,
       seoTitle: title,
@@ -8684,7 +7880,7 @@ function getSecondWeekTitle(movieTitle, totalNetStr, week2NetStr, seed) {
     `${movieTitle} Second Week Box Office: ${week2NetStr} in Week 2, ${totalNetStr} Total`,
     `${movieTitle} Completes Second Week — ${totalNetStr} Cumulative Net Collection Report`,
     `${movieTitle} 2nd Week Box Office Verdict: Strong Hold or Steep Drop? Full Analysis`,
-    `${movieTitle} Two Weeks at Ollywood Box Office: Complete Day-Wise Collection Report`,
+    `${movieTitle} Two Weeks at Bollywood Box Office: Complete Day-Wise Collection Report`,
     `${movieTitle} Second Week: Audience Hold \u0026 Box Office Performance Analysis`
   ];
   return templates[seed % templates.length];
@@ -8693,7 +7889,7 @@ function getThirdWeekTitle(movieTitle, totalNetStr, seed) {
   const templates = [
     `${movieTitle} Third Week Box Office: ${totalNetStr} Total Net — Extended Run Analysis`,
     `${movieTitle} Completes 3 Weeks in Theatres — ${totalNetStr} Net Cumulative Report`,
-    `${movieTitle} 21 Days at Odia Box Office: Third Week Collection \u0026 Audience Verdict`,
+    `${movieTitle} 21 Days at Hindi Box Office: Third Week Collection \u0026 Audience Verdict`,
     `${movieTitle} Three-Week Box Office Report: Sustained Run \u0026 Future Outlook`,
     `${movieTitle} Third Week Collection — ${totalNetStr} Net and Still Running Strong`
   ];
@@ -8702,9 +7898,9 @@ function getThirdWeekTitle(movieTitle, totalNetStr, seed) {
 function getFourthWeekTitle(movieTitle, totalNetStr, seed) {
   const templates = [
     `${movieTitle} Fourth Week Box Office: ${totalNetStr} Total — Remarkable Theatrical Run`,
-    `${movieTitle} Completes 4 Weeks: ${totalNetStr} Net in an Extraordinary Ollywood Run`,
+    `${movieTitle} Completes 4 Weeks: ${totalNetStr} Net in an Extraordinary Bollywood Run`,
     `${movieTitle} 28 Days in Theatres — Fourth Week Box Office Report \u0026 Legacy Analysis`,
-    `${movieTitle} Fourth Week at Box Office: A Landmark Run in Odia Cinema History`,
+    `${movieTitle} Fourth Week at Box Office: A Landmark Run in Hindi Cinema History`,
     `${movieTitle} Month-Long Theatrical Run: Fourth Week Collection \u0026 Final Verdict`
   ];
   return templates[seed % templates.length];
@@ -8714,9 +7910,9 @@ function getJubileeTitle(movieTitle, days, totalNetStr, seed) {
   const dayLabel = days === 25 ? "25 Days" : "50 Days";
   const templates = [
     `${movieTitle} ${jubileeLabel}! ${dayLabel} at Box Office — ${totalNetStr} Net Collection`,
-    `${movieTitle} Celebrates ${jubileeLabel}: ${dayLabel} Theatrical Run in Ollywood History`,
+    `${movieTitle} Celebrates ${jubileeLabel}: ${dayLabel} Theatrical Run in Bollywood History`,
     `${movieTitle} ${jubileeLabel} Box Office Report: ${totalNetStr} Net After ${dayLabel}`,
-    `${movieTitle} Scripts ${jubileeLabel} — A Historic ${dayLabel} Run at Odia Box Office`,
+    `${movieTitle} Scripts ${jubileeLabel} — A Historic ${dayLabel} Run at Hindi Box Office`,
     `${movieTitle} ${dayLabel} \u0026 ${jubileeLabel}: Complete Box Office Report \u0026 Legacy Analysis`
   ];
   return templates[seed % templates.length];
@@ -8744,18 +7940,18 @@ async function generateSecondWeekAI(movie, days, totalNet) {
   const fallbacks = {
     metaDescription: `${movieName} Second Week Box Office: ${week2Str} in Week 2, total ${totalNetStr} net. Week-on-week drop ${dropPct}%. Full analysis inside.`,
     headline: `${movieName} Second Week: ${week2Str} and a Box Office Run That Commands Respect`,
-    introParagraph: `${movieName}${year ? ` (${year})` : ""} has completed its second week in Odia theatres, and the numbers paint a revealing picture of where this film stands in the hearts of Odia audiences. The second seven-day window added ${week2Str} to the cumulative total, pushing the film's overall net collection to ${totalNetStr}. After the initial burst of opening excitement, Week 2 is always the moment of truth — and ${movieName} has faced it with the kind of composure that distinguishes a genuinely content-driven release from an opening-weekend flash-in-the-pan.`,
-    weekOneTwoComparison: `The week-on-week comparison tells the most important story. ${movieName} collected ${week1Str} in its first seven days and followed that with ${week2Str} in Week 2 — a drop of approximately ${dropPct}%. In the Odia theatrical market, a Week 2 drop of under 50% is considered a strong hold; anything above 65% signals a front-loaded film that struggled to sustain word-of-mouth. A ${dropPct}% drop places ${movieName} in the category that distributors and exhibitors watch most closely: a film with genuine legs.`,
-    mondayHoldSection: `${mondayHold ? `The Monday (Day 8) figure of ${mondayHold.split(": ")[1] || "—"} was particularly significant, as Monday collections are considered the purest indicator of true word-of-mouth — they represent viewers who chose to visit the theatre not because of promotional buzz but because of what friends and family told them about the film. A strong Monday hold from any Odia release immediately signals to exhibitors that they should consider maintaining or even expanding screen availability for the rest of Week 2.` : `The early days of Week 2 were the critical test for ${movieName} — weekday audiences post-opening buzz are among the most discerning in the Odia cinema market, coming to theatres purely on the strength of personal recommendations rather than promotional noise.`}`,
-    weekendContribution: `The second weekend — Days 12 through 14 — provided an important secondary lift for ${movieName}. ${day14 ? `The film closed its second week with a Day 14 collection of ${day14.net || "N/A"}, ` : ""}signalling that weekend audiences are still choosing this film over competing releases. Second weekends in Ollywood are becoming increasingly vital, as the OTT announcement cycle means audiences are acutely aware of when a film will leave theatres — and those who genuinely want the theatrical experience are making a point of catching it before that window closes.`,
-    audienceProfileWeek2: `The demographic profile of ${movieName}'s Week 2 audience has shifted subtly from its first-week composition. The initial front-loaded audience — fans of the lead actors, genre enthusiasts, early-adopter cinephiles — has given way to a broader family demographic drawn by the positive word-of-mouth that spread through Odia social media and community networks during the first week. This demographic shift is healthy and sustainable — it suggests the film's appeal extends well beyond its core fanbase.`,
-    industryReadSection: `For Ollywood, ${movieName}'s Week 2 performance carries meaningful industry implications. The Odia theatrical ecosystem depends critically on films sustaining screen count into their second week — a Week 2 drop of over 70% typically triggers mass screen releases, compressing the film's lifetime theatrical window dramatically. The fact that ${movieName} is holding well enough to warrant continued exhibition is an encouraging signal for the entire industry.`,
-    week3OutlookSection: `As ${movieName} moves into its third week, the key variables to watch are screen count, competition from new Odia or Hindi releases, and whether the OTT announcement has been made. Films at this stage with ${totalNetStr} in total net typically add between 20-35% more in their remaining theatrical run, depending on these factors. Week 3 weekend numbers will be the final major test of the film's sustained audience appeal.`,
-    conclusionParagraph: `Two weeks in, ${movieName}'s total net of ${totalNetStr} is a testament to the film's content quality and the authenticity of its audience connection. The week-on-week performance data tells a story of a film that opened promisingly, held reasonably, and continues to draw Odia cinema lovers to the big screen. For the creative team, the cast, and the producers, this second-week report is something to be read with genuine satisfaction.`
+    introParagraph: `${movieName}${year ? ` (${year})` : ""} has completed its second week in Hindi theatres, and the numbers paint a revealing picture of where this film stands in the hearts of Hindi audiences. The second seven-day window added ${week2Str} to the cumulative total, pushing the film's overall net collection to ${totalNetStr}. After the initial burst of opening excitement, Week 2 is always the moment of truth — and ${movieName} has faced it with the kind of composure that distinguishes a genuinely content-driven release from an opening-weekend flash-in-the-pan.`,
+    weekOneTwoComparison: `The week-on-week comparison tells the most important story. ${movieName} collected ${week1Str} in its first seven days and followed that with ${week2Str} in Week 2 — a drop of approximately ${dropPct}%. In the Hindi theatrical market, a Week 2 drop of under 50% is considered a strong hold; anything above 65% signals a front-loaded film that struggled to sustain word-of-mouth. A ${dropPct}% drop places ${movieName} in the category that distributors and exhibitors watch most closely: a film with genuine legs.`,
+    mondayHoldSection: `${mondayHold ? `The Monday (Day 8) figure of ${mondayHold.split(": ")[1] || "—"} was particularly significant, as Monday collections are considered the purest indicator of true word-of-mouth — they represent viewers who chose to visit the theatre not because of promotional buzz but because of what friends and family told them about the film. A strong Monday hold from any Hindi release immediately signals to exhibitors that they should consider maintaining or even expanding screen availability for the rest of Week 2.` : `The early days of Week 2 were the critical test for ${movieName} — weekday audiences post-opening buzz are among the most discerning in the Hindi cinema market, coming to theatres purely on the strength of personal recommendations rather than promotional noise.`}`,
+    weekendContribution: `The second weekend — Days 12 through 14 — provided an important secondary lift for ${movieName}. ${day14 ? `The film closed its second week with a Day 14 collection of ${day14.net || "N/A"}, ` : ""}signalling that weekend audiences are still choosing this film over competing releases. Second weekends in Bollywood are becoming increasingly vital, as the OTT announcement cycle means audiences are acutely aware of when a film will leave theatres — and those who genuinely want the theatrical experience are making a point of catching it before that window closes.`,
+    audienceProfileWeek2: `The demographic profile of ${movieName}'s Week 2 audience has shifted subtly from its first-week composition. The initial front-loaded audience — fans of the lead actors, genre enthusiasts, early-adopter cinephiles — has given way to a broader family demographic drawn by the positive word-of-mouth that spread through Hindi social media and community networks during the first week. This demographic shift is healthy and sustainable — it suggests the film's appeal extends well beyond its core fanbase.`,
+    industryReadSection: `For Bollywood, ${movieName}'s Week 2 performance carries meaningful industry implications. The Hindi theatrical ecosystem depends critically on films sustaining screen count into their second week — a Week 2 drop of over 70% typically triggers mass screen releases, compressing the film's lifetime theatrical window dramatically. The fact that ${movieName} is holding well enough to warrant continued exhibition is an encouraging signal for the entire industry.`,
+    week3OutlookSection: `As ${movieName} moves into its third week, the key variables to watch are screen count, competition from new Hindi or Hindi releases, and whether the OTT announcement has been made. Films at this stage with ${totalNetStr} in total net typically add between 20-35% more in their remaining theatrical run, depending on these factors. Week 3 weekend numbers will be the final major test of the film's sustained audience appeal.`,
+    conclusionParagraph: `Two weeks in, ${movieName}'s total net of ${totalNetStr} is a testament to the film's content quality and the authenticity of its audience connection. The week-on-week performance data tells a story of a film that opened promisingly, held reasonably, and continues to draw Hindi cinema lovers to the big screen. For the creative team, the cast, and the producers, this second-week report is something to be read with genuine satisfaction.`
   };
 
-  const systemPrompt = "You are a senior Odia cinema (Ollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for Ollypedia. Write with genuine journalistic authority. Avoid AI clichés. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text with no HTML tags. Every paragraph must be at least 5-7 full sentences.";
-  const userPrompt = `Write a second week box office report for the Odia movie "${movieName}" (${year}).
+  const systemPrompt = "You are a senior Hindi cinema (Bollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic authority. Avoid AI clichés. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text with no HTML tags. Every paragraph must be at least 5-7 full sentences.";
+  const userPrompt = `Write a second week box office report for the Hindi movie "${movieName}" (${year}).
 Week 1 total: ${week1Str}. Week 2 total: ${week2Str}. Week-on-week drop: ${dropPct}%.
 Week 2 day-wise data: ${week2DataStr}. Cumulative total after 2 weeks: ${totalNetStr}.
 
@@ -8784,19 +7980,19 @@ async function generateThirdWeekAI(movie, days, totalNet) {
   const week3DataStr = week3Days.map(d => `Day ${d.day}: ${d.net || "N/A"}`).join("; ");
 
   const fallbacks = {
-    metaDescription: `${movieName} Third Week Box Office: ${week3Str} in Week 3, total ${totalNetStr} net after 21 days. Complete analysis of this extended Ollywood run.`,
+    metaDescription: `${movieName} Third Week Box Office: ${week3Str} in Week 3, total ${totalNetStr} net after 21 days. Complete analysis of this extended Bollywood run.`,
     headline: `${movieName} Third Week: ${week3Str} More at Box Office — 21 Days and Still Running`,
-    introParagraph: `${movieName}${year ? ` (${year})` : ""} has completed 21 days in Odia theatres — a milestone that most Odia releases never reach in today's compressed theatrical environment. The third week added ${week3Str} to the cumulative total, pushing the film's lifetime net to ${totalNetStr}. In an era where OTT platforms announce their streaming dates within weeks of a film's theatrical release, a film that sustains audience interest deep into its third week has achieved something genuinely exceptional.`,
-    sustainedRunAnalysis: `The theatrical journey of ${movieName} through three full weeks — Week 1 (${week1Str}), Week 2 (${week2Str}), Week 3 (${week3Str}) — tells a compelling story about a film that found its audience not through marketing alone but through the most reliable force in cinema: genuine word-of-mouth. ${week3DataStr ? `The Week 3 day-wise breakdown (${week3DataStr}) shows ` : "The Week 3 pattern shows "}the kind of steady, loyal trickle of audience that characterises an Odia film that has become part of community conversation — discussed at family gatherings, recommended by friends, and sought out by those who missed it in the first two weekends.`,
-    repeatViewerSection: `Films that sustain theatrical runs into their third week in Odisha are almost always driven significantly by repeat viewers — people who saw the film in its first or second week and returned because the experience merited a second, or even third, theatrical viewing. This repeat-viewing phenomenon is rare in contemporary Odia cinema and represents one of the highest possible compliments an audience can pay to a film. For ${movieName}, reaching Week 3 with meaningful occupancy is evidence of this deep, lasting connection.`,
-    screenCountContext: `The screen count story for ${movieName} by Week 3 will likely reflect a consolidation — fewer screens than Week 1 but those that remain are seeing higher occupancy rates than many newer releases. This is the natural ecology of a long-running film: it may lose breadth (number of screens) while gaining depth (occupancy percentage on available screens). Theatre owners in major Odisha centres — Bhubaneswar, Cuttack, Sambalpur — are among the most experienced readers of audience data in the Odia circuit, and their decision to continue programming ${movieName} into Week 3 is its own form of industry endorsement.`,
-    industryMilestoneSection: `In the contemporary Ollywood landscape, most commercially successful films complete their active theatrical run in 10-14 days. For ${movieName} to extend that window to 21 days places it in a select group of recent Odia releases that have demonstrated multi-week durability. This durability has ripple effects across the industry: it raises the ceiling of expectation for future productions, strengthens the case for larger theatrical windows before OTT releases, and gives producers and distributors a benchmark for what sustained quality content can achieve.`,
-    lifetimePrediction: `Based on Week 3 trajectory, ${movieName}'s lifetime theatrical collection is now taking clear shape. Films at this stage typically add their final 10-20% in Week 4 and beyond, driven by B-centre and C-centre audiences in smaller Odisha districts and towns who tend to come later in a film's run. The total net of ${totalNetStr} after 21 days positions ${movieName} for a lifetime collection that reflects genuine commercial success for an Odia language production.`,
-    conclusionParagraph: `The third week of ${movieName} at the Odia box office is not merely a collection report — it is a statement about the quality of Odia cinema and the sophistication of Odia audiences. A film that still draws paying viewers in Week 3 has earned its place in the recent history of Ollywood, and the ${totalNetStr} cumulative total after 21 days is a number that will be referenced as a benchmark for years to come.`
+    introParagraph: `${movieName}${year ? ` (${year})` : ""} has completed 21 days in Hindi theatres — a milestone that most Hindi releases never reach in today's compressed theatrical environment. The third week added ${week3Str} to the cumulative total, pushing the film's lifetime net to ${totalNetStr}. In an era where OTT platforms announce their streaming dates within weeks of a film's theatrical release, a film that sustains audience interest deep into its third week has achieved something genuinely exceptional.`,
+    sustainedRunAnalysis: `The theatrical journey of ${movieName} through three full weeks — Week 1 (${week1Str}), Week 2 (${week2Str}), Week 3 (${week3Str}) — tells a compelling story about a film that found its audience not through marketing alone but through the most reliable force in cinema: genuine word-of-mouth. ${week3DataStr ? `The Week 3 day-wise breakdown (${week3DataStr}) shows ` : "The Week 3 pattern shows "}the kind of steady, loyal trickle of audience that characterises an Hindi film that has become part of community conversation — discussed at family gatherings, recommended by friends, and sought out by those who missed it in the first two weekends.`,
+    repeatViewerSection: `Films that sustain theatrical runs into their third week in Odisha are almost always driven significantly by repeat viewers — people who saw the film in its first or second week and returned because the experience merited a second, or even third, theatrical viewing. This repeat-viewing phenomenon is rare in contemporary Hindi cinema and represents one of the highest possible compliments an audience can pay to a film. For ${movieName}, reaching Week 3 with meaningful occupancy is evidence of this deep, lasting connection.`,
+    screenCountContext: `The screen count story for ${movieName} by Week 3 will likely reflect a consolidation — fewer screens than Week 1 but those that remain are seeing higher occupancy rates than many newer releases. This is the natural ecology of a long-running film: it may lose breadth (number of screens) while gaining depth (occupancy percentage on available screens). Theatre owners in major Odisha centres — Bhubaneswar, Cuttack, Sambalpur — are among the most experienced readers of audience data in the Hindi circuit, and their decision to continue programming ${movieName} into Week 3 is its own form of industry endorsement.`,
+    industryMilestoneSection: `In the contemporary Bollywood landscape, most commercially successful films complete their active theatrical run in 10-14 days. For ${movieName} to extend that window to 21 days places it in a select group of recent Hindi releases that have demonstrated multi-week durability. This durability has ripple effects across the industry: it raises the ceiling of expectation for future productions, strengthens the case for larger theatrical windows before OTT releases, and gives producers and distributors a benchmark for what sustained quality content can achieve.`,
+    lifetimePrediction: `Based on Week 3 trajectory, ${movieName}'s lifetime theatrical collection is now taking clear shape. Films at this stage typically add their final 10-20% in Week 4 and beyond, driven by B-centre and C-centre audiences in smaller Odisha districts and towns who tend to come later in a film's run. The total net of ${totalNetStr} after 21 days positions ${movieName} for a lifetime collection that reflects genuine commercial success for an Hindi language production.`,
+    conclusionParagraph: `The third week of ${movieName} at the Hindi box office is not merely a collection report — it is a statement about the quality of Hindi cinema and the sophistication of Hindi audiences. A film that still draws paying viewers in Week 3 has earned its place in the recent history of Bollywood, and the ${totalNetStr} cumulative total after 21 days is a number that will be referenced as a benchmark for years to come.`
   };
 
-  const systemPrompt = "You are a senior Odia cinema journalist writing a third-week box office analysis for Ollypedia. Emphasise the exceptional nature of a three-week Odia theatrical run. Write with genuine editorial authority. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.";
-  const userPrompt = `Third week box office report for the Odia movie "${movieName}" (${year}).
+  const systemPrompt = "You are a senior Hindi cinema journalist writing a third-week box office analysis for The Cinema Verse. Emphasise the exceptional nature of a three-week Hindi theatrical run. Write with genuine editorial authority. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.";
+  const userPrompt = `Third week box office report for the Hindi movie "${movieName}" (${year}).
 Week 1: ${week1Str}. Week 2: ${week2Str}. Week 3: ${week3Str}. Total after 21 days: ${totalNetStr}.
 Week 3 day-wise: ${week3DataStr}.
 
@@ -8826,17 +8022,17 @@ async function generateFourthWeekAI(movie, days, totalNet) {
   ];
 
   const fallbacks = {
-    metaDescription: `${movieName} Fourth Week Box Office: ${week4Str} in Week 4, total ${totalNetStr} after 28 days. Rare extended run analysis for this Odia cinema landmark.`,
-    headline: `${movieName} Completes Four Weeks: ${totalNetStr} Total — A Landmark Odia Theatrical Run`,
-    introParagraph: `${movieName}${year ? ` (${year})` : ""} has completed a full four weeks in Odia theatres — a feat that is extraordinarily rare in contemporary Ollywood. Adding ${week4Str} in its fourth week, the film's cumulative net has reached ${totalNetStr}, making this one of the most sustained theatrical runs in recent Odia cinema history. Week 1 delivered ${weeklyTotals[0]}, Week 2 added ${weeklyTotals[1]}, Week 3 contributed ${weeklyTotals[2]}, and now Week 4 rounds out this remarkable journey with ${week4Str} more.`,
-    historicalContextSection: `Four-week theatrical runs are not merely commercial achievements in Ollywood — they are cultural events. When an Odia film sustains audience attention for 28 consecutive days, it enters the conversation of films that have genuinely shaped the sensibility of their era. In the OTT age, where a film's digital release often follows within weeks of its theatrical premiere, a four-week run signals one thing above all else: this film was worth the theatre experience, again and again.`,
-    legacySection: `The legacy of ${movieName} at the Odia box office will be debated and discussed in trade circles and among cinema lovers for a long time. A four-week run produces a specific kind of cultural imprint — it means the film was discussed at workplaces and family dinners across Odisha for an entire month, that multiple generations within the same family went to watch it at different points during its run, and that it was good enough to be recommended by someone every single day for 28 days.`,
-    finalVerdict: `After four full weeks, ${movieName}'s total net of ${totalNetStr} represents not just a financial milestone but an audience verdict delivered through the most democratic medium available — the movie ticket. This number will stand as one of the notable Odia box office achievements in recent memory, and it reflects the hard work of every single member of the production — from the director to the junior technician.`,
-    conclusionParagraph: `As ${movieName}'s fourth week concludes, it does so with the quiet confidence of a film that never needed validation — it earned it. The ${totalNetStr} in cumulative net collection after 28 days is a number worth celebrating, and the fact that Odia audiences chose this film, repeatedly, over the course of a full month, is the most meaningful review that any film — and any filmmaker — could ever receive.`
+    metaDescription: `${movieName} Fourth Week Box Office: ${week4Str} in Week 4, total ${totalNetStr} after 28 days. Rare extended run analysis for this Hindi cinema landmark.`,
+    headline: `${movieName} Completes Four Weeks: ${totalNetStr} Total — A Landmark Hindi Theatrical Run`,
+    introParagraph: `${movieName}${year ? ` (${year})` : ""} has completed a full four weeks in Hindi theatres — a feat that is extraordinarily rare in contemporary Bollywood. Adding ${week4Str} in its fourth week, the film's cumulative net has reached ${totalNetStr}, making this one of the most sustained theatrical runs in recent Hindi cinema history. Week 1 delivered ${weeklyTotals[0]}, Week 2 added ${weeklyTotals[1]}, Week 3 contributed ${weeklyTotals[2]}, and now Week 4 rounds out this remarkable journey with ${week4Str} more.`,
+    historicalContextSection: `Four-week theatrical runs are not merely commercial achievements in Bollywood — they are cultural events. When an Hindi film sustains audience attention for 28 consecutive days, it enters the conversation of films that have genuinely shaped the sensibility of their era. In the OTT age, where a film's digital release often follows within weeks of its theatrical premiere, a four-week run signals one thing above all else: this film was worth the theatre experience, again and again.`,
+    legacySection: `The legacy of ${movieName} at the Hindi box office will be debated and discussed in trade circles and among cinema lovers for a long time. A four-week run produces a specific kind of cultural imprint — it means the film was discussed at workplaces and family dinners across Odisha for an entire month, that multiple generations within the same family went to watch it at different points during its run, and that it was good enough to be recommended by someone every single day for 28 days.`,
+    finalVerdict: `After four full weeks, ${movieName}'s total net of ${totalNetStr} represents not just a financial milestone but an audience verdict delivered through the most democratic medium available — the movie ticket. This number will stand as one of the notable Hindi box office achievements in recent memory, and it reflects the hard work of every single member of the production — from the director to the junior technician.`,
+    conclusionParagraph: `As ${movieName}'s fourth week concludes, it does so with the quiet confidence of a film that never needed validation — it earned it. The ${totalNetStr} in cumulative net collection after 28 days is a number worth celebrating, and the fact that Hindi audiences chose this film, repeatedly, over the course of a full month, is the most meaningful review that any film — and any filmmaker — could ever receive.`
   };
 
-  const systemPrompt = "You are a senior Odia cinema journalist covering an extraordinary four-week box office run. Write with genuine editorial gravitas — this is a landmark moment for Ollywood. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.";
-  const userPrompt = `Fourth week box office report for the Odia movie "${movieName}" (${year}).
+  const systemPrompt = "You are a senior Hindi cinema journalist covering an extraordinary four-week box office run. Write with genuine editorial gravitas — this is a landmark moment for Bollywood. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.";
+  const userPrompt = `Fourth week box office report for the Hindi movie "${movieName}" (${year}).
 Weekly breakdown — Week 1: ${weeklyTotals[0]}, Week 2: ${weeklyTotals[1]}, Week 3: ${weeklyTotals[2]}, Week 4: ${week4Str}.
 Total after 28 days: ${totalNetStr}.
 
@@ -8861,18 +8057,18 @@ async function generateJubileeAI(movie, days, totalNet, jubileeType) {
   const recentDays = days.slice(-3).map(d => `Day ${d.day}: ${d.net || "—"}`).join(", ");
 
   const fallbacks = {
-    metaDescription: `${movieName} celebrates its ${jubileeName} — ${dayCount} days at the Odia box office with ${totalNetStr} total net collection. A historic milestone for Ollywood!`,
-    headline: `${movieName} ${jubileeType === "silver" ? "Silver Jubilee" : "Golden Jubilee"}: ${dayCount} Days of Pure Cinematic Triumph at the Odia Box Office`,
-    introParagraph: `${movieName}${year ? ` (${year})` : ""} has achieved the extraordinary milestone of completing ${dayCount} days in Odia theatres — officially crossing into ${jubileeName} territory. With a cumulative net collection of ${totalNetStr} and counting, this film has transcended the ordinary commercial lifecycle to become a genuine cultural event in Odia cinema. The ${jubileeName} is not just a box office milestone; it is an acknowledgement from Odia audiences that this film has something irreplaceable to offer — something worth returning to the cinema for, day after day, week after week.`,
-    jubileeSignificanceSection: `The ${jubileeName} milestone carries a meaning in cinema that goes far beyond simple arithmetic. A ${dayCount}-day theatrical run means that this film has been in active exhibition across Odisha through multiple weekends, multiple festive occasions, and multiple rounds of competition from newer releases — and has survived and thrived through all of them. In contemporary Ollywood, where the average theatrical window has compressed to fewer than 14 days for most releases, completing ${dayCount} days is a statement of exceptional durability and quality.`,
-    journeyNarrativeSection: `The journey of ${movieName} from its first day — when it opened with ${openingDayNet} — to this ${jubileeName} milestone is the kind of box office story that enriches the folklore of Odia cinema. Recent daily figures (${recentDays}) confirm that this film continues to attract paying audiences even at this advanced stage of its theatrical run — a phenomenon driven not by promotional push but by the organic, unstoppable force of genuine audience admiration.`,
-    industryMilestoneSection: `The ${jubileeName} of ${movieName} will be studied and referenced in Ollywood industry conversations for years. It establishes a new benchmark for what sustained theatrical success looks like in the Odia language market, and it signals to investors, producers, and OTT platforms alike that quality Odia content can generate the kind of long-term cultural engagement that no algorithm can manufacture. The film's ${totalNetStr} total collection is secondary to what it represents: proof that Odia audiences will sustain their cinema-going commitment for a film that truly connects with them.`,
-    filmmakerLegacySection: `For the director, the lead cast, and the entire production team of ${movieName}, the ${jubileeName} is an achievement that will define their professional legacy. In a film industry where box office verdicts are often delivered within 72 hours of release, reaching ${dayCount} days means this creative team's work has been embraced and celebrated by Odia audiences across generations, geographies, and demographics — a validation that extends far beyond any numerical milestone.`,
-    conclusionParagraph: `As ${movieName} marks its ${jubileeName} at the Odia box office, Ollywood has reason to celebrate — not just the success of one film, but what that success says about the state of Odia cinema and the appetite of Odia audiences for authentic, well-crafted storytelling. The ${totalNetStr} cumulative net collection after ${dayCount} days is a historic number, and this ${jubileeName} will be remembered as one of the defining box office moments in recent Odia film history.`
+    metaDescription: `${movieName} celebrates its ${jubileeName} — ${dayCount} days at the Hindi box office with ${totalNetStr} total net collection. A historic milestone for Bollywood!`,
+    headline: `${movieName} ${jubileeType === "silver" ? "Silver Jubilee" : "Golden Jubilee"}: ${dayCount} Days of Pure Cinematic Triumph at the Hindi Box Office`,
+    introParagraph: `${movieName}${year ? ` (${year})` : ""} has achieved the extraordinary milestone of completing ${dayCount} days in Hindi theatres — officially crossing into ${jubileeName} territory. With a cumulative net collection of ${totalNetStr} and counting, this film has transcended the ordinary commercial lifecycle to become a genuine cultural event in Hindi cinema. The ${jubileeName} is not just a box office milestone; it is an acknowledgement from Hindi audiences that this film has something irreplaceable to offer — something worth returning to the cinema for, day after day, week after week.`,
+    jubileeSignificanceSection: `The ${jubileeName} milestone carries a meaning in cinema that goes far beyond simple arithmetic. A ${dayCount}-day theatrical run means that this film has been in active exhibition across Odisha through multiple weekends, multiple festive occasions, and multiple rounds of competition from newer releases — and has survived and thrived through all of them. In contemporary Bollywood, where the average theatrical window has compressed to fewer than 14 days for most releases, completing ${dayCount} days is a statement of exceptional durability and quality.`,
+    journeyNarrativeSection: `The journey of ${movieName} from its first day — when it opened with ${openingDayNet} — to this ${jubileeName} milestone is the kind of box office story that enriches the folklore of Hindi cinema. Recent daily figures (${recentDays}) confirm that this film continues to attract paying audiences even at this advanced stage of its theatrical run — a phenomenon driven not by promotional push but by the organic, unstoppable force of genuine audience admiration.`,
+    industryMilestoneSection: `The ${jubileeName} of ${movieName} will be studied and referenced in Bollywood industry conversations for years. It establishes a new benchmark for what sustained theatrical success looks like in the Hindi language market, and it signals to investors, producers, and OTT platforms alike that quality Hindi content can generate the kind of long-term cultural engagement that no algorithm can manufacture. The film's ${totalNetStr} total collection is secondary to what it represents: proof that Hindi audiences will sustain their cinema-going commitment for a film that truly connects with them.`,
+    filmmakerLegacySection: `For the director, the lead cast, and the entire production team of ${movieName}, the ${jubileeName} is an achievement that will define their professional legacy. In a film industry where box office verdicts are often delivered within 72 hours of release, reaching ${dayCount} days means this creative team's work has been embraced and celebrated by Hindi audiences across generations, geographies, and demographics — a validation that extends far beyond any numerical milestone.`,
+    conclusionParagraph: `As ${movieName} marks its ${jubileeName} at the Hindi box office, Bollywood has reason to celebrate — not just the success of one film, but what that success says about the state of Hindi cinema and the appetite of Hindi audiences for authentic, well-crafted storytelling. The ${totalNetStr} cumulative net collection after ${dayCount} days is a historic number, and this ${jubileeName} will be remembered as one of the defining box office moments in recent Hindi film history.`
   };
 
-  const systemPrompt = `You are a senior Odia cinema journalist covering a ${jubileeName} milestone — one of the rarest achievements in Ollywood. Write with the full weight and celebration this deserves. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.`;
-  const userPrompt = `Write a ${jubileeName} box office report for the Odia movie "${movieName}" (${year}).
+  const systemPrompt = `You are a senior Hindi cinema journalist covering a ${jubileeName} milestone — one of the rarest achievements in Bollywood. Write with the full weight and celebration this deserves. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.`;
+  const userPrompt = `Write a ${jubileeName} box office report for the Hindi movie "${movieName}" (${year}).
 Days in theatres: ${dayCount}. Total net collection: ${totalNetStr}.
 Opening day collection: ${openingDayNet}. Recent daily figures: ${recentDays || "N/A"}.
 
@@ -8927,17 +8123,17 @@ function buildWeekSummaryBlogHTML(movie, days, totalNet, weekNum, weekLabel, ai,
 
   const keywords = [
     movieName, `${movieName} ${weekLabel}`, `${movieName} box office`,
-    `${movieName} week ${weekNum} collection`, "Odia box office", "Ollywood"
+    `${movieName} week ${weekNum} collection`, "Hindi box office", "Bollywood"
   ].join(", ");
 
   return `<!-- ════════════════════════════════════════════════════════════════
-  OLLYPEDIA SEO META — READ BY CMS
+  cinemaverse SEO META — READ BY CMS
   title:          ${title}
   description:    ${ai.metaDescription}
   keywords:       ${keywords}
   canonical:      ${SITE_URL}/blog/${slug}
   robots:         index, follow
-  og:site_name:   Ollypedia
+  og:site_name:   The Cinema Verse
   og:title:       ${title}
   og:description: ${ai.metaDescription}
   og:url:         ${SITE_URL}/blog/${slug}
@@ -8946,10 +8142,10 @@ function buildWeekSummaryBlogHTML(movie, days, totalNet, weekNum, weekLabel, ai,
   og:locale:      en_IN
   article:published_time: ${dp}
   article:modified_time:  ${dp}
-  article:author: Ollypedia Team
+  article:author: The Cinema Verse Desk
   article:section: Box Office
   twitter:card:   summary_large_image
-  twitter:site:   @OllypediaIn
+  twitter:site:   @The Cinema VerseIn
   twitter:title:  ${title}
   twitter:description: ${ai.metaDescription}
   twitter:image:  ${ogImage}
@@ -8969,12 +8165,12 @@ function buildWeekSummaryBlogHTML(movie, days, totalNet, weekNum, weekLabel, ai,
       "inLanguage": "en",
       "keywords": ${JSON.stringify(keywords)},
       "author": [
-        { "@type": "Person", "name": "Ollypedia Team", "url": "${SITE_URL}/about" },
-        { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}" }
+        { "@type": "Person", "name": "The Cinema Verse Desk", "url": "${SITE_URL}/about" },
+        { "@type": "Organization", "name": "The Cinema Verse", "url": "${SITE_URL}" }
       ],
       "publisher": {
         "@type": "Organization",
-        "name": "Ollypedia",
+        "name": "The Cinema Verse",
         "url": "${SITE_URL}",
         "logo": { "@type": "ImageObject", "url": "${SITE_URL}/logo.png" }
       },
@@ -9047,7 +8243,7 @@ ${EVENT_BLOG_RESPONSIVE_STYLES}
       <tbody>${allDaysRows}</tbody>
     </table>
   </div>
-  <p style="font-size:0.72rem;color:#444;margin-top:10px;">* Highlighted rows = ${weekLabel} days. All figures are industry estimates. Source: Sacnilk via Ollypedia.</p>
+  <p style="font-size:0.72rem;color:#444;margin-top:10px;">* Highlighted rows = ${weekLabel} days. All figures are industry estimates. Source: Sacnilk via The Cinema Verse.</p>
 </section>
 
 <section id="analysis" style="${css.card}">
@@ -9068,7 +8264,7 @@ ${EVENT_BLOG_RESPONSIVE_STYLES}
   <p style="color:#ccc;line-height:1.9;margin:0 0 16px;font-size:0.97rem;">${ai.week3OutlookSection || ai.lifetimePrediction || ai.finalVerdict || ""}</p>
   <p style="color:#ccc;line-height:1.9;margin:0;font-size:0.97rem;">${ai.conclusionParagraph || ""}</p>
   <p style="font-size:0.72rem;color:#444;margin-top:15px;">
-    * All figures are industry estimates sourced from Sacnilk via Ollypedia. Back to
+    * All figures are industry estimates sourced from Sacnilk via The Cinema Verse. Back to
     <a href="${movieUrl}" style="color:#c9973a;text-decoration:underline;">${movieName} Main Page</a> ·
     <a href="/box-office/${movie.slug}" style="color:#c9973a;text-decoration:underline;">Full Box Office Report</a>
   </p>
@@ -9101,16 +8297,16 @@ function buildJubileblogHTML(movie, days, totalNet, jubileeType, ai, slug, title
   }).join("");
 
   const keywords = [movieName, `${movieName} ${jubileeName}`, `${movieName} ${dayCount} days`,
-    `${movieName} box office`, "Odia box office", "Ollywood", jubileeName].join(", ");
+    `${movieName} box office`, "Hindi box office", "Bollywood", jubileeName].join(", ");
 
   return `<!-- ════════════════════════════════════════════════════════════════
-  OLLYPEDIA SEO META — READ BY CMS
+  cinemaverse SEO META — READ BY CMS
   title:          ${title}
   description:    ${ai.metaDescription}
   keywords:       ${keywords}
   canonical:      ${SITE_URL}/blog/${slug}
   robots:         index, follow
-  og:site_name:   Ollypedia
+  og:site_name:   The Cinema Verse
   og:title:       ${title}
   og:description: ${ai.metaDescription}
   og:url:         ${SITE_URL}/blog/${slug}
@@ -9119,10 +8315,10 @@ function buildJubileblogHTML(movie, days, totalNet, jubileeType, ai, slug, title
   og:locale:      en_IN
   article:published_time: ${dp}
   article:modified_time:  ${dp}
-  article:author: Ollypedia Team
+  article:author: The Cinema Verse Desk
   article:section: Box Office
   twitter:card:   summary_large_image
-  twitter:site:   @OllypediaIn
+  twitter:site:   @The Cinema VerseIn
   twitter:title:  ${title}
   twitter:description: ${ai.metaDescription}
   twitter:image:  ${ogImage}
@@ -9142,12 +8338,12 @@ function buildJubileblogHTML(movie, days, totalNet, jubileeType, ai, slug, title
       "inLanguage": "en",
       "keywords": ${JSON.stringify(keywords)},
       "author": [
-        { "@type": "Person", "name": "Ollypedia Team", "url": "${SITE_URL}/about" },
-        { "@type": "Organization", "name": "Ollypedia", "url": "${SITE_URL}" }
+        { "@type": "Person", "name": "The Cinema Verse Desk", "url": "${SITE_URL}/about" },
+        { "@type": "Organization", "name": "The Cinema Verse", "url": "${SITE_URL}" }
       ],
       "publisher": {
         "@type": "Organization",
-        "name": "Ollypedia",
+        "name": "The Cinema Verse",
         "url": "${SITE_URL}",
         "logo": { "@type": "ImageObject", "url": "${SITE_URL}/logo.png" }
       },
@@ -9217,7 +8413,7 @@ ${EVENT_BLOG_RESPONSIVE_STYLES}
   <h2 style="${css.h2}">Conclusion</h2>
   <p style="color:#ccc;line-height:1.9;margin:0 0 16px;font-size:0.97rem;">${ai.conclusionParagraph || ""}</p>
   <p style="font-size:0.72rem;color:#444;margin-top:15px;">
-    * All figures are industry estimates sourced from Sacnilk via Ollypedia. Back to
+    * All figures are industry estimates sourced from Sacnilk via The Cinema Verse. Back to
     <a href="${movieUrl}" style="color:#c9973a;text-decoration:underline;">${movieName} Main Page</a> ·
     <a href="/box-office/${movie.slug}" style="color:#c9973a;text-decoration:underline;">Full Box Office Report</a>
   </p>
@@ -9273,11 +8469,11 @@ async function maybeGenerateWeekSummaryBlog(movie, sortedDays, totalNet, movieId
       excerpt: ai.metaDescription,
       content: html,
       category: "Box Office",
-      tags: [movie.title, "Box Office", weekLabel, "Odia Cinema", "Ollywood", `${weekNum * 7} Days`].filter(Boolean),
+      tags: [movie.title, "Box Office", weekLabel, "Hindi Cinema", "Bollywood", `${weekNum * 7} Days`].filter(Boolean),
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId,
       movieTitle: movie.title,
-      author: "Ollypedia Team",
+      author: "The Cinema Verse Desk",
       published: true,
       indexed: true,
       featured: false,
@@ -9326,11 +8522,11 @@ async function maybeGenerateJubileblog(movie, sortedDays, totalNet, actualDay, m
       excerpt: ai.metaDescription,
       content: html,
       category: "Box Office",
-      tags: [movie.title, "Box Office", jubileeName, `${dayCount} Days`, "Odia Cinema", "Ollywood"].filter(Boolean),
+      tags: [movie.title, "Box Office", jubileeName, `${dayCount} Days`, "Hindi Cinema", "Bollywood"].filter(Boolean),
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId,
       movieTitle: movie.title,
-      author: "Ollypedia Team",
+      author: "The Cinema Verse Desk",
       published: true,
       indexed: true,
       featured: false,

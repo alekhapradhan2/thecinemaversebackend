@@ -271,6 +271,9 @@ function HistoryPanel({ movie, logs, onClose }) {
                       {d.gross && (
                         <span style={{ color: "#7ec8e3", fontWeight: 600, fontSize: "0.75rem" }}>{d.gross}</span>
                       )}
+                      {d.overseas && (
+                        <span style={{ color: "#e87a6a", fontWeight: 600, fontSize: "0.75rem" }}>{d.overseas}</span>
+                      )}
                       {d.date && <span style={{ color: "var(--muted)", fontSize: "0.6rem" }}>{fmtDateShort(d.date) || d.date}</span>}
                       {d.note && d.note.includes("Sacnilk") && (
                         <span style={{ color: "#555", fontSize: "0.55rem", letterSpacing: "0.04em" }}>auto</span>
@@ -302,6 +305,12 @@ function HistoryPanel({ movie, logs, onClose }) {
                         <div>
                           <div style={{ fontSize: "0.65rem", color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Total Gross</div>
                           <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#7ec8e3" }}>{totalGross.toFixed(2)} {unit}</div>
+                        </div>
+                      )}
+                      {movie?.boxOffice?.overseasTotal && (
+                        <div>
+                          <div style={{ fontSize: "0.65rem", color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Total Overseas</div>
+                          <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#e87a6a" }}>{movie.boxOffice.overseasTotal}</div>
                         </div>
                       )}
                       <div>

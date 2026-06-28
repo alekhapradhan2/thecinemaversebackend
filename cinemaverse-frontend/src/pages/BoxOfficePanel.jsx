@@ -1,4 +1,4 @@
-﻿// src/components/admin/BoxOfficePanel.jsx
+// src/components/admin/BoxOfficePanel.jsx
 // ─────────────────────────────────────────────────────────────────────────────
 //  Complete rewrite — User-friendly Box Office Panel
 //
@@ -744,6 +744,7 @@ const buildBlogContent = (movie, daysUpToN, totalNet, totalGross, targetDay, sec
       <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:#888;font-size:0.82rem;">${dateStr}</td>
       <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:${isToday ? "#c9973a" : "#ddd"};font-weight:700;">${d.net ? fmtINR(d.net) : "—"}</td>
       <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:#7ec8e3;font-weight:600;">${d.gross ? fmtINR(d.gross) : "—"}</td>
+      <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:#e87a6a;font-weight:600;">${d.overseas ? fmtINR(d.overseas) : "—"}</td>
       <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:#c9973a;font-weight:700;">${fmtINR(cumulativeNet)}</td>
       <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;">${trendHtml}</td>
     </tr>`;
@@ -1170,6 +1171,7 @@ const buildBlogContent = (movie, daysUpToN, totalNet, totalGross, targetDay, sec
           <th style="${th}">Date</th>
           <th style="${th}">Net</th>
           <th style="${th}">Gross</th>
+          <th style="${th}">Overseas</th>
           <th style="${th}">Cumulative Net</th>
           <th style="${th}">Trend</th>
         </tr>
@@ -1184,6 +1186,7 @@ const buildBlogContent = (movie, daysUpToN, totalNet, totalGross, targetDay, sec
           </td>
           <td style="padding:12px 14px;background:#1f1800;border-top:2px solid #2e2000;color:#c9973a;font-weight:800;font-size:1rem;">${totalNetStr}</td>
           <td style="padding:12px 14px;background:#1f1800;border-top:2px solid #2e2000;color:#7ec8e3;font-weight:800;font-size:1rem;">${totalGrossStr}</td>
+          <td style="padding:12px 14px;background:#1f1800;border-top:2px solid #2e2000;color:#e87a6a;font-weight:800;font-size:1rem;">${movie.boxOffice?.overseasTotal ? fmtINR(movie.boxOffice.overseasTotal) : "—"}</td>
           <td style="padding:12px 14px;background:#1f1800;border-top:2px solid #2e2000;color:#c9973a;font-weight:800;font-size:1rem;">${totalNetStr}</td>
           <td style="padding:12px 14px;background:#1f1800;border-top:2px solid #2e2000;"></td>
         </tr>
@@ -1451,6 +1454,7 @@ function DayModal({ movie, isEdit, dayData, allDays, onClose, onSaved, onToast }
     day:   String(dayData?.day ?? nextDay),
     net:   String(dayData?.net   ?? ""),
     gross: String(dayData?.gross ?? ""),
+    overseas: String(dayData?.overseas ?? ""),
     date:  String(dayData?.date  ?? new Date().toISOString().slice(0, 10)),
     note:  String(dayData?.note  ?? ""),
   });
@@ -1468,14 +1472,16 @@ function DayModal({ movie, isEdit, dayData, allDays, onClose, onSaved, onToast }
 
   const set = (k) => (e) => {
     const val = e.target.value;
-    if (k === "net") {
+    if (k === "net" || k === "overseas") {
       // Auto-calculate gross unless the user has manually overridden it
       setForm((p) => {
-        const netNum = parseToRupees(val);
-        const autoGross = netNum > 0
-          ? fmtINR(Math.round(netNum * GST_RATE))
-          : p.gross;
-        return { ...p, net: val, gross: grossManual ? p.gross : autoGross };
+        const next = { ...p, [k]: val };
+        const netNum = parseToRupees(next.net);
+        const overseasNum = parseToRupees(next.overseas);
+        const autoGross = (netNum > 0 || overseasNum > 0)
+          ? fmtINR(Math.round(netNum * GST_RATE) + overseasNum)
+          : next.gross;
+        return { ...next, gross: grossManual ? next.gross : autoGross };
       });
     } else if (k === "gross") {
       setGrossManual(val.trim() !== ""); // if user clears gross, allow auto again
@@ -1489,7 +1495,8 @@ function DayModal({ movie, isEdit, dayData, allDays, onClose, onSaved, onToast }
   const getDaysUpToN = useCallback(() => {
     const current = {
       day: parseInt(form.day, 10), net: form.net.trim(),
-      gross: form.gross.trim(), date: form.date, note: form.note.trim(),
+      gross: form.gross.trim(), overseas: form.overseas.trim(),
+      date: form.date, note: form.note.trim(),
     };
     const others = (allDays || []).filter((d) => d.day !== current.day);
     return [...others, current].sort((a, b) => a.day - b.day);
@@ -1544,6 +1551,7 @@ function DayModal({ movie, isEdit, dayData, allDays, onClose, onSaved, onToast }
       day:   parseInt(form.day, 10),
       net:   form.net.trim(),
       gross: form.gross.trim(),
+      overseas: form.overseas.trim(),
       date:  form.date,
       note:  form.note.trim(),
     };
@@ -1658,14 +1666,19 @@ function DayModal({ movie, isEdit, dayData, allDays, onClose, onSaved, onToast }
           </div>
 
           {/* Row 2: Net + Gross */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 14 }}>
             <div>
               <label style={lbl}>Net Collection (₹)</label>
               <input className="form-input" style={{ width: "100%", boxSizing: "border-box" }}
                 type="text" placeholder="e.g. 45,00,000" value={form.net} onChange={set("net")} autoFocus={!isEdit} />
               <div style={{ fontSize: "0.65rem", color: "var(--muted)", marginTop: 4 }}>
-                Gross auto-calculates at Net × 1.18 (18% GST)
+                Gross auto-calculates at Net × 1.18 + Overseas
               </div>
+            </div>
+            <div>
+              <label style={lbl}>Overseas (₹)</label>
+              <input className="form-input" style={{ width: "100%", boxSizing: "border-box" }}
+                type="text" placeholder="Optional" value={form.overseas} onChange={set("overseas")} />
             </div>
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
@@ -1675,8 +1688,9 @@ function DayModal({ movie, isEdit, dayData, allDays, onClose, onSaved, onToast }
                     type="button"
                     onClick={() => {
                       setGrossManual(false);
-                      const netNum = parseFloat(form.net.replace(/[^0-9.]/g, ""));
-                      const autoGross = !isNaN(netNum) && netNum > 0 ? String(Math.round(netNum * GST_RATE)) : "";
+                      const netNum = parseToRupees(form.net);
+                      const overseasNum = parseToRupees(form.overseas);
+                      const autoGross = (netNum > 0 || overseasNum > 0) ? fmtINR(Math.round(netNum * GST_RATE) + overseasNum) : "";
                       setForm((p) => ({ ...p, gross: autoGross }));
                     }}
                     style={{ fontSize: "0.6rem", color: "var(--gold)", background: "rgba(201,151,58,0.12)", border: "1px solid rgba(201,151,58,0.3)", borderRadius: 6, padding: "2px 7px", cursor: "pointer", fontWeight: 700 }}
@@ -2253,6 +2267,7 @@ export default function BoxOfficePanel({ movies, onToast }) {
                   {[
                     { label: "Total Net",   value: fmtINR(totalNet),   color: "var(--gold)" },
                     { label: "Total Gross", value: fmtINR(totalGross), color: "#7ec8e3"      },
+                    { label: "Overseas",    value: selMovie.boxOffice?.overseasTotal ? fmtINR(selMovie.boxOffice.overseasTotal) : "—", color: "#e87a6a" },
                     { label: "Days",        value: loadingDays ? "…" : (days.length || "—"), color: "var(--text)" },
                   ].map(({ label: l, value, color }) => (
                     <div key={l} style={{ background: "rgba(0,0,0,0.4)", borderRadius: 10, padding: "9px 16px", border: "1px solid rgba(255,255,255,0.06)", minWidth: 110 }}>
@@ -2298,7 +2313,7 @@ export default function BoxOfficePanel({ movies, onToast }) {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
                   <thead>
                     <tr style={{ background: "var(--bg2)" }}>
-                      {["Day", "Date", "Net Collection", "Gross Collection", "Notes", ""].map((h, i) => (
+                      {["Day", "Date", "Net Collection", "Gross Collection", "Overseas", "Notes", ""].map((h, i) => (
                         <th key={i} style={{ padding: "12px 16px", textAlign: "left", fontSize: "0.64rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, whiteSpace: "nowrap", borderBottom: "2px solid var(--border)" }}>
                           {h}
                         </th>
@@ -2321,6 +2336,7 @@ export default function BoxOfficePanel({ movies, onToast }) {
                         </td>
                         <td style={{ padding: "12px 16px", fontWeight: 700 }}>{fmtINR(d.net)}</td>
                         <td style={{ padding: "12px 16px", fontWeight: 600, color: "#7ec8e3" }}>{fmtINR(d.gross)}</td>
+                        <td style={{ padding: "12px 16px", fontWeight: 600, color: "#e87a6a" }}>{fmtINR(d.overseas)}</td>
                         <td style={{ padding: "12px 16px", color: "var(--muted)", fontSize: "0.78rem", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {d.note || "—"}
                         </td>
@@ -2354,6 +2370,7 @@ export default function BoxOfficePanel({ movies, onToast }) {
                       </td>
                       <td style={{ padding: "12px 16px", fontWeight: 800, color: "var(--gold)", fontSize: "1rem" }}>{fmtINR(totalNet)}</td>
                       <td style={{ padding: "12px 16px", fontWeight: 800, color: "#7ec8e3", fontSize: "1rem" }}>{fmtINR(totalGross)}</td>
+                      <td style={{ padding: "12px 16px", fontWeight: 800, color: "#e87a6a", fontSize: "1rem" }}>{selMovie?.boxOffice?.overseasTotal ? fmtINR(selMovie.boxOffice.overseasTotal) : "—"}</td>
                       <td colSpan={2} />
                     </tr>
                   </tfoot>

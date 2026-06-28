@@ -38,7 +38,7 @@ function buildMoviePrompt(movie, type) {
   const cast  = (movie.cast  || []).slice(0,5).map(c => `${c.name}${c.role ? ` as ${c.role}` : ""}`).join(", ");
   const songs = (movie.media?.songs || []).slice(0,3).map(s => s.title).filter(Boolean).join(", ");
   const year  = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "upcoming";
-  const genre = (movie.genre || []).join(", ") || "Odia";
+  const genre = (movie.genre || []).join(", ") || "Hindi";
   const ctx   = `Movie: "${movie.title}" (${year}) | Genre: ${genre} | Director: ${movie.director||"N/A"} | Cast: ${cast||"N/A"} | Songs: ${songs||"N/A"} | Synopsis: ${movie.synopsis||"N/A"} | Verdict: ${movie.verdict||"Upcoming"}`;
 
   const htmlRules = `
@@ -60,7 +60,7 @@ OUTPUT RULES — STRICTLY FOLLOW:
 - Do NOT output any text outside the <article> tag`;
 
   const map = {
-    review: `You are an expert SEO content writer for Ollypedia, an Odia cinema website. Write a fully structured, AdSense-friendly HTML movie review for the Odia film "${movie.title}" (${year}).
+    review: `You are an expert SEO content writer for thecinemaverse, an Hindi cinema website. Write a fully structured, AdSense-friendly HTML movie review for the Hindi film "${movie.title}" (${year}).
 
 Sections to include:
 1. Engaging introduction (mention "${movie.title}" in first sentence)
@@ -75,7 +75,7 @@ Sections to include:
 ${ctx}
 ${htmlRules}`,
 
-    story: `You are an expert SEO content writer for Ollypedia, an Odia cinema website. Write a fully structured HTML story and plot breakdown article for "${movie.title}" (${year}).
+    story: `You are an expert SEO content writer for thecinemaverse, an Hindi cinema website. Write a fully structured HTML story and plot breakdown article for "${movie.title}" (${year}).
 
 Sections to include:
 1. Introduction — what the film is about
@@ -83,13 +83,13 @@ Sections to include:
 3. Key Plot Points & Narrative Arc
 4. Emotional Beats & Themes
 5. What Makes the Story Stand Out (as <ul>)
-6. Comparison Table — "${movie.title}" vs similar Odia films (themes, tone, style)
+6. Comparison Table — "${movie.title}" vs similar Hindi films (themes, tone, style)
 7. FAQ section
 
 ${ctx}
 ${htmlRules}`,
 
-    cast: `You are an expert SEO content writer for Ollypedia. Write a fully structured HTML cast spotlight article for "${movie.title}" (${year}).
+    cast: `You are an expert SEO content writer for thecinemaverse. Write a fully structured HTML cast spotlight article for "${movie.title}" (${year}).
 
 Sections to include:
 1. Introduction
@@ -102,7 +102,7 @@ Sections to include:
 ${ctx}
 ${htmlRules}`,
 
-    music: `You are an expert SEO content writer for Ollypedia. Write a fully structured HTML music review for "${movie.title}" (${year}).
+    music: `You are an expert SEO content writer for thecinemaverse. Write a fully structured HTML music review for "${movie.title}" (${year}).
 
 Sections to include:
 1. Introduction — overall feel of the soundtrack
@@ -116,7 +116,7 @@ Sections to include:
 ${ctx}
 ${htmlRules}`,
 
-    analysis: `You are an expert SEO content writer for Ollypedia. Write a fully structured HTML deep-dive analysis for "${movie.title}" (${year}).
+    analysis: `You are an expert SEO content writer for thecinemaverse. Write a fully structured HTML deep-dive analysis for "${movie.title}" (${year}).
 
 Sections to include:
 1. Introduction
@@ -125,13 +125,13 @@ Sections to include:
 4. Direction & Screenplay Analysis
 5. Cultural & Social Significance
 6. Key Strengths & Weaknesses (as two <ul> lists)
-7. Comparison Table — "${movie.title}" vs recent Odia films
+7. Comparison Table — "${movie.title}" vs recent Hindi films
 8. FAQ section
 
 ${ctx}
 ${htmlRules}`,
 
-    trivia: `You are an expert SEO content writer for Ollypedia. Write a fully structured HTML trivia & facts article for "${movie.title}" (${year}).
+    trivia: `You are an expert SEO content writer for thecinemaverse. Write a fully structured HTML trivia & facts article for "${movie.title}" (${year}).
 
 Sections to include:
 1. Introduction
@@ -150,9 +150,9 @@ ${htmlRules}`,
 
 function autoTitle(movie, type) {
   const year  = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
-  const genre = (movie.genre || []).join(", ") || "Odia Film";
+  const genre = (movie.genre || []).join(", ") || "Hindi Film";
   return {
-    review:   `${movie.title}${year ? ` (${year})` : ""} – ${genre} Odia Movie Review & Story`,
+    review:   `${movie.title}${year ? ` (${year})` : ""} – ${genre} Hindi Movie Review & Story`,
     story:    `${movie.title} – Full Story, Plot & Narrative Breakdown`,
     cast:     `${movie.title} – Cast Spotlight: Meet the Actors & Characters`,
     music:    `${movie.title} – Music Review: Songs, Score & Soundtrack`,
@@ -169,7 +169,7 @@ function autoCategory(type) {
 // ─── Cast/Crew prompt builder ────────────────────────────────────────────────
 function buildCastPrompt(castMember, type) {
   const movies = (castMember.movies || []).slice(0,5).map(m => typeof m==="string" ? m : m.title||"").filter(Boolean).join(", ");
-  const ctx = `Name: ${castMember.name} | Type: ${castMember.type||"Actor"} | Known for: ${movies||"Ollywood films"} | Bio: ${castMember.bio||"N/A"}`;
+  const ctx = `Name: ${castMember.name} | Type: ${castMember.type||"Actor"} | Known for: ${movies||"Bollywood films"} | Bio: ${castMember.bio||"N/A"}`;
 
   const htmlRules = `
 OUTPUT RULES — STRICTLY FOLLOW:
@@ -185,10 +185,10 @@ OUTPUT RULES — STRICTLY FOLLOW:
 - Do NOT use inline styles. Do NOT output anything outside <article>.`;
 
   const map = {
-    profile: `You are an expert SEO content writer for Ollypedia, an Odia cinema website. Write a fully structured HTML profile/biography article for ${castMember.type||"actor"} "${castMember.name}".
+    profile: `You are an expert SEO content writer for thecinemaverse, an Hindi cinema website. Write a fully structured HTML profile/biography article for ${castMember.type||"actor"} "${castMember.name}".
 
 Sections:
-1. Introduction — who they are and why they matter in Ollywood
+1. Introduction — who they are and why they matter in Bollywood
 2. Early Life & Background
 3. Career Journey & Breakthrough
 4. Notable Works (as <ul>)
@@ -200,7 +200,7 @@ Sections:
 ${ctx}
 ${htmlRules}`,
 
-    interview: `You are an expert SEO content writer for Ollypedia. Write a creative HTML Q&A-style interview feature with ${castMember.name} (${castMember.type||"actor"}) about their career in Odia cinema.
+    interview: `You are an expert SEO content writer for thecinemaverse. Write a creative HTML Q&A-style interview feature with ${castMember.name} (${castMember.type||"actor"}) about their career in Hindi cinema.
 
 Sections:
 1. Introduction
@@ -211,7 +211,7 @@ Sections:
 ${ctx}
 ${htmlRules}`,
 
-    spotlight: `You are an expert SEO content writer for Ollypedia. Write a fully structured HTML spotlight/feature article on ${castMember.name} (${castMember.type||"actor"}) for fans of Odia cinema.
+    spotlight: `You are an expert SEO content writer for thecinemaverse. Write a fully structured HTML spotlight/feature article on ${castMember.name} (${castMember.type||"actor"}) for fans of Hindi cinema.
 
 Sections:
 1. Introduction
@@ -230,9 +230,9 @@ ${htmlRules}`,
 
 function autoCastTitle(castMember, type) {
   return {
-    profile:   `${castMember.name} – Biography, Career & Films | Odia Cinema`,
-    interview: `${castMember.name} – Exclusive Interview | Ollywood`,
-    spotlight: `${castMember.name} – Actor Spotlight | Odia Cinema`,
+    profile:   `${castMember.name} – Biography, Career & Films | Hindi Cinema`,
+    interview: `${castMember.name} – Exclusive Interview | Bollywood`,
+    spotlight: `${castMember.name} – Actor Spotlight | Hindi Cinema`,
     custom:    `${castMember.name} – Article`,
   }[type] || `${castMember.name} – Article`;
 }
@@ -328,10 +328,10 @@ async function publishArticle(movie, article, type, youtubeVideoId = "") {
     body: JSON.stringify({
       title, slug, content:article, excerpt,
       category: autoCategory(type),
-      tags: [movie.title, "Ollywood", "Odia Movie", ...(movie.genre||[])],
+      tags: [movie.title, "Bollywood", "Hindi Movie", ...(movie.genre||[])],
       coverImage: movie.posterUrl || movie.thumbnailUrl || "",
       movieTitle: movie.title, movieId: movie._id,
-      author: "OllyPedia Editorial",
+      author: "thecinemaverse Editorial",
       readTime: readTime(article), seoTitle:title, seoDesc:excerpt, published:true,
       ...(youtubeVideoId.trim() ? { youtubeVideoId: youtubeVideoId.trim() } : {}),
     }),
@@ -357,7 +357,7 @@ async function publishBlogPost({ title, content, category, tags, coverImage, mov
       coverImage: coverImage || (castMember ? castMember.photo||"" : movie ? movie.posterUrl||movie.thumbnailUrl||"" : ""),
       movieTitle: movie?.title || "", movieId: movie?._id || null,
       castName: castMember?.name || "", castId: castMember?._id || null,
-      author: "OllyPedia Editorial",
+      author: "thecinemaverse Editorial",
       readTime: readTime(content),
       seoTitle: title.trim(), seoDesc: excerpt,
       published: published !== false,
@@ -953,7 +953,7 @@ function NewBlogModal({ movies=[], cast=[], onClose, onPublished, onToast }) {
     }
 
     if (articleType === "custom") {
-      const base = userPrompt.trim() || "Write an engaging 1000+ word blog article about Ollywood cinema.";
+      const base = userPrompt.trim() || "Write an engaging 1000+ word blog article about Bollywood cinema.";
       if (linkedMovie) {
         const cast2  = (linkedMovie.cast||[]).slice(0,5).map(c => `${c.name}${c.role?` as ${c.role}`:""}`).join(", ");
         const year  = linkedMovie.releaseDate ? new Date(linkedMovie.releaseDate).getFullYear() : "upcoming";
@@ -966,8 +966,8 @@ function NewBlogModal({ movies=[], cast=[], onClose, onPublished, onToast }) {
       const base = buildMoviePrompt(linkedMovie, articleType);
       return userPrompt.trim() ? `${base}\n\nEditor notes: ${userPrompt.trim()}` : base;
     }
-    const topic = userPrompt.trim() || "Write an engaging 1000+ word blog article about Ollywood cinema.";
-    return `You are an expert SEO blog writer for Ollypedia, an Odia cinema website.\n\nInstructions: ${topic}\n\n${htmlRules}\n\nIMPORTANT: Respond ONLY with a valid JSON object (no markdown, no backticks, no extra text) in this exact format:\n{"title": "Your Blog Title Here", "content": "<article>...full HTML content here...</article>"}`;
+    const topic = userPrompt.trim() || "Write an engaging 1000+ word blog article about Bollywood cinema.";
+    return `You are an expert SEO blog writer for thecinemaverse, an Hindi cinema website.\n\nInstructions: ${topic}\n\n${htmlRules}\n\nIMPORTANT: Respond ONLY with a valid JSON object (no markdown, no backticks, no extra text) in this exact format:\n{"title": "Your Blog Title Here", "content": "<article>...full HTML content here...</article>"}`;
   }, [linkedMovie, linkedCast, linkType, articleType, castArticleType, userPrompt]);
 
   const handleGenerate = async () => {
@@ -1142,7 +1142,7 @@ function NewBlogModal({ movies=[], cast=[], onClose, onPublished, onToast }) {
         </div>
         <div>
           <label className="bg-field-label">Tags <span style={{ fontWeight:400, textTransform:"none" }}>(comma-separated)</span></label>
-          <input className="bg-field-input" placeholder="Ollywood, Drama, 2025…"
+          <input className="bg-field-input" placeholder="Bollywood, Drama, 2025…"
             value={blogTags} onChange={e=>setBlogTags(e.target.value)} />
         </div>
       </div>
@@ -1273,7 +1273,7 @@ function NewBlogModal({ movies=[], cast=[], onClose, onPublished, onToast }) {
                 <textarea className="bg-field-input bg-field-textarea"
                   placeholder={
                     linkedCast && linkType==="cast"
-                      ? `e.g. "Focus on their most emotional performances" or "Highlight their contribution to Odia cinema"`
+                      ? `e.g. "Focus on their most emotional performances" or "Highlight their contribution to Hindi cinema"`
                       : linkedMovie
                         ? `e.g. "Focus on the emotional climax" or "Highlight the music score"…`
                         : `Describe your blog topic, tone, key points and audience.`
@@ -1310,7 +1310,7 @@ function NewBlogModal({ movies=[], cast=[], onClose, onPublished, onToast }) {
                 </div>
                 <div>
                   <label className="bg-field-label">Tags</label>
-                  <input className="bg-field-input" placeholder="Ollywood, Drama…"
+                  <input className="bg-field-input" placeholder="Bollywood, Drama…"
                     value={blogTags} onChange={e=>setBlogTags(e.target.value)} />
                 </div>
               </div>
@@ -1635,11 +1635,11 @@ function CastPanel({ castMember, movies=[], cast=[], onToast }) {
         body: JSON.stringify({
           title, slug, content:genContent, excerpt,
           category:"Actor Spotlight",
-          tags:[castMember.name, castMember.type||"Actor", "Ollywood"],
+          tags:[castMember.name, castMember.type||"Actor", "Bollywood"],
           coverImage: castMember.photo||"",
           castName: castMember.name, castId: castMember._id,
           movieTitle:"", movieId:null,
-          author:"OllyPedia Editorial",
+          author:"thecinemaverse Editorial",
           readTime: readTime(genContent), seoTitle:title, seoDesc:excerpt,
           published:true,
           ...(ytId.trim() ? { youtubeVideoId: parseYtId(ytId) } : {}),
@@ -1883,7 +1883,7 @@ function MovieRow({ movie, artCount, onToast, movies=[], cast=[] }) {
           <div className="bg-mtitle">{movie.title}</div>
           <div className="bg-msub">
             <span>{year}</span><span>·</span>
-            <span>{(movie.genre||[]).join(", ")||"Odia"}</span><span>·</span>
+            <span>{(movie.genre||[]).join(", ")||"Hindi"}</span><span>·</span>
             <span>{movie.verdict||"Upcoming"}</span>
             {artCount > 0 && (
               <span className="bg-mcount">{artCount} article{artCount!==1?"s":""}</span>
