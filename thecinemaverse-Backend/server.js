@@ -9507,11 +9507,62 @@ cron.schedule("30 6 * * *", async () => {
   } catch (e) {
     console.error(`[Sacnilk Cron] Fatal error: ${e.message}`);
   }
+
+  // ── Auto-Blog Generation for Scraper-Added / Updated Movies ──
+  console.log(`[Blog Cron] Checking for newly added or updated movies at ${new Date().toISOString()}`);
+  try {
+    // Only look at movies created or updated recently (last 48 hours)
+    // This prevents the system from trying to generate blogs for thousands of old scraped movies at once.
+    const recentDate = new Date(Date.now() - 48 * 60 * 60 * 1000);
+
+    // 1. Generate "Movie Details" blog for any movie that doesn't have one (newly added by scraper)
+    const newMovies = await Movie.find({ 
+      detailBlogId: null,
+      createdAt: { $gte: recentDate }
+    }).lean();
+    console.log(`[Blog Cron] Found ${newMovies.length} movie(s) needing Movie Details blog.`);
+    for (const movie of newMovies) {
+      try {
+        await autoGenerateMovieDetailsBlog(movie);
+      } catch (err) {
+        console.error(`[Blog Cron] Error generating Movie Details for "${movie.title}": ${err.message}`);
+      }
+      await new Promise(r => setTimeout(r, 2000)); // Polite delay
+    }
+
+    // 2. Generate OTT blogs for movies that have streaming info but missing blogs
+    const ottMovies = await Movie.find({ 
+      streamingOn: { $nin: ["", null] },
+      updatedAt: { $gte: recentDate }
+    }).lean();
+    console.log(`[Blog Cron] Checking ${ottMovies.length} movie(s) with OTT details for missing blogs.`);
+    for (const movie of ottMovies) {
+      try {
+        if (!movie.ottBlogId) {
+          await autoGenerateOttBlog(movie);
+          await new Promise(r => setTimeout(r, 2000));
+        }
+        if (!movie.ottLiveBlogId && isRealDate(movie.ottReleaseDate)) {
+          const releaseMs = new Date(movie.ottReleaseDate).getTime();
+          if (Date.now() >= releaseMs) {
+            await autoGenerateOttLiveBlog(movie);
+            await new Promise(r => setTimeout(r, 2000));
+          }
+        }
+      } catch (err) {
+        console.error(`[Blog Cron] Error generating OTT blogs for "${movie.title}": ${err.message}`);
+      }
+    }
+    console.log(`[Blog Cron] Finished blog generation at ${new Date().toISOString()}`);
+  } catch (e) {
+    console.error(`[Blog Cron] Fatal error: ${e.message}`);
+  }
+
 }, {
   timezone: "Asia/Kolkata",
 });
 
-console.log("✅ Sacnilk cron scheduled: daily at 8:00 AM IST");
+console.log("✅ Cron scheduled: daily at 6:30 AM IST (Sacnilk Scrape & Auto-Blogs)");
 
 
 
