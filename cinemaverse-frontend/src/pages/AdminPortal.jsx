@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { API, getAdminToken } from "../api/api";
 
@@ -28,16 +28,36 @@ const CAST_TYPES = [
 ];
 const VERDICTS = ["Upcoming", "Hit", "Super Hit", "Blockbuster", "Average", "Flop", "Disaster", "Released"];
 const OTT_PLATFORMS = [
+  // ── National / Major Platforms ──────────────────────────────────
+  { name: "Netflix", url: "https://www.netflix.com", logo: "🎬" },
+  { name: "Amazon Prime Video", url: "https://www.primevideo.com", logo: "📦" },
+  { name: "Disney+ Hotstar", url: "https://www.hotstar.com", logo: "⭐" },
+  { name: "JioCinema", url: "https://www.jiocinema.com", logo: "🔵" },
+  { name: "SonyLIV", url: "https://www.sonyliv.com", logo: "🔴" },
+  { name: "ZEE5", url: "https://www.zee5.com", logo: "🟣" },
+  { name: "Voot / JioCinema", url: "https://www.jiocinema.com", logo: "🟠" },
+  { name: "ALTBalaji", url: "https://www.altbalaji.com", logo: "🅰️" },
+  { name: "MX Player", url: "https://www.mxplayer.in", logo: "▶️" },
+  { name: "Lionsgate Play", url: "https://www.lionsgateplay.com", logo: "🦁" },
+  { name: "Apple TV+", url: "https://tv.apple.com", logo: "🍎" },
+  { name: "YouTube", url: "https://www.youtube.com", logo: "📹" },
+  // ── South Indian / Regional ─────────────────────────────────────
+  { name: "Aha", url: "https://www.aha.video", logo: "🎭" },
+  { name: "Sun NXT", url: "https://www.sunnxt.com", logo: "☀️" },
+  { name: "Hoichoi", url: "https://www.hoichoi.tv", logo: "🎪" },
+  { name: "Chaupal", url: "https://www.chaupal.tv", logo: "🎺" },
+  { name: "Planet Marathi", url: "https://www.planetmarathi.com", logo: "🌏" },
+  { name: "Manorama MAX", url: "https://www.manoramamax.com", logo: "📡" },
+  { name: "Namma Flix", url: "https://www.nammaflix.com", logo: "🎦" },
+  { name: "Hungama Play", url: "https://www.hungama.com", logo: "🎵" },
+  { name: "ShemarooMe", url: "https://www.shemaroome.com", logo: "🎙️" },
+  { name: "Ullu", url: "https://www.ullu.app", logo: "🦉" },
+  { name: "ErosNow", url: "https://erosnow.com", logo: "🎟️" },
+  // ── Odiya / Regional Specialty ──────────────────────────────────
   { name: "Aao NXT", url: "https://www.aaonxt.com", logo: "🎬" },
   { name: "Tarang Plus", url: "https://www.tarangplus.in", logo: "📺" },
   { name: "Kanccha Lannka", url: "https://www.kancchalannka.com", logo: "🎥" },
-  { name: "SonyLIV", url: "https://www.sonyliv.com", logo: "🔴" },
-  { name: "Disney+ Hotstar", url: "https://www.hotstar.com", logo: "⭐" },
-  { name: "Netflix", url: "https://www.netflix.com", logo: "🎞" },
-  { name: "Amazon Prime", url: "https://www.primevideo.com", logo: "📦" },
-  { name: "ZEE5", url: "https://www.zee5.com", logo: "🟣" },
-  { name: "MX Player", url: "https://www.mxplayer.in", logo: "▶️" },
-  { name: "YouTube", url: "https://www.youtube.com", logo: "🔴" },
+  // ── Other ───────────────────────────────────────────────────────
   { name: "Other", url: "", logo: "🌐" },
 ];
 const NEWS_CATS = ["Update", "Announcement", "Review", "Interview", "Event", "Award", "Other"];

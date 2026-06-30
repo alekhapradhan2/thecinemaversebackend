@@ -861,33 +861,57 @@ function findNearbyFestival(dateStr) {
   return "";
 }
 
-/** Deterministic, always-consistent SEO title for the "Movie Details" blog —
- *  built in code (not left to the AI) so the format never drifts:
- *  "Kali Gita (2026) Movie Details, Cast, Crew, Story, Release Date & Latest Updates" */
+/** Rotating SEO title builder for the "Movie Details" blog.
+ *  Picks one of 10 distinct editorial-style templates deterministically
+ *  per movie (same movie → same template always; different movies → variety).
+ *  Movie name always leads; length targets 60–90 chars. */
 function buildMovieDetailsTitle(movie) {
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
-  return `${movie.title}${year ? ` (${year})` : ""} Movie Details, Cast, Crew, Story, Release Date & Latest Updates`;
+  const y = year ? ` (${year})` : "";
+  const m = movie.title;
+  const seed = m + (year || "");
+  const templates = [
+    () => `${m}${y} Movie Details: Cast, Story, Release Date, Songs, Trailer & OTT`,
+    () => `${m}${y} — Complete Movie Guide: Cast, Crew, Story, Songs, Trailer & Updates`,
+    () => `Everything You Need to Know About ${m}${y}: Cast, OTT, Trailer, Budget & More`,
+    () => `${m} Movie Details${y}: Star Cast, Story, Release Date, Music & Latest News`,
+    () => `${m}${y}: Full Movie Information — Cast, Story, Songs, Trailer & OTT Release`,
+    () => `${m}${y} Cast, Story & Release Date — Complete Bollywood Movie Details`,
+    () => `${m} Full Movie Details${y}: Director, Cast, Crew, Story, Songs & Box Office`,
+    () => `${m}${y} — Cast, Story, Trailer, Songs & All You Need to Know`,
+    () => `${m} Movie${y}: Story, Star Cast, Release Date, Music, OTT & Box Office Update`,
+    () => `${m}${y}: Release Date, Cast, Crew, Trailer, Songs & Complete Movie Details`,
+  ];
+  return pickVariant(seed, templates)();
 }
 
-/** Deterministic, always-consistent SEO title for the "OTT Release" blog —
- *  built in code so lead-actor names and the platform always appear exactly
- *  the way you want: "Bindusagar OTT Release Date: A & B Starrer Premieres
- *  on Tarang Plus on 26 June 2026" (falls back to "Announced Soon" if the
- *  date isn't a clean, parseable date).
- *  SEO FIX: capped at 90 chars (Google's effective title display ceiling) —
- *  first tries 2 lead names, then falls back to 1, then 0, so the title
- *  degrades gracefully instead of getting cut off mid-word. */
+/** Rotating SEO title builder for the "OTT Release Announcement" blog.
+ *  Picks one of 8 distinct editorial-style templates per movie.
+ *  Capped at 90 chars with graceful lead-count fallback. */
 function buildOttTitle(movie, cc) {
-  const dateTail = isRealDate(movie.ottReleaseDate) ? `on ${formatHumanDate(movie.ottReleaseDate)}` : "— Announced Soon";
-  // BUGFIX: use the strictly-filtered ottCast (Director + Actor + Actress
-  // only) so a Cinematographer/Editor/Music Director never ends up named
-  // as a "Starrer" in the page title — same root cause as the Cast-section
-  // bug, fixed the same way, scoped only to this OTT-blog title builder.
+  const dateStr = isRealDate(movie.ottReleaseDate) ? formatHumanDate(movie.ottReleaseDate) : null;
+  const platform = movie.streamingOn;
+  const m = movie.title;
+  // BUGFIX: use strictly-filtered ottCast so crew members never appear as "Starrer".
+  const getLeads = (n) => (cc.ottCast || cc.leadCast || []).slice(0, n).map(c => c.name).filter(Boolean);
+
   const build = (leadCount) => {
-    const leads = (cc.ottCast || cc.leadCast || []).slice(0, leadCount).map(c => c.name).filter(Boolean);
-    const subject = leads.length ? `${leads.join(" & ")} Starrer` : "Hindi Movie";
-    return `${movie.title} OTT Release Date: ${subject} Premieres on ${movie.streamingOn} ${dateTail}`.replace(/\s+/g, " ").trim();
+    const leads = getLeads(leadCount);
+    const cast = leads.length ? `${leads.join(" & ")} Starrer` : "Hindi Movie";
+    const datePart = dateStr ? dateStr : "Soon";
+    const templates = [
+      () => `${m} OTT Release: ${cast} to Stream on ${platform}${dateStr ? ` on ${dateStr}` : " — Date Announced Soon"}`,
+      () => `${m} OTT Rights Confirmed — Premieres on ${platform}${dateStr ? ` on ${dateStr}` : ", Date TBA"}`,
+      () => `${m} Digital Premiere on ${platform}: ${cast}${dateStr ? ` — Releasing ${dateStr}` : " — Date Coming Soon"}`,
+      () => `${m} OTT Update: ${cast} to Stream on ${platform}${dateStr ? ` from ${dateStr}` : " Soon"}`,
+      () => `${m} OTT Release Date${dateStr ? ` is ${dateStr}` : " Announced"}: ${cast} on ${platform}`,
+      () => `When Is ${m} Coming to OTT? ${platform} Streaming Date${dateStr ? ` is ${datePart}` : " Revealed"}`,
+      () => `${m} on ${platform}: OTT Release Date${dateStr ? ` Confirmed as ${datePart}` : ", Cast & All Details"}`,
+      () => `${m} OTT Streaming Date Revealed — ${cast} Arrives on ${platform}${dateStr ? ` on ${datePart}` : ""}`,
+    ];
+    return pickVariant(m, templates)().replace(/\s+/g, " ").trim();
   };
+
   let title = build(2);
   if (title.length > 90) title = build(1);
   if (title.length > 90) title = build(0);
@@ -963,19 +987,37 @@ async function generateMovieDetailsAiSections(movie, cc) {
 
   const ctx = `Movie: "${movie.title}"${year ? ` (${year})` : ""} | Genre: ${genre} | Language: ${movie.language || "Hindi"} | Director: ${cc.director || "N/A"} | Producer: ${cc.producer || "N/A"} | Lead Cast: ${leadNames || "N/A"} | Music Director: ${cc.musicDirector || "N/A"} | Writer: ${cc.writer || "N/A"} | Cinematographer: ${cc.dop || "N/A"} | Release Date: ${movie.releaseDate ? formatHumanDate(movie.releaseDate) : "TBA"} | Runtime: ${movie.runtime || "N/A"} | Certification: ${movie.contentRating || "N/A"} | Songs: ${songNames || "N/A"} | Synopsis: ${movie.synopsis || "N/A"}${festival ? ` | Note: release falls close to ${festival} — you may mention this naturally if it fits.` : ""}`;
 
-  const userPrompt = `Write deeply detailed, SEO-rich JSON content for a comprehensive movie-details article on The Cinema Verse, an Hindi (Bbbollywood) cinema website, about the film "${movie.title}". This MUST be a full editorial article with long, rich, substantive paragraphs — each paragraph must feel like it was written by a professional film journalist. Use ONLY the details given below. Naturally weave in the movie title, genre, director, and lead cast names across paragraphs. Do NOT include HTML or markdown.
+  const introStyles = [
+    `Start by highlighting the lead cast (${leadNames}) and why their involvement makes this film exciting.`,
+    `Start by framing the film within the current landscape of Bollywood ${genre} movies and its cultural relevance.`,
+    `Start by focusing on the director's vision (${cc.director}) and the scale of the production.`,
+    `Start with the story's core hook and what makes this narrative unique for Hindi cinema audiences.`,
+    `Start by discussing the massive anticipation, buzz, and box office expectations surrounding this release.`,
+  ];
+  const introStyle = pickVariant(movie.title, introStyles);
+
+  const personas = [
+    "a veteran Hindi film critic with deep industry knowledge",
+    "an enthusiastic Bollywood entertainment editor",
+    "a thoughtful cinema blogger focusing on cultural storytelling",
+    "a sharp, modern digital journalist writing for a young cinephile audience",
+    "a passionate Bollywood historian connecting new films to classic trends",
+  ];
+  const persona = pickVariant(movie.title + "sys", personas);
+
+  const userPrompt = `Write deeply detailed, SEO-rich JSON content for a comprehensive movie-details article on The Cinema Verse, an Hindi (Bollywood) cinema website, about the film "${movie.title}". This MUST be a full editorial article with long, rich, substantive paragraphs. Use ONLY the details given below. Do NOT include HTML or markdown. Do NOT use predictable AI phrasing. Write organically. Generate unique, editorial-style H2 heading variants where applicable.
 
 ${ctx}
 
-Return a JSON object with exactly these keys (plain text only, NO HTML, NO markdown, aim for maximum detail and length):
-- metaDescription: 150-160 characters mentioning movie title, release date and genre, maximising Google click-through rate
-- introParagraph: 250-350 words introducing the film in depth — cover its genre, Bbbollywood landscape expectations, production scale, what makes it different, key anticipation factors. Start with "${movie.title}".
-- storyParagraph: 350-500 words expanding on the synopsis — discuss narrative background, story world, major themes, emotional conflicts, character arcs, setting, tone and pacing. Do not invent specific plot twists not in the synopsis; if synopsis is thin, write richly about the genre, tone, emotional stakes, and cultural context.
-- castCrewParagraph: 300-400 words covering each lead cast member individually — their character roles, acting style, notable past work, what they bring to this film specifically. Name every cast member. Discuss director-cast collaboration, chemistry, and ensemble dynamics.
-- directorVisionParagraph: 250-350 words about the director's signature filmmaking style, technical execution for this project, visual language, production design, use of locations, cinematography approach, and creative ambition. If director name is N/A, write about the production team's craft and values.
-- musicParagraph: 200-280 words about the soundtrack, background score, mood of the music, genre of songs. If song titles are listed, describe each one briefly. If no songs listed, discuss the musical traditions of Hindi cinema and what this film's genre demands from its score.
-- whereToWatchParagraph: 180-250 words on the theatrical release strategy — major circuits in India (Mumbai, Delhi, Pune, Bengaluru, Hyderabad, Kolkata, Ahmedabad), importance of supporting Hindi films in theatres, how to find showtimes, family viewing experience, and the cinematic experience advantage.
-- anticipationParagraph: 250-350 words on audience expectations, industry buzz, social media reception, trailer/teaser reception if known, comparison with similar Hindi films, box office potential, why this film matters for Bbbollywood, and the overall cultural significance of this release.`;
+Return a JSON object with exactly these keys (plain text only, NO HTML, NO markdown):
+- metaDescription: 150-160 characters mentioning movie title, release date and genre, maximising Google click-through rate.
+- introParagraph: 250-350 words introducing the film in depth. ${introStyle} Start with "${movie.title}".
+- storyParagraph: 350-500 words expanding on the synopsis — discuss narrative background, major themes, emotional conflicts, setting, tone, and pacing. Do not invent plot twists.
+- castCrewParagraph: 300-400 words covering each lead cast member individually — their roles, acting style, and chemistry.
+- directorVisionParagraph: 250-350 words about the filmmaking style, visual language, and creative ambition.
+- musicParagraph: 200-280 words about the soundtrack, background score, and musical mood.
+- whereToWatchParagraph: 180-250 words on the theatrical release strategy and the cinematic experience advantage.
+- anticipationParagraph: 250-350 words on audience expectations, industry buzz, and cultural significance.`;
 
   const fallbacks = {
     metaDescription: `${movie.title}${year ? ` (${year})` : ""}: full cast, crew, story and release date. Read the complete details on The Cinema Verse, your home for Hindi cinema.`,
@@ -1008,7 +1050,7 @@ Return a JSON object with exactly these keys (plain text only, NO HTML, NO markd
   };
 
   return callGroqStructured(
-    "You are a senior Hindi cinema (Bbbollywood) journalist writing long-form, highly detailed, SEO-optimised editorial articles for The Cinema Verse. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Each paragraph must be thorough, specific, and feel like professional film journalism. Never use placeholder or filler sentences — every sentence must add real value and information.",
+    `You are ${persona} writing long-form, highly detailed, SEO-optimised editorial articles for The Cinema Verse. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Each paragraph must be thorough, specific, and feel like professional film journalism. Avoid repetitive sentence structures. Vary your vocabulary.`,
     userPrompt,
     ["metaDescription", "introParagraph", "storyParagraph", "castCrewParagraph", "directorVisionParagraph", "musicParagraph", "whereToWatchParagraph", "anticipationParagraph"],
     fallbacks,
@@ -1394,36 +1436,76 @@ function trimSlugToLength(slug, maxLen) {
   return out || slug.slice(0, maxLen);
 }
 
-/** SEO FIX: short, clean, keyword-rich slug for the Movie Details blog —
- *  "bindusagar-2026-movie-details" instead of the full ~120-char SEO-title
- *  slug. Capped at 60 chars per Google's URL-length guidance. */
+/**
+ * pickVariant — deterministically picks one item from `array` using a
+ * simple character-code hash of `seed`. The same seed always returns the
+ * same variant (idempotent across re-runs), but different movie titles
+ * map to different indices, producing real structural variety at scale.
+ */
+function pickVariant(seed, array) {
+  const h = String(seed).split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  return array[Math.abs(h) % array.length];
+}
+
+/** Rotating slug suffix variants for the Movie Details blog.
+ *  Picks deterministically per-movie so the same movie always gets the
+ *  same slug (idempotent), while different movies get different suffixes.
+ *  Max 60 chars total per Google URL-length guidance. */
 function buildMovieDetailsSlug(movie) {
+  const suffixes = [
+    "movie-details",
+    "complete-movie-guide",
+    "cast-story-release-date",
+    "full-movie-information",
+    "bollywood-film-guide",
+    "movie-details-cast-crew",
+  ];
+  const suffix = pickVariant(movie.title, suffixes);
   const base = trimSlugToLength(makeMovieSlug(movie.title, movie.releaseDate), 45);
-  return trimSlugToLength(`${base}-movie-details`, 60);
+  return trimSlugToLength(`${base}-${suffix}`, 60);
 }
 
-/** SEO FIX: short OTT-release slug that does NOT embed the release date
- *  (a date-bearing slug goes stale the moment the film actually releases).
- *  "bindusagar-2026-ott-release-tarang-plus" — platform name included for
- *  keyword relevance, capped at 60 chars. */
+/** Rotating OTT-announcement slug variants — does NOT embed the release
+ *  date so it never goes stale. Platform name appended for keyword value.
+ *  Max 65 chars. */
 function buildOttSlug(movie) {
-  const base = trimSlugToLength(makeMovieSlug(movie.title, movie.releaseDate), 35);
   const platform = trimSlugToLength(
     String(movie.streamingOn || "").toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim(),
     15
   );
-  return trimSlugToLength(`${base}-ott-release${platform ? `-${platform}` : ""}`, 60);
+  const platSuffix = platform ? `-${platform}` : "";
+  const prefixes = [
+    "ott-release",
+    "ott-premiere",
+    "digital-release",
+    "ott-streaming",
+    "streaming-announcement",
+    "ott-release-date",
+  ];
+  const prefix = pickVariant(movie.title, prefixes);
+  const base = trimSlugToLength(makeMovieSlug(movie.title, movie.releaseDate), 35);
+  return trimSlugToLength(`${base}-${prefix}${platSuffix}`, 65);
 }
 
-/** SEO FIX: short "now streaming" slug — distinct from buildOttSlug so the
- *  two OTT pages never collide, and short enough to stay memorable. */
+/** Rotating "now streaming" slug variants — distinct from buildOttSlug
+ *  so the two OTT pages never collide. Max 65 chars. */
 function buildOttLiveSlug(movie) {
-  const base = trimSlugToLength(makeMovieSlug(movie.title, movie.releaseDate), 30);
   const platform = trimSlugToLength(
     String(movie.streamingOn || "").toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim(),
     15
   );
-  return trimSlugToLength(`${base}-streaming-now${platform ? `-${platform}` : ""}`, 60);
+  const platSuffix = platform ? `-${platform}` : "";
+  const prefixes = [
+    "streaming-now",
+    "now-streaming",
+    "watch-online",
+    "ott-now-available",
+    "stream-online",
+    "digital-premiere-now",
+  ];
+  const prefix = pickVariant(movie.title + "live", prefixes);
+  const base = trimSlugToLength(makeMovieSlug(movie.title, movie.releaseDate), 30);
+  return trimSlugToLength(`${base}-${prefix}${platSuffix}`, 65);
 }
 
 async function autoGenerateMovieDetailsBlog(movie) {
@@ -1852,17 +1934,34 @@ async function generateOttAiSections(movie, cc) {
 
   const ctx = `Movie: "${movie.title}"${year ? ` (${year})` : ""} | OTT Platform: ${movie.streamingOn} | OTT Release Date: ${ottDateFmt} | Genre: ${(movie.genre || []).join(", ") || "Hindi"} | Language: ${movie.language || "Hindi"} | Lead Cast: ${leadNames || "N/A"} | Director: ${cc.director || "N/A"} | Synopsis: ${movie.synopsis || "N/A"}${festival ? ` | Note: this OTT release falls close to ${festival} — you may mention this naturally if it fits.` : ""}`;
 
-  const userPrompt = `Write deeply detailed, SEO-rich JSON content for an OTT-release announcement article on The Cinema Verse, an Hindi (Bbbollywood) cinema website, about the film "${movie.title}" streaming on ${movie.streamingOn}. This MUST be a full editorial article with long, rich paragraphs — each paragraph should feel like professional journalism. Use ONLY the details given. No HTML or markdown.
+  const introStyles = [
+    `Lead with the excitement of ${movie.title} securing its digital release on ${movie.streamingOn}.`,
+    `Focus first on the lead cast (${leadNames}) and how their fans can finally watch the film online.`,
+    `Open with a news-breaking tone about the official OTT confirmation for ${movie.title}.`,
+    `Start by discussing the film's genre and theatrical buzz before confirming its arrival on ${movie.streamingOn}.`,
+    `Lead with the date (${ottDateFmt}) and the platform, setting up why this is a highly anticipated digital premiere.`,
+  ];
+  const introStyle = pickVariant(movie.title + "ott", introStyles);
+
+  const personas = [
+    "a digital streaming expert reporting for a Bollywood news site",
+    "a sharp, modern entertainment journalist",
+    "a passionate OTT content reviewer and cinema fan",
+    "an insider Bollywood desk editor",
+  ];
+  const persona = pickVariant(movie.title + "ottsys", personas);
+
+  const userPrompt = `Write deeply detailed, SEO-rich JSON content for an OTT-release announcement article on The Cinema Verse, an Hindi (Bollywood) cinema website, about the film "${movie.title}" streaming on ${movie.streamingOn}. This MUST be a full editorial article with long, rich paragraphs. Use ONLY the details given. Do NOT use predictable AI phrasing. Write organically. Generate unique, editorial-style H2 heading variants where applicable.
 
 ${ctx}
 
-Return a JSON object with exactly these keys (plain text only, NO HTML, NO markdown, aim for maximum detail):
-- metaDescription: 150-160 characters mentioning movie title, OTT platform and release status/date, maximising Google click-through
-- introParagraph: 220-320 words announcing that "${movie.title}" will stream on ${movie.streamingOn}. Name the lead cast, detail the genre and story highlights, explain why this OTT release is significant for Hindi cinema fans, and clearly state the release status: ${ottDateFmt}.
-- synopsisParagraph: 200-280 words recapping the film's story, genre, thematic conflicts, emotional highlights, and what makes it worth watching on OTT. Draw from the synopsis and genre; do not invent specific plot points not mentioned. Write to help a viewer decide whether to watch. IMPORTANT: paraphrase and reframe in your own words for an OTT/streaming context — do not copy the source synopsis verbatim, since this same film also has a separate theatrical-release article with its own story section.
-- castHighlightParagraph: 200-280 words specifically naming and highlighting each lead actor — their roles, acting style, past notable performances in Hindi cinema, and what they bring to this specific film. Make it feel like a genuine talent profile piece.
-- howToWatchParagraph: 180-250 words explaining step-by-step how India audiences can stream the film on ${movie.streamingOn} — app download, website access, subscription tiers, regional language content availability, and how digital OTT access is transforming Hindi cinema viewership.
-- platformParagraph: 150-220 words introducing ${movie.streamingOn} as an OTT platform — its founding story, growth, content library, focus on regional Indian language films, contribution to Hindi cinema's digital accessibility, and why it is a key destination for Bbbollywood fans.`;
+Return a JSON object with exactly these keys (plain text only, NO HTML, NO markdown):
+- metaDescription: 150-160 characters mentioning movie title, OTT platform and release status/date, maximising Google click-through.
+- introParagraph: 220-320 words. ${introStyle} Clearly state the release status: ${ottDateFmt}.
+- synopsisParagraph: 200-280 words recapping the film's story, genre, and what makes it worth watching on OTT. IMPORTANT: paraphrase and reframe in your own words for a streaming context — do not copy the source synopsis verbatim.
+- castHighlightParagraph: 200-280 words specifically naming and highlighting each lead actor and their performance.
+- howToWatchParagraph: 180-250 words explaining step-by-step how India audiences can stream the film on ${movie.streamingOn}.
+- platformParagraph: 150-220 words introducing ${movie.streamingOn} as an OTT platform and its contribution to Bollywood's digital accessibility.`;
 
   const fallbacks = {
     metaDescription: `${movie.title} streams on ${movie.streamingOn}. Get cast, release details and how-to-watch info on The Cinema Verse.`,
@@ -1881,7 +1980,7 @@ Return a JSON object with exactly these keys (plain text only, NO HTML, NO markd
   };
 
   return callGroqStructured(
-    "You are a senior Hindi cinema (Bbbollywood) journalist writing long-form, highly detailed, SEO-optimised editorial articles for The Cinema Verse. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML. Each paragraph must be thorough, specific, and written like professional film journalism. Every sentence must add real value.",
+    `You are ${persona} writing long-form, highly detailed, SEO-optimised editorial articles for The Cinema Verse. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML. Write dynamically and avoid repetitive structures. Every sentence must add real value.`,
     userPrompt,
     ["metaDescription", "introParagraph", "synopsisParagraph", "castHighlightParagraph", "howToWatchParagraph", "platformParagraph"],
     fallbacks,
@@ -2217,17 +2316,34 @@ async function generateOttLiveAiSections(movie, cc) {
 
   const ctx = `Movie: "${movie.title}"${year ? ` (${year})` : ""} | Now Streaming on: ${movie.streamingOn} | OTT Release Date: ${ottDateFmt} | Genre: ${genre} | Language: ${movie.language || "Hindi"} | Lead Cast: ${leadNames || "N/A"} | Director: ${cc.director || "N/A"} | Synopsis: ${movie.synopsis || "N/A"} | Streaming URL: ${movie.streamingUrl || "N/A"}`;
 
-  const userPrompt = `Write deeply detailed, SEO-rich JSON content for a "Now Streaming on OTT" announcement article on The Cinema Verse, an Hindi (Bbbollywood) cinema website. The film "${movie.title}" is NOW AVAILABLE to stream on ${movie.streamingOn} as of ${ottDateFmt}. Write in an excited, celebratory, present-tense editorial tone. This must feel like a breaking news announcement for Hindi cinema fans. No HTML or markdown in values.
+  const introStyles = [
+    `Lead with an excited "Just Arrived" / breaking-news tone announcing that ${movie.title} is finally available to watch on ${movie.streamingOn}.`,
+    `Focus on the perfect weekend/evening watch framing — urge fans to start streaming ${movie.title} today on ${movie.streamingOn}.`,
+    `Start by highlighting the massive digital premiere for the cast (${leadNames}) and why fans have been waiting for this drop.`,
+    `Open with a celebratory tone about ${movie.title}'s transition from theatres to your home screen via ${movie.streamingOn}.`,
+    `Lead strongly with the "Watch Now" imperative, confirming the film is officially live on ${movie.streamingOn} as of today.`,
+  ];
+  const introStyle = pickVariant(movie.title + "live", introStyles);
+
+  const personas = [
+    "a high-energy pop culture writer for a Bollywood site",
+    "an enthusiastic streaming platform curator",
+    "a passionate Hindi cinema fan sharing a must-watch recommendation",
+    "a dynamic entertainment journalist reporting a digital premiere",
+  ];
+  const persona = pickVariant(movie.title + "livesys", personas);
+
+  const userPrompt = `Write deeply detailed, SEO-rich JSON content for a "Now Streaming on OTT" announcement article on The Cinema Verse, an Hindi (Bollywood) cinema website. The film "${movie.title}" is NOW AVAILABLE to stream on ${movie.streamingOn} as of ${ottDateFmt}. Write in an excited, present-tense editorial tone. Do NOT use predictable AI phrasing. Write organically. Generate unique, editorial-style H2 heading variants where applicable. No HTML or markdown in values.
 
 ${ctx}
 
 Return a JSON object with exactly these keys (plain text only, NO HTML, NO markdown):
-- metaDescription: 150-160 characters announcing that "${movie.title}" is NOW streaming on ${movie.streamingOn}, with date, maximising click-through
-- introParagraph: 250-350 words — breaking-news style announcement that "${movie.title}" is NOW AVAILABLE on ${movie.streamingOn} as of ${ottDateFmt}. Name the lead cast, describe what kind of film it is (genre, emotional tone, story highlights), explain why this is an exciting moment for Hindi cinema, and urge fans to watch it today.
-- whyWatchParagraph: 250-350 words — a compelling editorial making the case for why viewers should watch "${movie.title}" RIGHT NOW on ${movie.streamingOn}. Cover the story's emotional appeal, the quality of the performances, the director's craft, what makes this film stand out from other Hindi films, and what kind of viewer will love it most.
-- synopsisParagraph: 200-280 words — a vivid, spoiler-free retelling of the film's story that makes viewers want to press play immediately. Focus on the opening setup, main conflict, and emotional stakes without revealing major plot twists. IMPORTANT: paraphrase and reframe in your own words — do not copy the source synopsis verbatim, since this same film also has separate theatrical-release and OTT-release articles with their own story sections.
-- castReviewParagraph: 220-300 words — present-tense review-style writing about the lead actors' performances in the film. Name each lead actor, describe their character briefly, and discuss what they bring to the film and why their performances are worth seeing on OTT.
-- howToWatchParagraph: 180-250 words — direct, step-by-step guide to streaming "${movie.title}" on ${movie.streamingOn} RIGHT NOW. Include app download instructions, website access, subscription info, and a call to action to start watching immediately.`;
+- metaDescription: 150-160 characters announcing that "${movie.title}" is NOW streaming on ${movie.streamingOn}, with date, maximising click-through.
+- introParagraph: 250-350 words. ${introStyle} Name the lead cast and describe the genre and emotional tone.
+- whyWatchParagraph: 250-350 words making the case for why viewers should watch "${movie.title}" RIGHT NOW on ${movie.streamingOn}. Cover emotional appeal, performances, and director's craft.
+- synopsisParagraph: 200-280 words retelling the story vividly without spoilers. IMPORTANT: paraphrase and reframe in your own words — do not copy the source synopsis verbatim.
+- castReviewParagraph: 220-300 words — present-tense review-style writing about the lead actors' performances. Name each lead actor.
+- howToWatchParagraph: 180-250 words — direct, step-by-step guide to streaming "${movie.title}" on ${movie.streamingOn} RIGHT NOW. Include a strong call to action.`;
 
   const fallbacks = {
     metaDescription: `${movie.title} is NOW streaming on ${movie.streamingOn}! Watch this Hindi ${genre} film online today. Full details on The Cinema Verse.`,
@@ -2245,7 +2361,7 @@ Return a JSON object with exactly these keys (plain text only, NO HTML, NO markd
   };
 
   return callGroqStructured(
-    "You are a senior Hindi cinema (Bbbollywood) journalist writing a 'Now Streaming on OTT' announcement article for The Cinema Verse. Return ONLY a valid JSON object \u2014 no markdown, no code fences, no extra text. All values must be plain text with no HTML. Write in an engaged, celebratory, present-tense tone that makes Hindi cinema fans excited to watch the film right now. Every sentence must add real value.",
+    `You are ${persona} writing a 'Now Streaming on OTT' announcement article for The Cinema Verse. Return ONLY a valid JSON object \u2014 no markdown, no code fences, no extra text. All values must be plain text with no HTML. Write dynamically and avoid predictable sentence structures. Make fans excited to watch the film right now.`,
     userPrompt,
     ["metaDescription", "introParagraph", "whyWatchParagraph", "synopsisParagraph", "castReviewParagraph", "howToWatchParagraph"],
     fallbacks,
@@ -3548,8 +3664,8 @@ app.patch("/api/admin/movies/:id", adminAuth, async (req, res) => {
       }
     }
     // ── Auto-blog: refresh the Movie Details blog so dateModified + content
-    // actually reflect this edit (only if a Details blog already exists) ──
-    if (detailContentChanged && updated.detailBlogId) {
+    // actually reflect this edit (creates the blog if it was missing) ──
+    if (detailContentChanged) {
       autoGenerateMovieDetailsBlog(updated).catch(() => { });
     }
 
