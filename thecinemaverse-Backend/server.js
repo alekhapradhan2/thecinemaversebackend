@@ -9627,8 +9627,18 @@ cron.schedule("30 6 * * *", async () => {
   // ── Auto-Blog Generation for Scraper-Added / Updated Movies ──
   console.log(`[Blog Cron] Checking for newly added or updated movies at ${new Date().toISOString()}`);
   try {
+    // Check that the movie is released in/after 2020, or is TBA/Upcoming.
+    const isEligible = (m) => {
+      if (m.releaseTBA) return true;
+      const r = String(m.releaseDate || "").trim().toUpperCase();
+      if (!r || r === "TBA") return true;
+      const year = new Date(r).getFullYear();
+      if (!isNaN(year) && year >= 2020) return true;
+      return false;
+    };
+
     // Only look at movies created or updated recently (last 48 hours)
-    // This prevents the system from trying to generate blogs for thousands of old scraped movies at once.
+    // AND meet the >= 2020 / TBA criteria
     const recentDate = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
     // 1. Generate "Movie Details" blog for any movie that doesn't have one (newly added by scraper)
@@ -9636,8 +9646,9 @@ cron.schedule("30 6 * * *", async () => {
       detailBlogId: null,
       createdAt: { $gte: recentDate }
     }).lean();
-    console.log(`[Blog Cron] Found ${newMovies.length} movie(s) needing Movie Details blog.`);
-    for (const movie of newMovies) {
+    const eligibleNewMovies = newMovies.filter(isEligible);
+    console.log(`[Blog Cron] Found ${eligibleNewMovies.length} eligible movie(s) (>=2020 or TBA & last 48h) needing Movie Details blog out of ${newMovies.length} missing it.`);
+    for (const movie of eligibleNewMovies) {
       try {
         await autoGenerateMovieDetailsBlog(movie);
       } catch (err) {
@@ -9651,8 +9662,9 @@ cron.schedule("30 6 * * *", async () => {
       streamingOn: { $nin: ["", null] },
       updatedAt: { $gte: recentDate }
     }).lean();
-    console.log(`[Blog Cron] Checking ${ottMovies.length} movie(s) with OTT details for missing blogs.`);
-    for (const movie of ottMovies) {
+    const eligibleOttMovies = ottMovies.filter(isEligible);
+    console.log(`[Blog Cron] Checking ${eligibleOttMovies.length} eligible movie(s) (>=2020 or TBA & last 48h) with OTT details for missing blogs.`);
+    for (const movie of eligibleOttMovies) {
       try {
         if (!movie.ottBlogId) {
           await autoGenerateOttBlog(movie);
