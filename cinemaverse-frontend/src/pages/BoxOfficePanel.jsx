@@ -712,17 +712,24 @@ const buildBlogContent = (movie, daysUpToN, totalNet, totalGross, targetDay, sec
   // ── GRAPH 2: Structured data table with cumulative + trend ──────────────────
   let cumulativeNet   = 0;
   let cumulativeGross = 0;
+  let cumulativeWorldwide = 0;
 
   const dataTableRows = sorted.map((d, i) => {
     const netNum    = parseNum(d.net);
     const grossNum  = parseNum(d.gross);
+    const overseasNum = parseNum(d.overseas);
+    const worldwideNum = grossNum + overseasNum;
     cumulativeNet   += netNum;
     cumulativeGross += grossNum;
+    cumulativeWorldwide += worldwideNum;
 
-    const prevNetNum = i > 0 ? parseNum(sorted[i - 1].net) : null;
+    const prevGrossNum = i > 0 ? parseNum(sorted[i - 1].gross) : null;
+    const prevOverseasNum = i > 0 ? parseNum(sorted[i - 1].overseas) : null;
+    const prevWorldwideNum = prevGrossNum !== null && prevOverseasNum !== null ? prevGrossNum + prevOverseasNum : null;
+
     let trendHtml = "";
-    if (prevNetNum !== null && prevNetNum > 0 && netNum > 0) {
-      const pctChange = ((netNum - prevNetNum) / prevNetNum) * 100;
+    if (prevWorldwideNum !== null && prevWorldwideNum > 0 && worldwideNum > 0) {
+      const pctChange = ((worldwideNum - prevWorldwideNum) / prevWorldwideNum) * 100;
       const isUp      = pctChange >= 0;
       trendHtml = `<span style="display:inline-block;background:${isUp ? "rgba(40,120,60,0.25)" : "rgba(180,40,40,0.25)"};color:${isUp ? "#5dba7d" : "#e07070"};border-radius:4px;padding:2px 7px;font-size:0.72rem;font-weight:700;">
         ${isUp ? "▲" : "▼"} ${Math.abs(pctChange).toFixed(1)}%
@@ -745,8 +752,7 @@ const buildBlogContent = (movie, daysUpToN, totalNet, totalGross, targetDay, sec
       <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:${isToday ? "#c9973a" : "#ddd"};font-weight:700;">${d.net ? fmtINR(d.net) : "—"}</td>
       <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:#7ec8e3;font-weight:600;">${d.gross ? fmtINR(d.gross) : "—"}</td>
       <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:#e87a6a;font-weight:600;">${d.overseas ? fmtINR(d.overseas) : "—"}</td>
-      <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:#c9973a;font-weight:700;">${fmtINR(cumulativeNet)}</td>
-      <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;">${trendHtml}</td>
+      <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:#c9973a;font-weight:700;">${fmtINR(cumulativeWorldwide)} <span style="margin-left:6px;">${trendHtml}</span></td>
     </tr>`;
   }).join("");
 
@@ -1169,11 +1175,10 @@ const buildBlogContent = (movie, daysUpToN, totalNet, totalGross, targetDay, sec
         <tr>
           <th style="${th}">Day</th>
           <th style="${th}">Date</th>
-          <th style="${th}">Net</th>
-          <th style="${th}">Gross</th>
-          <th style="${th}">Overseas</th>
-          <th style="${th}">Cumulative Net</th>
-          <th style="${th}">Trend</th>
+          <th style="${th}">India Net</th>
+          <th style="${th}">India Gross</th>
+          <th style="${th}">Overseas Gross</th>
+          <th style="${th}">Worldwide Gross</th>
         </tr>
       </thead>
       <tbody>
@@ -1187,8 +1192,7 @@ const buildBlogContent = (movie, daysUpToN, totalNet, totalGross, targetDay, sec
           <td style="padding:12px 14px;background:#1f1800;border-top:2px solid #2e2000;color:#c9973a;font-weight:800;font-size:1rem;">${totalNetStr}</td>
           <td style="padding:12px 14px;background:#1f1800;border-top:2px solid #2e2000;color:#7ec8e3;font-weight:800;font-size:1rem;">${totalGrossStr}</td>
           <td style="padding:12px 14px;background:#1f1800;border-top:2px solid #2e2000;color:#e87a6a;font-weight:800;font-size:1rem;">${movie.boxOffice?.overseasTotal ? fmtINR(movie.boxOffice.overseasTotal) : "—"}</td>
-          <td style="padding:12px 14px;background:#1f1800;border-top:2px solid #2e2000;color:#c9973a;font-weight:800;font-size:1rem;">${totalNetStr}</td>
-          <td style="padding:12px 14px;background:#1f1800;border-top:2px solid #2e2000;"></td>
+          <td style="padding:12px 14px;background:#1f1800;border-top:2px solid #2e2000;color:#c9973a;font-weight:800;font-size:1rem;">${fmtINR(totalGross + (movie.boxOffice?.overseasTotal || 0))}</td>
         </tr>
       </tfoot>
     </table>
