@@ -100,6 +100,20 @@ mongoose.connect(process.env.MONGO_URI)
  *  the www vs non-www canonical mismatch flagged in the SEO audit. */
 const SITE_URL = process.env.SITE_URL || "https://www.thecinemaverse.com";
 
+const LANGUAGES = {
+  hindi: { industry: "Bollywood", adjective: "Hindi", dbValue: "Hindi" },
+  bengali: { industry: "Bengali Cinema", adjective: "Bengali", dbValue: "Bengali" },
+  telugu: { industry: "Tollywood", adjective: "Telugu", dbValue: "Telugu" },
+  malayalam: { industry: "Mollywood", adjective: "Malayalam", dbValue: "Malayalam" },
+  tamil: { industry: "Kollywood", adjective: "Tamil", dbValue: "Tamil" },
+  kannada: { industry: "Sandalwood", adjective: "Kannada", dbValue: "Kannada" },
+  odia: { industry: "Ollywood", adjective: "Odia", dbValue: "odia" },
+};
+function getLangConfig(langStr) {
+  const key = (langStr || "hindi").toLowerCase().trim();
+  return LANGUAGES[key] || LANGUAGES.hindi;
+}
+
 /** Is s a valid 24-hex MongoDB ObjectId string? */
 const isOid = (s) => typeof s === "string" && /^[a-f0-9]{24}$/i.test(s.trim());
 
@@ -800,11 +814,11 @@ async function fetchRelatedMovies(movie, limit = 4, preferPlatform = false) {
   }
 }
 
-/** Builds the "Related Hindi Movies" internal-linking HTML block, or "" if
+/** Builds the "Related Movies" internal-linking HTML block, or "" if
  *  there are no related movies to show. Shared across all 3 blog types.
- *  `heading` lets OTT pages say "More Hindi Movies on {Platform}" instead
+ *  `heading` lets OTT pages say "More {lang} Movies on {Platform}" instead
  *  per the audit's competitor-comparison recommendation. */
-function buildRelatedMoviesHtml(related, accentColor = "#c9973a", heading = "Related Hindi Movies") {
+function buildRelatedMoviesHtml(related, accentColor = "#c9973a", heading = "Related Movies") {
   if (!Array.isArray(related) || !related.length) return "";
   const cards = related.map(m => {
     const img = m.posterUrl || m.thumbnailUrl || "";
@@ -866,6 +880,7 @@ function findNearbyFestival(dateStr) {
  *  per movie (same movie → same template always; different movies → variety).
  *  Movie name always leads; length targets 60–90 chars. */
 function buildMovieDetailsTitle(movie) {
+  const langConfig = getLangConfig(movie.language);
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const y = year ? ` (${year})` : "";
   const m = movie.title;
@@ -876,7 +891,7 @@ function buildMovieDetailsTitle(movie) {
     () => `Everything You Need to Know About ${m}${y}: Cast, OTT, Trailer, Budget & More`,
     () => `${m} Movie Details${y}: Star Cast, Story, Release Date, Music & Latest News`,
     () => `${m}${y}: Full Movie Information — Cast, Story, Songs, Trailer & OTT Release`,
-    () => `${m}${y} Cast, Story & Release Date — Complete Bollywood Movie Details`,
+    () => `${m}${y} Cast, Story & Release Date — Complete ${langConfig.adjective} Movie Details`,
     () => `${m} Full Movie Details${y}: Director, Cast, Crew, Story, Songs & Box Office`,
     () => `${m}${y} — Cast, Story, Trailer, Songs & All You Need to Know`,
     () => `${m} Movie${y}: Story, Star Cast, Release Date, Music, OTT & Box Office Update`,
@@ -889,6 +904,7 @@ function buildMovieDetailsTitle(movie) {
  *  Picks one of 8 distinct editorial-style templates per movie.
  *  Capped at 90 chars with graceful lead-count fallback. */
 function buildOttTitle(movie, cc) {
+  const langConfig = getLangConfig(movie.language);
   const dateStr = isRealDate(movie.ottReleaseDate) ? formatHumanDate(movie.ottReleaseDate) : null;
   const platform = movie.streamingOn;
   const m = movie.title;
@@ -897,7 +913,7 @@ function buildOttTitle(movie, cc) {
 
   const build = (leadCount) => {
     const leads = getLeads(leadCount);
-    const cast = leads.length ? `${leads.join(" & ")} Starrer` : "Hindi Movie";
+    const cast = leads.length ? `${leads.join(" & ")} Starrer` : `${langConfig.adjective} Movie`;
     const datePart = dateStr ? dateStr : "Soon";
     const templates = [
       () => `${m} OTT Release: ${cast} to Stream on ${platform}${dateStr ? ` on ${dateStr}` : " — Date Announced Soon"}`,
@@ -978,34 +994,35 @@ async function callGroqStructured(systemPrompt, userPrompt, keys, fallbacks, max
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function generateMovieDetailsAiSections(movie, cc) {
+  const langConfig = getLangConfig(movie.language);
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
-  const genre = (movie.genre || []).join(", ") || "Hindi";
+  const genre = (movie.genre || []).join(", ") || langConfig.adjective;
   const leadNames = cc.leadCast.map(c => c.name).filter(Boolean).join(", ");
   const hasSongs = Array.isArray(movie.media?.songs) && movie.media.songs.length > 0;
   const songNames = hasSongs ? movie.media.songs.map(s => s.title).filter(Boolean).join(", ") : "";
   const festival = findNearbyFestival(movie.releaseDate);
 
-  const ctx = `Movie: "${movie.title}"${year ? ` (${year})` : ""} | Genre: ${genre} | Language: ${movie.language || "Hindi"} | Director: ${cc.director || "N/A"} | Producer: ${cc.producer || "N/A"} | Lead Cast: ${leadNames || "N/A"} | Music Director: ${cc.musicDirector || "N/A"} | Writer: ${cc.writer || "N/A"} | Cinematographer: ${cc.dop || "N/A"} | Release Date: ${movie.releaseDate ? formatHumanDate(movie.releaseDate) : "TBA"} | Runtime: ${movie.runtime || "N/A"} | Certification: ${movie.contentRating || "N/A"} | Songs: ${songNames || "N/A"} | Synopsis: ${movie.synopsis || "N/A"}${festival ? ` | Note: release falls close to ${festival} — you may mention this naturally if it fits.` : ""}`;
+  const ctx = `Movie: "${movie.title}"${year ? ` (${year})` : ""} | Genre: ${genre} | Language: ${movie.language || langConfig.adjective} | Director: ${cc.director || "N/A"} | Producer: ${cc.producer || "N/A"} | Lead Cast: ${leadNames || "N/A"} | Music Director: ${cc.musicDirector || "N/A"} | Writer: ${cc.writer || "N/A"} | Cinematographer: ${cc.dop || "N/A"} | Release Date: ${movie.releaseDate ? formatHumanDate(movie.releaseDate) : "TBA"} | Runtime: ${movie.runtime || "N/A"} | Certification: ${movie.contentRating || "N/A"} | Songs: ${songNames || "N/A"} | Synopsis: ${movie.synopsis || "N/A"}${festival ? ` | Note: release falls close to ${festival} — you may mention this naturally if it fits.` : ""}`;
 
   const introStyles = [
     `Start by highlighting the lead cast (${leadNames}) and why their involvement makes this film exciting.`,
-    `Start by framing the film within the current landscape of Bollywood ${genre} movies and its cultural relevance.`,
+    `Start by framing the film within the current landscape of ${langConfig.industry} ${genre} movies and its cultural relevance.`,
     `Start by focusing on the director's vision (${cc.director}) and the scale of the production.`,
-    `Start with the story's core hook and what makes this narrative unique for Hindi cinema audiences.`,
+    `Start with the story's core hook and what makes this narrative unique for ${langConfig.adjective} cinema audiences.`,
     `Start by discussing the massive anticipation, buzz, and box office expectations surrounding this release.`,
   ];
   const introStyle = pickVariant(movie.title, introStyles);
 
   const personas = [
-    "a veteran Hindi film critic with deep industry knowledge",
-    "an enthusiastic Bollywood entertainment editor",
+    `a veteran ${langConfig.adjective} film critic with deep industry knowledge`,
+    `an enthusiastic ${langConfig.industry} entertainment editor`,
     "a thoughtful cinema blogger focusing on cultural storytelling",
     "a sharp, modern digital journalist writing for a young cinephile audience",
-    "a passionate Bollywood historian connecting new films to classic trends",
+    `a passionate ${langConfig.industry} historian connecting new films to classic trends`,
   ];
   const persona = pickVariant(movie.title + "sys", personas);
 
-  const userPrompt = `Write deeply detailed, SEO-rich JSON content for a comprehensive movie-details article on The Cinema Verse, an Hindi (Bollywood) cinema website, about the film "${movie.title}". This MUST be a full editorial article with long, rich, substantive paragraphs. Use ONLY the details given below. Do NOT include HTML or markdown. Do NOT use predictable AI phrasing. Write organically. Generate unique, editorial-style H2 heading variants where applicable.
+  const userPrompt = `Write deeply detailed, SEO-rich JSON content for a comprehensive movie-details article on The Cinema Verse, an ${langConfig.adjective} (${langConfig.industry}) cinema website, about the film "${movie.title}". This MUST be a full editorial article with long, rich, substantive paragraphs. Use ONLY the details given below. Do NOT include HTML or markdown. Do NOT use predictable AI phrasing. Write organically. Generate unique, editorial-style H2 heading variants where applicable.
 
 ${ctx}
 
@@ -1020,16 +1037,16 @@ Return a JSON object with exactly these keys (plain text only, NO HTML, NO markd
 - anticipationParagraph: 250-350 words on audience expectations, industry buzz, and cultural significance.`;
 
   const fallbacks = {
-    metaDescription: `${movie.title}${year ? ` (${year})` : ""}: full cast, crew, story and release date. Read the complete details on The Cinema Verse, your home for Hindi cinema.`,
-    introParagraph: `${movie.title}${year ? ` (${year})` : ""} is one of the most awaited ${genre} films in Hindi cinema, bringing together a talented cast and crew under the ${movie.language || "Hindi"} banner. The film has sparked widespread discussion among Hindi cinema fans for its bold premise, its choice of genre, and the calibre of talent involved in front of and behind the camera. From its story to its theatrical release plans, here is everything Bbbollywood fans need to know about this hotly anticipated production. With ${cc.director ? `director ${cc.director} at the helm` : "a skilled creative team guiding the vision"}, the film is set to make a significant mark on the Hindi film industry this year.`,
+    metaDescription: `${movie.title}${year ? ` (${year})` : ""}: full cast, crew, story and release date. Read the complete details on The Cinema Verse, your home for ${langConfig.adjective} cinema.`,
+    introParagraph: `${movie.title}${year ? ` (${year})` : ""} is one of the most awaited ${genre} films in ${langConfig.adjective} cinema, bringing together a talented cast and crew under the ${movie.language || langConfig.adjective} banner. The film has sparked widespread discussion among ${langConfig.adjective} cinema fans for its bold premise, its choice of genre, and the calibre of talent involved in front of and behind the camera. From its story to its theatrical release plans, here is everything ${langConfig.industry} fans need to know about this hotly anticipated production. With ${cc.director ? `director ${cc.director} at the helm` : "a skilled creative team guiding the vision"}, the film is set to make a significant mark on the ${langConfig.adjective} film industry this year.`,
     // SEO FIX: this is the canonical, full-length synopsis presentation —
     // the OTT Release and "Now Streaming" pages reframe (not repeat) this
     // text in their own fallbacks below, to avoid duplicate-content
     // penalties across the three blog pages for the same movie.
-    storyParagraph: movie.synopsis || `Full plot details for ${movie.title} will be updated as soon as they are officially released by the production team. What is known is that this ${genre} drama carries a story designed to resonate deeply with Hindi audiences — touching on universal themes of identity, family, love, and struggle, placed firmly in the cultural and social landscape of India. The film promises a narrative that goes beyond surface-level entertainment, aiming to deliver emotional depth, strong character writing, and a cinematic experience that stays with the viewer long after the credits roll. Hindi cinema audiences have long been waiting for a ${genre} film of this calibre, and ${movie.title} appears ready to deliver on those expectations.`,
-    castCrewParagraph: `${movie.title} is helmed by ${cc.director || "the director"}${cc.producer ? ` and produced by ${cc.producer}` : ""}, with ${leadNames || "a talented cast"} leading the film. ${leadNames ? `${leadNames.split(",")[0]} headlines the cast` : "The cast"} alongside a carefully chosen supporting ensemble drawn from Bbbollywood's growing and versatile talent pool. Each cast member brings their unique strengths and experience to the project, creating a dynamic ensemble that promises powerful on-screen performances. The chemistry between the lead actors has been a talking point in promotional discussions, and audiences can expect nuanced, layered portrayals from every member of the cast.`,
-    directorVisionParagraph: cc.director ? `${cc.director} brings a distinct and considered vision to ${movie.title}, shaping its ${genre.toLowerCase()} narrative with a sharp eye for authentic Hindi storytelling. Known for meticulous attention to production detail, the director has assembled a technical crew that reflects the ambition of this project — from the cinematography and production design to the editing and sound design. The visual language of ${movie.title} is expected to reflect the emotional texture of its story, using lighting, framing, and location choices to build a vivid and immersive world for the audience.` : `The creative team behind ${movie.title} is focused on delivering an authentic ${genre.toLowerCase()} experience rooted in Hindi storytelling traditions, combining modern production techniques with culturally grounded narrative choices. Every aspect of the film's technical execution has been crafted to serve the story and the emotional journey of its characters.`,
-    musicParagraph: hasSongs ? `The music of ${movie.title}${cc.musicDirector ? `, composed by ${cc.musicDirector},` : ""} features tracks including ${songNames}, adding to the film's emotional and entertainment value. The soundtrack blends melodious compositions with energetic numbers, catering to a wide range of musical tastes within the Hindi audience. Each song has been crafted to complement a key moment in the film's narrative, enhancing the emotional resonance of the story on screen.` : `Music plays a central and irreplaceable role in Hindi cinema, and ${movie.title} is expected to feature a soundtrack that perfectly complements its ${genre.toLowerCase()} tone and emotional arc. Full album details, song titles, and composer credits will be updated as they are officially released by the production team. Fans can expect a mix of melodious and peppy tracks that reflect the spirit of the film and the cultural heartbeat of India.`,
+    storyParagraph: movie.synopsis || `Full plot details for ${movie.title} will be updated as soon as they are officially released by the production team. What is known is that this ${genre} drama carries a story designed to resonate deeply with ${langConfig.adjective} audiences — touching on universal themes of identity, family, love, and struggle, placed firmly in the cultural and social landscape of India. The film promises a narrative that goes beyond surface-level entertainment, aiming to deliver emotional depth, strong character writing, and a cinematic experience that stays with the viewer long after the credits roll. ${langConfig.adjective} cinema audiences have long been waiting for a ${genre} film of this calibre, and ${movie.title} appears ready to deliver on those expectations.`,
+    castCrewParagraph: `${movie.title} is helmed by ${cc.director || "the director"}${cc.producer ? ` and produced by ${cc.producer}` : ""}, with ${leadNames || "a talented cast"} leading the film. ${leadNames ? `${leadNames.split(",")[0]} headlines the cast` : "The cast"} alongside a carefully chosen supporting ensemble drawn from ${langConfig.industry}'s growing and versatile talent pool. Each cast member brings their unique strengths and experience to the project, creating a dynamic ensemble that promises powerful on-screen performances. The chemistry between the lead actors has been a talking point in promotional discussions, and audiences can expect nuanced, layered portrayals from every member of the cast.`,
+    directorVisionParagraph: cc.director ? `${cc.director} brings a distinct and considered vision to ${movie.title}, shaping its ${genre.toLowerCase()} narrative with a sharp eye for authentic ${langConfig.adjective} storytelling. Known for meticulous attention to production detail, the director has assembled a technical crew that reflects the ambition of this project — from the cinematography and production design to the editing and sound design. The visual language of ${movie.title} is expected to reflect the emotional texture of its story, using lighting, framing, and location choices to build a vivid and immersive world for the audience.` : `The creative team behind ${movie.title} is focused on delivering an authentic ${genre.toLowerCase()} experience rooted in ${langConfig.adjective} storytelling traditions, combining modern production techniques with culturally grounded narrative choices. Every aspect of the film's technical execution has been crafted to serve the story and the emotional journey of its characters.`,
+    musicParagraph: hasSongs ? `The music of ${movie.title}${cc.musicDirector ? `, composed by ${cc.musicDirector},` : ""} features tracks including ${songNames}, adding to the film's emotional and entertainment value. The soundtrack blends melodious compositions with energetic numbers, catering to a wide range of musical tastes within the ${langConfig.adjective} audience. Each song has been crafted to complement a key moment in the film's narrative, enhancing the emotional resonance of the story on screen.` : `Music plays a central and irreplaceable role in ${langConfig.adjective} cinema, and ${movie.title} is expected to feature a soundtrack that perfectly complements its ${genre.toLowerCase()} tone and emotional arc. Full album details, song titles, and composer credits will be updated as they are officially released by the production team. Fans can expect a mix of melodious and peppy tracks that reflect the spirit of the film and the cultural heartbeat of India.`,
     whereToWatchParagraph: (() => {
       // SEO FIX: this fallback previously rendered byte-identical across
       // every movie, which the audit flags as a duplicate-content risk.
@@ -1044,9 +1061,9 @@ Return a JSON object with exactly these keys (plain text only, NO HTML, NO markd
         `${movie.title} arrives in cinemas throughout India, releasing in major centres such as`,
       ];
       const opener = openers[seed % openers.length];
-      return `${opener} ${rotated.join(", ")}. The Cinema Verse strongly encourages Hindi cinema fans to experience this film on the big screen — the theatrical experience, with its immersive visuals, surround sound, and shared audience energy, brings the story of ${movie.title} to life in a way that no home viewing can replicate. Supporting Hindi films in cinemas also directly helps the Bbbollywood industry grow and produce more high-quality content for audiences everywhere.`;
+      return `${opener} ${rotated.join(", ")}. The Cinema Verse strongly encourages ${langConfig.adjective} cinema fans to experience this film on the big screen — the theatrical experience, with its immersive visuals, surround sound, and shared audience energy, brings the story of ${movie.title} to life in a way that no home viewing can replicate. Supporting ${langConfig.adjective} films in cinemas also directly helps the ${langConfig.industry} industry grow and produce more high-quality content for audiences everywhere.`;
     })(),
-    anticipationParagraph: `With its promising cast, strong creative team, and a story that taps into the pulse of Hindi society, ${movie.title} has generated significant buzz and anticipation among Hindi cinema audiences. Fans of ${genre.toLowerCase()} films in particular have reason to look forward to this one, given the quality of talent assembled and the ambition of the production. Social media has been buzzing with discussions about the film's trailer, posters, and music — all of which point to a major release that could define this season for Bbbollywood. Box office observers are closely watching ${movie.title} as a potential standout film of the year.`,
+    anticipationParagraph: `With its promising cast, strong creative team, and a story that taps into the pulse of ${langConfig.adjective} society, ${movie.title} has generated significant buzz and anticipation among ${langConfig.adjective} cinema audiences. Fans of ${genre.toLowerCase()} films in particular have reason to look forward to this one, given the quality of talent assembled and the ambition of the production. Social media has been buzzing with discussions about the film's trailer, posters, and music — all of which point to a major release that could define this season for ${langConfig.industry}. Box office observers are closely watching ${movie.title} as a potential standout film of the year.`,
   };
 
   return callGroqStructured(
@@ -1059,8 +1076,9 @@ Return a JSON object with exactly these keys (plain text only, NO HTML, NO markd
 }
 
 function buildMovieDetailsBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, dateModified, relatedMovies = []) {
+  const langConfig = getLangConfig(movie.language);
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
-  const genre = (movie.genre || []).join(", ") || "Hindi";
+  const genre = (movie.genre || []).join(", ") || langConfig.adjective;
   const releaseFmt = movie.releaseTBA || !movie.releaseDate ? "To Be Announced" : formatHumanDate(movie.releaseDate);
   // Falls back to the site logo only when the movie has no poster/thumbnail/
   // banner at all — same fallback asset the rest of the codebase already
@@ -1121,8 +1139,8 @@ function buildMovieDetailsBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublis
   const leadNames = cc.leadCast.map(c => c.name).filter(Boolean);
   const keywordsArr = [
     movie.title, `${movie.title} cast`, `${movie.title} release date`, `${movie.title} story`,
-    `${movie.title} director`, year ? `${movie.title} ${year}` : "", `${movie.title} hindi movie`,
-    "Hindi movie", "Bbbollywood", genre ? `${genre} hindi movie` : "", movie.language || "Hindi",
+    `${movie.title} director`, year ? `${movie.title} ${year}` : "", `${movie.title} ${langConfig.adjective.toLowerCase()} movie`,
+    `${langConfig.adjective} movie`, `${langConfig.industry}`, genre ? `${genre} ${langConfig.adjective.toLowerCase()} movie` : "", movie.language || langConfig.adjective,
     cc.director ? `${cc.director} movies` : "", cc.musicDirector ? `${cc.musicDirector} music` : "",
     ...leadNames.map(n => `${n} movies`),
   ].filter(Boolean);
@@ -1235,7 +1253,7 @@ function buildMovieDetailsBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublis
         "name": ${JSON.stringify(movie.title)},
         "url": "${SITE_URL}${movieUrl}",
         "image": ${JSON.stringify(ogImage)},
-        "inLanguage": ${JSON.stringify(movie.language || "Hindi")},
+        "inLanguage": ${JSON.stringify(movie.language || langConfig.adjective)},
         "genre": ${JSON.stringify(genre)}${movie.releaseDate ? `,
         "datePublished": "${movie.releaseDate}"` : ""}${movie.contentRating ? `,
         "contentRating": ${JSON.stringify(movie.contentRating)}` : ""}${movie.runtime ? `,
@@ -1285,7 +1303,7 @@ function buildMovieDetailsBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublis
   <h1 style="color:#fff;font-size:1.4rem;font-weight:800;margin:0 0 12px;line-height:1.3;">${seoTitle}</h1>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
     <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#c9973a;font-weight:700;">${genre}</span>
-    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#7ec8e3;font-weight:700;">${movie.language || "Hindi"}</span>
+    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#7ec8e3;font-weight:700;">${movie.language || langConfig.adjective}</span>
     <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#e8c87a;font-weight:700;">📅 ${releaseFmt}</span>
     ${hasImdb ? `<span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#f5c518;font-weight:700;">⭐ ${imdbNum}/10 IMDb</span>` : ""}
   </div>
@@ -1317,7 +1335,7 @@ ${BLOG_RESPONSIVE_STYLES}
         <tbody>
           <tr><td style="${tdL}">Release Date</td><td style="${tdR}">${releaseFmt}</td></tr>
           <tr><td style="${tdL}">Genre</td><td style="${tdR}">${genre}</td></tr>
-          <tr><td style="${tdL}">Language</td><td style="${tdR}">${movie.language || "Hindi"}</td></tr>
+          <tr><td style="${tdL}">Language</td><td style="${tdR}">${movie.language || langConfig.adjective}</td></tr>
           ${movie.runtime ? `<tr><td style="${tdL}">Runtime</td><td style="${tdR}">${movie.runtime}</td></tr>` : ""}
           ${movie.contentRating ? `<tr><td style="${tdL}">Certification</td><td style="${tdR}">${movie.contentRating}</td></tr>` : ""}
           ${keyCrewRows}
@@ -1398,7 +1416,7 @@ ${BLOG_RESPONSIVE_STYLES}
     ${buildRelatedMoviesHtml(relatedMovies, "#c9973a")}
 
     <section style="background:#111;border-radius:14px;padding:20px 26px;margin-bottom:22px;display:flex;gap:12px;flex-wrap:wrap;">
-      <a href="/movies" style="display:inline-block;background:#c9973a;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">Browse More Hindi Movies →</a>
+      <a href="/movies" style="display:inline-block;background:#c9973a;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">Browse More ${langConfig.adjective} Movies →</a>
     </section>
   </div>
 </div>`;
@@ -1457,7 +1475,7 @@ function buildMovieDetailsSlug(movie) {
     "complete-movie-guide",
     "cast-story-release-date",
     "full-movie-information",
-    "bollywood-film-guide",
+    `${langConfig.industry.toLowerCase()}-film-guide`,
     "movie-details-cast-crew",
   ];
   const suffix = pickVariant(movie.title, suffixes);
@@ -1535,7 +1553,7 @@ async function autoGenerateMovieDetailsBlog(movie) {
       excerpt: ai.metaDescription,
       content: html,
       category: "Movie Update",
-      tags: [movie.title, "Bbollywood", "Hindi Movie", ...(movie.genre || [])],
+      tags: [movie.title, langConfig.industry, `${langConfig.adjective} Movie`, ...(movie.genre || [])],
       coverImage: movie.posterUrl || movie.thumbnailUrl || movie.bannerUrl || "",
       movieId: movie._id,
       movieTitle: movie.title,
@@ -1657,23 +1675,24 @@ function buildSongSeoDesc(song, movie) {
  * Raw description text must NEVER be copied verbatim into the output.
  */
 async function generateSongAiSections(song, movie, cc) {
+  const langConfig = getLangConfig(movie.language);
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const singer = song.singer || "the vocalist";
   const md = song.musicDirector || cc.musicDirector || "the music director";
   const lyricist = song.lyricist || "";
-  const genre = (movie.genre || []).join(", ") || "Hindi";
+  const genre = (movie.genre || []).join(", ") || langConfig.adjective;
   const hasDesc = !!(song.description || "").trim();
   const hasLyrics = !!(song.lyrics || "").trim();
 
   const fallbacks = {
-    intro: `${song.title} is the latest musical offering from the Bbollywood film ${movie.title}${year ? ` (${year})` : ""}. Rendered beautifully by ${singer} with a mesmerizing composition by ${md}, this track is fast becoming the heartbeat of the film's soundtrack.`,
+    intro: `${song.title} is the latest musical offering from the ${langConfig.industry} film ${movie.title}${year ? ` (${year})` : ""}. Rendered beautifully by ${singer} with a mesmerizing composition by ${md}, this track is fast becoming the heartbeat of the film's soundtrack.`,
     aboutSong: hasDesc
-      ? `${song.title} captures the quintessential Bbollywood emotion of ${movie.title} with undeniable charm. ${singer}'s vocals glide over the melody effortlessly, while ${md}'s production sets a grand sonic stage. Every beat and rhythm highlights the ambition behind this track, making it a chartbuster in the making for Hindi music lovers.`
-      : `Showcasing the vocal prowess of ${singer} and the musical genius of ${md}, this song perfectly sets the mood for the ${genre} drama. It's designed to strike a chord with Bbollywood audiences, blending mass appeal with soulful melodies. The track is bound to dominate music charts and playlists alike.`,
+      ? `${song.title} captures the quintessential ${langConfig.industry} emotion of ${movie.title} with undeniable charm. ${singer}'s vocals glide over the melody effortlessly, while ${md}'s production sets a grand sonic stage. Every beat and rhythm highlights the ambition behind this track, making it a chartbuster in the making for ${langConfig.adjective} music lovers.`
+      : `Showcasing the vocal prowess of ${singer} and the musical genius of ${md}, this song perfectly sets the mood for the ${genre} drama. It's designed to strike a chord with ${langConfig.industry} audiences, blending mass appeal with soulful melodies. The track is bound to dominate music charts and playlists alike.`,
     lyricsNote: hasLyrics
-      ? `The lyrics of ${song.title} carry the poetic depth typical of classic Hindi cinema, giving voice to emotions that resonate deeply. Dive into the complete lyrics below to appreciate the craft behind the melody.`
+      ? `The lyrics of ${song.title} carry the poetic depth typical of classic ${langConfig.adjective} cinema, giving voice to emotions that resonate deeply. Dive into the complete lyrics below to appreciate the craft behind the melody.`
       : `The lyrics of ${song.title} are poetic and expressive, weaving themes of emotion and drama that fans of ${movie.title} will instantly connect with.`,
-    verdict: `${song.title} is a blockbuster addition to the ${movie.title} album. With ${singer}'s stellar delivery and ${md}'s vibrant composition, this is Bbollywood music at its absolute best. Watch the full video on The Cinema Verse.`,
+    verdict: `${song.title} is a blockbuster addition to the ${movie.title} album. With ${singer}'s stellar delivery and ${md}'s vibrant composition, this is ${langConfig.industry} music at its absolute best. Watch the full video on The Cinema Verse.`,
     metaDescription: buildSongSeoDesc(song, movie),
     audioCredits: [],
     videoCredits: [],
@@ -1684,12 +1703,12 @@ async function generateSongAiSections(song, movie, cc) {
     : "";
 
   const aboutSongInstruction = hasDesc
-    ? `- aboutSong (5-6 long, highly detailed paragraphs): A deeply human, glamorous editorial review of the song. Incorporate every detail from the description. Discuss emotional tone, artist performances, and Bbollywood vibes. Write in an enthusiastic, premium entertainment journalist voice (300-400 words).\n- audioCredits: Extract a JSON array of objects with keys "role" and "name" for all audio credits.\n- videoCredits: Extract a JSON array of objects with keys "role" and "name" for all video credits.`
-    : `- aboutSong (3-4 paragraphs, each 4-5 sentences): A premium Bbollywood editorial about the song's musical style, mood, and artist delivery.\n- audioCredits: []\n- videoCredits: []`;
+    ? `- aboutSong (5-6 long, highly detailed paragraphs): A deeply human, glamorous editorial review of the song. Incorporate every detail from the description. Discuss emotional tone, artist performances, and ${langConfig.industry} vibes. Write in an enthusiastic, premium entertainment journalist voice (300-400 words).\n- audioCredits: Extract a JSON array of objects with keys "role" and "name" for all audio credits.\n- videoCredits: Extract a JSON array of objects with keys "role" and "name" for all video credits.`
+    : `- aboutSong (3-4 paragraphs, each 4-5 sentences): A premium ${langConfig.industry} editorial about the song's musical style, mood, and artist delivery.\n- audioCredits: []\n- videoCredits: []`;
 
   return callGroqStructured(
-    `You are a top Bbollywood music journalist writing premium, highly engaging editorial articles for The Cinema Verse. Write in fluent, descriptive English with a glamorous entertainment tone. Avoid sounding robotic. Return ONLY a valid JSON object with exactly these keys: intro, aboutSong, lyricsNote, verdict, metaDescription, audioCredits, videoCredits.`,
-    `Write a full, rich Bbollywood song feature article:
+    `You are a top ${langConfig.industry} music journalist writing premium, highly engaging editorial articles for The Cinema Verse. Write in fluent, descriptive English with a glamorous entertainment tone. Avoid sounding robotic. Return ONLY a valid JSON object with exactly these keys: intro, aboutSong, lyricsNote, verdict, metaDescription, audioCredits, videoCredits.`,
+    `Write a full, rich ${langConfig.industry} song feature article:
 Song title: "${song.title}"
 Movie: "${movie.title}" (${year || "upcoming"})
 Genre: ${genre}
@@ -1714,11 +1733,12 @@ ${aboutSongInstruction}
  * Follows the same dark-theme design system as movie detail / OTT blogs.
  */
 function buildSongBlogHTML(song, movie, cc, ai, blogSlug, seoTitle, datePublished, dateModified, relatedMovies = [], dropLabel = "First Drop") {
+  const langConfig = getLangConfig(movie.language);
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const singer = song.singer || "";
   const md = song.musicDirector || cc.musicDirector || "";
   const lyricist = song.lyricist || "";
-  const genre = (movie.genre || []).join(", ") || "Hindi";
+  const genre = (movie.genre || []).join(", ") || langConfig.adjective;
   const poster = movie.posterUrl || movie.thumbnailUrl || movie.bannerUrl || "";
   const ogImage = poster || `${SITE_URL}/logo.png`;
   const movieUrl = `/movie/${movie.slug || movie._id}`;
@@ -1870,7 +1890,7 @@ async function autoGenerateSongBlog(song, movie, songIndex = 0, onlyIfNew = true
       excerpt: seoDesc,
       content: html,
       category: "Song Updates",
-      tags: [song.title, movie.title, "Hindi Songs", "Bbollywood", "Hindi Music", song.singer || "", song.musicDirector || cc.musicDirector || ""].filter(Boolean),
+      tags: [song.title, movie.title, `${langConfig.adjective} Songs`, langConfig.industry, `${langConfig.adjective} Music`, song.singer || "", song.musicDirector || cc.musicDirector || ""].filter(Boolean),
       coverImage: song.thumbnailUrl || (song.ytId ? `https://img.youtube.com/vi/${song.ytId}/hqdefault.jpg` : movie.posterUrl || movie.thumbnailUrl || ""),
       movieId: movie._id,
       movieTitle: movie.title,
@@ -1924,6 +1944,7 @@ async function autoGenerateAllSongBlogs(movie) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function generateOttAiSections(movie, cc) {
+  const langConfig = getLangConfig(movie.language);
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const isDateAvailable = isRealDate(movie.ottReleaseDate);
   const ottDateFmt = isDateAvailable ? formatHumanDate(movie.ottReleaseDate) : "Release Date Not Announced";
@@ -1932,7 +1953,7 @@ async function generateOttAiSections(movie, cc) {
   const leadNames = (cc.ottCast || cc.leadCast).map(c => c.name).filter(Boolean).join(", ");
   const festival = isDateAvailable ? findNearbyFestival(movie.ottReleaseDate) : "";
 
-  const ctx = `Movie: "${movie.title}"${year ? ` (${year})` : ""} | OTT Platform: ${movie.streamingOn} | OTT Release Date: ${ottDateFmt} | Genre: ${(movie.genre || []).join(", ") || "Hindi"} | Language: ${movie.language || "Hindi"} | Lead Cast: ${leadNames || "N/A"} | Director: ${cc.director || "N/A"} | Synopsis: ${movie.synopsis || "N/A"}${festival ? ` | Note: this OTT release falls close to ${festival} — you may mention this naturally if it fits.` : ""}`;
+  const ctx = `Movie: "${movie.title}"${year ? ` (${year})` : ""} | OTT Platform: ${movie.streamingOn} | OTT Release Date: ${ottDateFmt} | Genre: ${(movie.genre || []).join(", ") || langConfig.adjective} | Language: ${movie.language || langConfig.adjective} | Lead Cast: ${leadNames || "N/A"} | Director: ${cc.director || "N/A"} | Synopsis: ${movie.synopsis || "N/A"}${festival ? ` | Note: this OTT release falls close to ${festival} — you may mention this naturally if it fits.` : ""}`;
 
   const introStyles = [
     `Lead with the excitement of ${movie.title} securing its digital release on ${movie.streamingOn}.`,
@@ -1944,14 +1965,14 @@ async function generateOttAiSections(movie, cc) {
   const introStyle = pickVariant(movie.title + "ott", introStyles);
 
   const personas = [
-    "a digital streaming expert reporting for a Bollywood news site",
+    `a digital streaming expert reporting for a ${langConfig.industry} news site`,
     "a sharp, modern entertainment journalist",
     "a passionate OTT content reviewer and cinema fan",
-    "an insider Bollywood desk editor",
+    `an insider ${langConfig.industry} desk editor`,
   ];
   const persona = pickVariant(movie.title + "ottsys", personas);
 
-  const userPrompt = `Write deeply detailed, SEO-rich JSON content for an OTT-release announcement article on The Cinema Verse, an Hindi (Bollywood) cinema website, about the film "${movie.title}" streaming on ${movie.streamingOn}. This MUST be a full editorial article with long, rich paragraphs. Use ONLY the details given. Do NOT use predictable AI phrasing. Write organically. Generate unique, editorial-style H2 heading variants where applicable.
+  const userPrompt = `Write deeply detailed, SEO-rich JSON content for an OTT-release announcement article on The Cinema Verse, an ${langConfig.adjective} (${langConfig.industry}) cinema website, about the film "${movie.title}" streaming on ${movie.streamingOn}. This MUST be a full editorial article with long, rich paragraphs. Use ONLY the details given. Do NOT use predictable AI phrasing. Write organically. Generate unique, editorial-style H2 heading variants where applicable.
 
 ${ctx}
 
@@ -1961,22 +1982,22 @@ Return a JSON object with exactly these keys (plain text only, NO HTML, NO markd
 - synopsisParagraph: 200-280 words recapping the film's story, genre, and what makes it worth watching on OTT. IMPORTANT: paraphrase and reframe in your own words for a streaming context — do not copy the source synopsis verbatim.
 - castHighlightParagraph: 200-280 words specifically naming and highlighting each lead actor and their performance.
 - howToWatchParagraph: 180-250 words explaining step-by-step how India audiences can stream the film on ${movie.streamingOn}.
-- platformParagraph: 150-220 words introducing ${movie.streamingOn} as an OTT platform and its contribution to Bollywood's digital accessibility.`;
+- platformParagraph: 150-220 words introducing ${movie.streamingOn} as an OTT platform and its contribution to ${langConfig.industry}'s digital accessibility.`;
 
   const fallbacks = {
     metaDescription: `${movie.title} streams on ${movie.streamingOn}. Get cast, release details and how-to-watch info on The Cinema Verse.`,
-    introParagraph: `${movie.title}${leadNames ? `, starring ${leadNames},` : ""} is set to stream on the popular OTT platform ${movie.streamingOn}. The OTT release status is currently: ${ottDateFmt}. This digital premiere marks an exciting milestone for Hindi cinema fans everywhere, giving audiences across India and around the world the opportunity to experience this ${(movie.genre || []).join(", ") || "Hindi"} film from the comfort of their homes. With the growing reach of regional OTT platforms like ${movie.streamingOn}, Hindi cinema is finding new audiences far beyond the traditional theatrical circuit, and ${movie.title} is set to be a significant addition to this wave of digital content.`,
+    introParagraph: `${movie.title}${leadNames ? `, starring ${leadNames},` : ""} is set to stream on the popular OTT platform ${movie.streamingOn}. The OTT release status is currently: ${ottDateFmt}. This digital premiere marks an exciting milestone for ${langConfig.adjective} cinema fans everywhere, giving audiences across India and around the world the opportunity to experience this ${(movie.genre || []).join(", ") || langConfig.adjective} film from the comfort of their homes. With the growing reach of regional OTT platforms like ${movie.streamingOn}, ${langConfig.adjective} cinema is finding new audiences far beyond the traditional theatrical circuit, and ${movie.title} is set to be a significant addition to this wave of digital content.`,
     // SEO FIX: previously fell back to the raw, unmodified `movie.synopsis`
     // string — byte-identical to the Movie Details page's storyParagraph
     // fallback, which the audit flags as duplicate content across blog
     // pages for the same movie. Now reframes the synopsis with OTT-specific
     // context instead of repeating it verbatim.
     synopsisParagraph: movie.synopsis
-      ? `Now streaming on ${movie.streamingOn}, ${movie.title} tells a story that has resonated strongly with Hindi audiences since it was first announced. ${movie.synopsis} For viewers deciding whether to press play, this ${(movie.genre || []).join(", ") || "Hindi"} film offers a self-contained viewing experience that holds up just as well on a home screen as it did in theatres.`
-      : `${movie.title} is a ${(movie.genre || []).join(", ") || "Hindi"} film that has drawn considerable attention from Bbbollywood audiences and critics alike. The film carries a story built around the cultural and emotional landscape of India, exploring themes that resonate deeply with Hindi viewers. Full story details, including character backgrounds and plot specifics, will be updated as officially confirmed by the production team. What is clear is that ${movie.title} combines strong performances with a compelling narrative structure that is ideal for OTT viewing.`,
-    castHighlightParagraph: leadNames ? `${leadNames} lead the cast of ${movie.title}, each bringing their distinctive acting strengths and on-screen presence to their respective roles. The ensemble is widely regarded as one of the strongest assembled for an Hindi film in recent memory, with each actor having established themselves as a significant talent in the Bbbollywood industry. Their combined performances are expected to be a major draw for OTT audiences discovering the film on ${movie.streamingOn}, and early reviews of their work on screen have been overwhelmingly positive.` : `${movie.title} features a talented cast of Hindi cinema's most acclaimed performers, whose nuanced portrayals and strong screen chemistry are expected to be the highlight of this OTT viewing experience on ${movie.streamingOn}. The casting choices reflect the production team's commitment to quality storytelling and authentic representation of Hindi culture and characters.`,
-    howToWatchParagraph: `Viewers can catch ${movie.title} on ${movie.streamingOn} by downloading the official app from the Google Play Store or Apple App Store, or by visiting the platform's website directly. ${movie.streamingOn} offers subscription plans tailored for Hindi-speaking audiences, with options for monthly and annual memberships that provide unlimited access to its growing library of Hindi films, web series, and regional content. Once subscribed, simply search for "${movie.title}" in the app or website to start streaming. The Cinema Verse will update the direct streaming link as soon as it goes live officially.`,
-    platformParagraph: `${movie.streamingOn} is among the leading OTT platforms dedicated to bringing Hindi-language films, web series, and regional entertainment to digital screens across India and beyond. With a rapidly growing content library and a strong focus on authentic regional storytelling, ${movie.streamingOn} has become a vital destination for Hindi cinema fans who want to stay connected with Bbbollywood's latest releases. The platform's commitment to supporting Hindi-language content creators and giving regional films a digital home has made it an important part of the Bbbollywood ecosystem.`,
+      ? `Now streaming on ${movie.streamingOn}, ${movie.title} tells a story that has resonated strongly with ${langConfig.adjective} audiences since it was first announced. ${movie.synopsis} For viewers deciding whether to press play, this ${(movie.genre || []).join(", ") || langConfig.adjective} film offers a self-contained viewing experience that holds up just as well on a home screen as it did in theatres.`
+      : `${movie.title} is a ${(movie.genre || []).join(", ") || langConfig.adjective} film that has drawn considerable attention from ${langConfig.industry} audiences and critics alike. The film carries a story built around the cultural and emotional landscape of India, exploring themes that resonate deeply with ${langConfig.adjective} viewers. Full story details, including character backgrounds and plot specifics, will be updated as officially confirmed by the production team. What is clear is that ${movie.title} combines strong performances with a compelling narrative structure that is ideal for OTT viewing.`,
+    castHighlightParagraph: leadNames ? `${leadNames} lead the cast of ${movie.title}, each bringing their distinctive acting strengths and on-screen presence to their respective roles. The ensemble is widely regarded as one of the strongest assembled for an ${langConfig.adjective} film in recent memory, with each actor having established themselves as a significant talent in the ${langConfig.industry} industry. Their combined performances are expected to be a major draw for OTT audiences discovering the film on ${movie.streamingOn}, and early reviews of their work on screen have been overwhelmingly positive.` : `${movie.title} features a talented cast of ${langConfig.adjective} cinema's most acclaimed performers, whose nuanced portrayals and strong screen chemistry are expected to be the highlight of this OTT viewing experience on ${movie.streamingOn}. The casting choices reflect the production team's commitment to quality storytelling and authentic representation of ${langConfig.adjective} culture and characters.`,
+    howToWatchParagraph: `Viewers can catch ${movie.title} on ${movie.streamingOn} by downloading the official app from the Google Play Store or Apple App Store, or by visiting the platform's website directly. ${movie.streamingOn} offers subscription plans tailored for ${langConfig.adjective}-speaking audiences, with options for monthly and annual memberships that provide unlimited access to its growing library of ${langConfig.adjective} films, web series, and regional content. Once subscribed, simply search for "${movie.title}" in the app or website to start streaming. The Cinema Verse will update the direct streaming link as soon as it goes live officially.`,
+    platformParagraph: `${movie.streamingOn} is among the leading OTT platforms dedicated to bringing ${langConfig.adjective}-language films, web series, and regional entertainment to digital screens across India and beyond. With a rapidly growing content library and a strong focus on authentic regional storytelling, ${movie.streamingOn} has become a vital destination for ${langConfig.adjective} cinema fans who want to stay connected with ${langConfig.industry}'s latest releases. The platform's commitment to supporting ${langConfig.adjective}-language content creators and giving regional films a digital home has made it an important part of the ${langConfig.industry} ecosystem.`,
   };
 
   return callGroqStructured(
@@ -2022,7 +2043,7 @@ function buildOttBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, date
   const keywordsArr = [
     movie.title, `${movie.title} OTT release date`, `${movie.title} ${movie.streamingOn}`,
     `watch ${movie.title} online`, `${movie.title} streaming`, movie.streamingOn,
-    `${movie.streamingOn} hindi movies`, "Hindi movie OTT", "Bbbollywood streaming",
+    `${movie.streamingOn} ${langConfig.adjective.toLowerCase()} movies`, `${langConfig.adjective} movie OTT`, `${langConfig.industry} streaming`,
     ...leadNames.map(n => `${n} movies`),
   ].filter(Boolean);
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
@@ -2112,7 +2133,7 @@ function buildOttBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, date
         "name": ${JSON.stringify(movie.title)},
         "url": "${SITE_URL}${movieUrl}",
         "image": ${JSON.stringify(ogImage)},
-        "inLanguage": ${JSON.stringify(movie.language || "Hindi")}${movie.releaseDate ? `,
+        "inLanguage": ${JSON.stringify(movie.language || langConfig.adjective)}${movie.releaseDate ? `,
         "datePublished": "${movie.releaseDate}"` : ""}${movie.runtime ? `,
         "duration": ${JSON.stringify(movie.runtime)}` : ""}${cc.director ? `,
         "director": { "@type": "Person", "name": ${JSON.stringify(cc.director)} }` : ""}${leadCast.length ? `,
@@ -2184,7 +2205,7 @@ ${BLOG_RESPONSIVE_STYLES}
         <tbody>
           <tr><td style="${tdL}">Streaming Platform</td><td style="${tdR}">${movie.streamingOn}</td></tr>
           <tr><td style="${tdL}">OTT Release Date</td><td style="${tdR}">${ottDateFmt}</td></tr>
-          <tr><td style="${tdL}">Language</td><td style="${tdR}">${movie.language || "Hindi"}</td></tr>
+          <tr><td style="${tdL}">Language</td><td style="${tdR}">${movie.language || langConfig.adjective}</td></tr>
           ${(movie.genre || []).length ? `<tr><td style="${tdL}">Genre</td><td style="${tdR}">${(movie.genre || []).join(", ")}</td></tr>` : ""}
           ${movie.releaseDate ? `<tr><td style="${tdL}">Theatrical Release</td><td style="${tdR}">${formatHumanDate(movie.releaseDate)}</td></tr>` : ""}
         </tbody>
@@ -2212,11 +2233,11 @@ ${BLOG_RESPONSIVE_STYLES}
       ${autoBlogParagraphs(ai.platformParagraph)}
     </section>
 
-    ${buildRelatedMoviesHtml(relatedMovies, "#7ec8e3", `More Hindi Movies on ${movie.streamingOn}`)}
+    ${buildRelatedMoviesHtml(relatedMovies, "#7ec8e3", `More ${langConfig.adjective} Movies on ${movie.streamingOn}`)}
 
     <section style="background:#111;border-radius:14px;padding:20px 26px;margin-bottom:22px;display:flex;gap:12px;flex-wrap:wrap;">
       <a href="${movieUrl}" style="display:inline-block;background:#c9973a;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">View Full Movie Page →</a>
-      <a href="/movies" style="display:inline-block;background:transparent;border:1px solid #333;color:#ccc;font-weight:700;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">Browse More Hindi Movies →</a>
+      <a href="/movies" style="display:inline-block;background:transparent;border:1px solid #333;color:#ccc;font-weight:700;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">Browse More ${langConfig.adjective} Movies →</a>
     </section>
   </div>
 </div>`;
@@ -2255,7 +2276,7 @@ async function autoGenerateOttBlog(movie) {
       excerpt: ai.metaDescription,
       content: html,
       category: "OTT Release",
-      tags: [movie.title, movie.streamingOn, "OTT Release", "Hindi Movie"],
+      tags: [movie.title, movie.streamingOn, "OTT Release", `${langConfig.adjective} Movie`],
       coverImage: movie.posterUrl || movie.thumbnailUrl || movie.bannerUrl || "",
       movieId: movie._id,
       movieTitle: movie.title,
@@ -2297,7 +2318,7 @@ function buildOttLiveTitle(movie, cc) {
   // so a crew member never ends up named as a "Starrer" in the title.
   const build = (leadCount) => {
     const leads = (cc.ottCast || cc.leadCast || []).slice(0, leadCount).map(c => c.name).filter(Boolean);
-    const subject = leads.length ? `${leads.join(" & ")} Starrer` : "Hindi Movie";
+    const subject = leads.length ? `${leads.join(" & ")} Starrer` : `${langConfig.adjective} Movie`;
     return `${movie.title} Is Now Streaming on ${movie.streamingOn}: ${subject}`.replace(/\s+/g, " ").trim();
   };
   let title = build(2);
@@ -2307,14 +2328,15 @@ function buildOttLiveTitle(movie, cc) {
 }
 
 async function generateOttLiveAiSections(movie, cc) {
+  const langConfig = getLangConfig(movie.language);
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const ottDateFmt = isRealDate(movie.ottReleaseDate) ? formatHumanDate(movie.ottReleaseDate) : "Now";
   // BUGFIX: use the strictly-filtered ottCast so the AI is never told a
   // Cinematographer/Editor/Music Director is part of the "Lead Cast".
   const leadNames = (cc.ottCast || cc.leadCast).map(c => c.name).filter(Boolean).join(", ");
-  const genre = (movie.genre || []).join(", ") || "Hindi";
+  const genre = (movie.genre || []).join(", ") || langConfig.adjective;
 
-  const ctx = `Movie: "${movie.title}"${year ? ` (${year})` : ""} | Now Streaming on: ${movie.streamingOn} | OTT Release Date: ${ottDateFmt} | Genre: ${genre} | Language: ${movie.language || "Hindi"} | Lead Cast: ${leadNames || "N/A"} | Director: ${cc.director || "N/A"} | Synopsis: ${movie.synopsis || "N/A"} | Streaming URL: ${movie.streamingUrl || "N/A"}`;
+  const ctx = `Movie: "${movie.title}"${year ? ` (${year})` : ""} | Now Streaming on: ${movie.streamingOn} | OTT Release Date: ${ottDateFmt} | Genre: ${genre} | Language: ${movie.language || langConfig.adjective} | Lead Cast: ${leadNames || "N/A"} | Director: ${cc.director || "N/A"} | Synopsis: ${movie.synopsis || "N/A"} | Streaming URL: ${movie.streamingUrl || "N/A"}`;
 
   const introStyles = [
     `Lead with an excited "Just Arrived" / breaking-news tone announcing that ${movie.title} is finally available to watch on ${movie.streamingOn}.`,
@@ -2326,14 +2348,14 @@ async function generateOttLiveAiSections(movie, cc) {
   const introStyle = pickVariant(movie.title + "live", introStyles);
 
   const personas = [
-    "a high-energy pop culture writer for a Bollywood site",
+    `a high-energy pop culture writer for a ${langConfig.industry} site`,
     "an enthusiastic streaming platform curator",
-    "a passionate Hindi cinema fan sharing a must-watch recommendation",
+    `a passionate ${langConfig.adjective} cinema fan sharing a must-watch recommendation`,
     "a dynamic entertainment journalist reporting a digital premiere",
   ];
   const persona = pickVariant(movie.title + "livesys", personas);
 
-  const userPrompt = `Write deeply detailed, SEO-rich JSON content for a "Now Streaming on OTT" announcement article on The Cinema Verse, an Hindi (Bollywood) cinema website. The film "${movie.title}" is NOW AVAILABLE to stream on ${movie.streamingOn} as of ${ottDateFmt}. Write in an excited, present-tense editorial tone. Do NOT use predictable AI phrasing. Write organically. Generate unique, editorial-style H2 heading variants where applicable. No HTML or markdown in values.
+  const userPrompt = `Write deeply detailed, SEO-rich JSON content for a "Now Streaming on OTT" announcement article on The Cinema Verse, an ${langConfig.adjective} (${langConfig.industry}) cinema website. The film "${movie.title}" is NOW AVAILABLE to stream on ${movie.streamingOn} as of ${ottDateFmt}. Write in an excited, present-tense editorial tone. Do NOT use predictable AI phrasing. Write organically. Generate unique, editorial-style H2 heading variants where applicable. No HTML or markdown in values.
 
 ${ctx}
 
@@ -2346,18 +2368,18 @@ Return a JSON object with exactly these keys (plain text only, NO HTML, NO markd
 - howToWatchParagraph: 180-250 words — direct, step-by-step guide to streaming "${movie.title}" on ${movie.streamingOn} RIGHT NOW. Include a strong call to action.`;
 
   const fallbacks = {
-    metaDescription: `${movie.title} is NOW streaming on ${movie.streamingOn}! Watch this Hindi ${genre} film online today. Full details on The Cinema Verse.`,
-    introParagraph: `${movie.title}${leadNames ? `, starring ${leadNames},` : ""} is officially now available to stream on ${movie.streamingOn} as of ${ottDateFmt}. This eagerly awaited Hindi ${genre} film has made its digital debut, giving fans across India and around the world the chance to experience it from the comfort of their homes. Directed by ${cc.director || "the talented creative team"}, the film brings together a stellar cast and a compelling story that has been the talk of Bbbollywood since its theatrical run. With its arrival on ${movie.streamingOn}, ${movie.title} joins the growing library of premium Hindi cinema available on OTT, marking another milestone for Bbbollywood's digital expansion.`,
-    whyWatchParagraph: `${movie.title} is the kind of Hindi film that demands to be experienced \u2014 and now that it is available on ${movie.streamingOn}, there has never been a better time to press play. The film combines a gripping ${genre.toLowerCase()} narrative with outstanding performances from its lead cast, creating an experience that is both entertaining and emotionally resonant. The direction, cinematography, and production values set a new benchmark for Hindi cinema, proving that Bbbollywood continues to grow in ambition and craft. Whether you are a long-time Hindi cinema fan or a newcomer discovering Bbbollywood through OTT, ${movie.title} is the perfect film to start with.`,
+    metaDescription: `${movie.title} is NOW streaming on ${movie.streamingOn}! Watch this ${langConfig.adjective} ${genre} film online today. Full details on The Cinema Verse.`,
+    introParagraph: `${movie.title}${leadNames ? `, starring ${leadNames},` : ""} is officially now available to stream on ${movie.streamingOn} as of ${ottDateFmt}. This eagerly awaited ${langConfig.adjective} ${genre} film has made its digital debut, giving fans across India and around the world the chance to experience it from the comfort of their homes. Directed by ${cc.director || "the talented creative team"}, the film brings together a stellar cast and a compelling story that has been the talk of ${langConfig.industry} since its theatrical run. With its arrival on ${movie.streamingOn}, ${movie.title} joins the growing library of premium ${langConfig.adjective} cinema available on OTT, marking another milestone for ${langConfig.industry}'s digital expansion.`,
+    whyWatchParagraph: `${movie.title} is the kind of ${langConfig.adjective} film that demands to be experienced \u2014 and now that it is available on ${movie.streamingOn}, there has never been a better time to press play. The film combines a gripping ${genre.toLowerCase()} narrative with outstanding performances from its lead cast, creating an experience that is both entertaining and emotionally resonant. The direction, cinematography, and production values set a new benchmark for ${langConfig.adjective} cinema, proving that ${langConfig.industry} continues to grow in ambition and craft. Whether you are a long-time ${langConfig.adjective} cinema fan or a newcomer discovering ${langConfig.industry} through OTT, ${movie.title} is the perfect film to start with.`,
     // SEO FIX: previously fell back to the raw, unmodified `movie.synopsis`
     // string — identical to the other two blog pages' fallbacks. Reframed
     // with "now streaming" / spoiler-light viewing-decision framing instead
     // of repeating the synopsis verbatim, so all three pages read distinctly.
     synopsisParagraph: movie.synopsis
-      ? `Here's the setup, without spoiling the journey: ${movie.synopsis} It's a story Hindi audiences have already responded to strongly, and watching it now on ${movie.streamingOn} means experiencing those emotional beats with the comfort of a pause button — perfect for catching every detail you might have missed on the big screen.`
+      ? `Here's the setup, without spoiling the journey: ${movie.synopsis} It's a story ${langConfig.adjective} audiences have already responded to strongly, and watching it now on ${movie.streamingOn} means experiencing those emotional beats with the comfort of a pause button — perfect for catching every detail you might have missed on the big screen.`
       : `${movie.title} is a ${genre} film set in the heart of India, weaving a story that touches on themes of identity, love, struggle, and triumph. The narrative unfolds with a compelling central conflict that keeps viewers engaged from the first scene to the last. With strong character development, authentic dialogue, and a richly depicted setting, the film creates a world that feels real and emotionally involving. Without giving too much away, ${movie.title} delivers a satisfying and memorable cinematic journey that OTT viewers are sure to appreciate at home on ${movie.streamingOn}.`,
-    castReviewParagraph: leadNames ? `${leadNames} deliver performances in ${movie.title} that are among the finest of their careers in Hindi cinema. Each actor brings depth, authenticity, and a genuine emotional investment to their role, creating characters that linger in the memory long after the film ends. The ensemble dynamic is one of the film's greatest strengths, with the cast working in perfect harmony to bring the story to life with nuance and power. OTT viewers on ${movie.streamingOn} are in for a treat as they experience these performances for the first time.` : `The cast of ${movie.title} delivers remarkable performances that elevate this Hindi ${genre.toLowerCase()} film to a memorable cinematic experience. Available now on ${movie.streamingOn}, viewers can witness the full depth and range of the ensemble cast's talents in the comfort of their own homes.`,
-    howToWatchParagraph: `To start watching ${movie.title} on ${movie.streamingOn} right now, download the ${movie.streamingOn} app from the Google Play Store or Apple App Store on your smartphone or tablet. Alternatively, visit the ${movie.streamingOn} website directly in your browser. Create an account or log in if you already have one, then choose a subscription plan that suits you \u2014 ${movie.streamingOn} offers flexible monthly and annual options. Once subscribed, search for "${movie.title}" using the search bar and press play to begin streaming instantly. The film is available in Hindi with optional subtitles for wider accessibility.`,
+    castReviewParagraph: leadNames ? `${leadNames} deliver performances in ${movie.title} that are among the finest of their careers in ${langConfig.adjective} cinema. Each actor brings depth, authenticity, and a genuine emotional investment to their role, creating characters that linger in the memory long after the film ends. The ensemble dynamic is one of the film's greatest strengths, with the cast working in perfect harmony to bring the story to life with nuance and power. OTT viewers on ${movie.streamingOn} are in for a treat as they experience these performances for the first time.` : `The cast of ${movie.title} delivers remarkable performances that elevate this ${langConfig.adjective} ${genre.toLowerCase()} film to a memorable cinematic experience. Available now on ${movie.streamingOn}, viewers can witness the full depth and range of the ensemble cast's talents in the comfort of their own homes.`,
+    howToWatchParagraph: `To start watching ${movie.title} on ${movie.streamingOn} right now, download the ${movie.streamingOn} app from the Google Play Store or Apple App Store on your smartphone or tablet. Alternatively, visit the ${movie.streamingOn} website directly in your browser. Create an account or log in if you already have one, then choose a subscription plan that suits you \u2014 ${movie.streamingOn} offers flexible monthly and annual options. Once subscribed, search for "${movie.title}" using the search bar and press play to begin streaming instantly. The film is available in ${movie.language || langConfig.adjective} with optional subtitles for wider accessibility.`,
   };
 
   return callGroqStructured(
@@ -2380,7 +2402,7 @@ function buildOttLiveBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, 
   // and its actor[] schema, instead of the shared cc.leadCast (which can
   // include crew). Scoped to this function only.
   const leadCast = cc.ottCast || cc.leadCast || [];
-  const genre = (movie.genre || []).join(", ") || "Hindi";
+  const genre = (movie.genre || []).join(", ") || langConfig.adjective;
   const imdbNum = parseFloat(movie.imdbRating);
   const hasImdb = !isNaN(imdbNum) && imdbNum > 0 && imdbNum <= 10;
   const dp = datePublished || new Date().toISOString();
@@ -2399,8 +2421,8 @@ function buildOttLiveBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, 
   const leadNames = leadCast.map(c => c.name).filter(Boolean);
   const keywordsArr = [
     movie.title, `${movie.title} OTT`, `${movie.title} streaming now`, `watch ${movie.title} online`,
-    `${movie.title} ${movie.streamingOn}`, movie.streamingOn, `${movie.streamingOn} hindi movies`,
-    "Hindi movie OTT", "Bbbollywood streaming", "watch hindi movie online",
+    `${movie.title} ${movie.streamingOn}`, movie.streamingOn, `${movie.streamingOn} ${langConfig.adjective.toLowerCase()} movies`,
+    `${langConfig.adjective} movie OTT`, `${langConfig.industry} streaming`, `watch ${langConfig.adjective.toLowerCase()} movie online`,
     ...leadNames.map(n => `${n} movies`),
   ].filter(Boolean);
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
@@ -2476,7 +2498,7 @@ function buildOttLiveBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, 
         "name": ${JSON.stringify(movie.title)},
         "url": "${SITE_URL}${movieUrl}",
         "image": ${JSON.stringify(ogImage)},
-        "inLanguage": ${JSON.stringify(movie.language || "Hindi")},
+        "inLanguage": ${JSON.stringify(movie.language || langConfig.adjective)},
         "genre": ${JSON.stringify(genre)}${movie.releaseDate ? `,
         "datePublished": "${movie.releaseDate}"` : ""}${movie.runtime ? `,
         "duration": ${JSON.stringify(movie.runtime)}` : ""}${cc.director ? `,
@@ -2551,7 +2573,7 @@ ${BLOG_RESPONSIVE_STYLES}
         <tbody>
           <tr><td style="${tdL}">Streaming Platform</td><td style="${tdR}">${movie.streamingOn}</td></tr>
           <tr><td style="${tdL}">OTT Release Date</td><td style="${tdR}">${ottDateFmt}</td></tr>
-          <tr><td style="${tdL}">Language</td><td style="${tdR}">${movie.language || "Hindi"}</td></tr>
+          <tr><td style="${tdL}">Language</td><td style="${tdR}">${movie.language || langConfig.adjective}</td></tr>
           ${genre ? `<tr><td style="${tdL}">Genre</td><td style="${tdR}">${genre}</td></tr>` : ""}
           ${movie.releaseDate ? `<tr><td style="${tdL}">Theatrical Release</td><td style="${tdR}">${formatHumanDate(movie.releaseDate)}</td></tr>` : ""}
           ${cc.director ? `<tr><td style="${tdL}">Director</td><td style="${tdR}">${(() => { const u = castProfileUrl(cc.directorEntry); return u ? `<a href="${u}" style="color:#4ade80;text-decoration:underline;text-underline-offset:2px;">${cc.director}</a>` : cc.director; })()}</td></tr>` : ""}
@@ -2581,11 +2603,11 @@ ${BLOG_RESPONSIVE_STYLES}
       ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" style="display:inline-block;background:#4ade80;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;margin-top:6px;">▶ Start Watching on ${movie.streamingOn} →</a>` : ""}
     </section>
 
-    ${buildRelatedMoviesHtml(relatedMovies, "#4ade80", `More Hindi Movies on ${movie.streamingOn}`)}
+    ${buildRelatedMoviesHtml(relatedMovies, "#4ade80", `More ${langConfig.adjective} Movies on ${movie.streamingOn}`)}
 
     <section style="background:#111;border-radius:14px;padding:20px 26px;margin-bottom:22px;display:flex;gap:12px;flex-wrap:wrap;">
       <a href="${movieUrl}" style="display:inline-block;background:#c9973a;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">View Full Movie Page →</a>
-      <a href="/movies" style="display:inline-block;background:transparent;border:1px solid #333;color:#ccc;font-weight:700;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">Browse More Hindi Movies →</a>
+      <a href="/movies" style="display:inline-block;background:transparent;border:1px solid #333;color:#ccc;font-weight:700;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">Browse More ${langConfig.adjective} Movies →</a>
     </section>
   </div>
 </div>`;
@@ -2618,7 +2640,7 @@ async function autoGenerateOttLiveBlog(movie) {
       excerpt: ai.metaDescription,
       content: html,
       category: "OTT Release",
-      tags: [movie.title, movie.streamingOn, "Now Streaming", "Hindi Movie OTT", "Watch Online"],
+      tags: [movie.title, movie.streamingOn, "Now Streaming", `${langConfig.adjective} Movie OTT`, "Watch Online"],
       coverImage: movie.posterUrl || movie.thumbnailUrl || movie.bannerUrl || "",
       movieId: movie._id,
       movieTitle: movie.title,
@@ -3117,7 +3139,7 @@ app.post("/api/movies", auth, async (req, res) => {
       releaseTBA: !!b.releaseTBA,
       director, producer,
       budget: String(b.budget || ""),
-      language: String(b.language || "Hindi"),
+      language: String(b.language || langConfig.adjective),
       synopsis: String(b.synopsis || ""),
       posterUrl: String(b.posterUrl || ""),
       thumbnailUrl: String(b.thumbnailUrl || ""),
@@ -3502,7 +3524,7 @@ app.post("/api/admin/movies", adminAuth, async (req, res) => {
       director: String(b.director || ""),
       producer: String(b.producer || ""),
       budget: String(b.budget || ""),
-      language: String(b.language || "Hindi"),
+      language: String(b.language || langConfig.adjective),
       synopsis: String(b.synopsis || ""),
       posterUrl: String(b.posterUrl || ""),
       thumbnailUrl: String(b.thumbnailUrl || ""),
@@ -4241,7 +4263,7 @@ app.get("/sitemap-cast.xml", async (req, res) => {
       const slug = String(c.name || "").toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, "-").trim();
       const role = String(c.type || "artist").toLowerCase().replace(/\s+/g, "-");
       const lastmod = c.updatedAt ? new Date(c.updatedAt).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
-      xml += urlEntry(`${SITE_URL}/cast/${c._id}/${slug}-hindi-${role}`, lastmod, "monthly", "0.7") + "\n";
+      xml += urlEntry(`${SITE_URL}/cast/${c._id}/${slug}-${langConfig.adjective.toLowerCase()}-${role}`, lastmod, "monthly", "0.7") + "\n";
     });
   } catch { }
   res.type("application/xml").send(xml + "</urlset>");
@@ -4310,7 +4332,7 @@ app.post("/api/admin/generate-article", adminAuth, async (req, res) => {
         messages: [
           {
             role: "system",
-            content: "You are an expert Hindi cinema journalist writing for The Cinema Verse. When asked to return JSON, you MUST return ONLY a valid JSON object with no extra text, no markdown, no code fences. All string values must be plain text — no HTML tags, no bullet points.",
+            content: "You are an expert ${langConfig.adjective} cinema journalist writing for The Cinema Verse. When asked to return JSON, you MUST return ONLY a valid JSON object with no extra text, no markdown, no code fences. All string values must be plain text — no HTML tags, no bullet points.",
           },
           {
             role: "user",
@@ -5355,44 +5377,44 @@ async function scrapeSacnilkForMovie(movieId) {
           return `Day ${targetDay} Collection Report & Analysis`;
         })(),
         introParagraph: (() => {
-          if (tagSet.has("opening-day")) return `The Hindi box office has finally opened its doors to ${movie.title}. The much-awaited film has marked its Day 1 presence with an estimated net collection of ${formatINR(totalNet)}. Early footfalls give us a glimpse of the initial audience reaction across India.`;
+          if (tagSet.has("opening-day")) return `The ${langConfig.adjective} box office has finally opened its doors to ${movie.title}. The much-awaited film has marked its Day 1 presence with an estimated net collection of ${formatINR(totalNet)}. Early footfalls give us a glimpse of the initial audience reaction across India.`;
           if (tagSet.has("opening-weekend") || targetDay <= 3) return `The opening weekend is turning out to be a crucial period for ${movie.title}. By Day ${targetDay}, the film has pushed its total net collection to an estimated ${formatINR(totalNet)}. The weekend crowd has significantly influenced these initial numbers.`;
-          if (tagSet.has("first-week-closing") || targetDay === 7) return `A full week has passed since ${movie.title} hit the screens. Wrapping up its first seven days, the film's total net collection stands at an estimated ${formatINR(totalNet)}, painting a clear picture of its week-one box office trajectory in the Hindi circuit.`;
-          return `The theatrical journey of ${movie.title} continues at the Hindi box office. As of Day ${targetDay}, the film has managed to pull an estimated net collection of ${formatINR(totalNet)} and a gross of ${formatINR(totalGross)}, holding its ground as audiences continue to visit the theatres.`;
+          if (tagSet.has("first-week-closing") || targetDay === 7) return `A full week has passed since ${movie.title} hit the screens. Wrapping up its first seven days, the film's total net collection stands at an estimated ${formatINR(totalNet)}, painting a clear picture of its week-one box office trajectory in the ${langConfig.adjective} circuit.`;
+          return `The theatrical journey of ${movie.title} continues at the ${langConfig.adjective} box office. As of Day ${targetDay}, the film has managed to pull an estimated net collection of ${formatINR(totalNet)} and a gross of ${formatINR(totalGross)}, holding its ground as audiences continue to visit the theatres.`;
         })(),
         boxOfficeAnalysis: tagSet.has("opening-day")
-          ? `Opening day figures are crucial for any Hindi film, and ${movie.title} has taken its first major step. The Day 1 numbers provide a solid baseline for the upcoming weekend. Initial reports indicate that ${tagSet.has("weekend") ? "the holiday/weekend timing" : "the dedicated fanbase"} played a significant role in driving these early ticket sales.`
+          ? `Opening day figures are crucial for any ${langConfig.adjective} film, and ${movie.title} has taken its first major step. The Day 1 numbers provide a solid baseline for the upcoming weekend. Initial reports indicate that ${tagSet.has("weekend") ? "the holiday/weekend timing" : "the dedicated fanbase"} played a significant role in driving these early ticket sales.`
           : tagSet.has("first-week-closing") || targetDay === 7
-            ? `Closing the first week with ${formatINR(totalNet)} net is a key milestone for ${movie.title}. Week-one numbers often dictate screen retention in the second week. These figures suggest how the core Hindi audience has received the film before word-of-mouth takes over completely.`
+            ? `Closing the first week with ${formatINR(totalNet)} net is a key milestone for ${movie.title}. Week-one numbers often dictate screen retention in the second week. These figures suggest how the core ${langConfig.adjective} audience has received the film before word-of-mouth takes over completely.`
             : isWeekendDay
-              ? `Weekends are the lifeblood of the Hindi film trade, and ${movie.title} is looking to capitalize on this window on Day ${targetDay}. Families and casual viewers typically flock to cinemas during these days, providing a much-needed spike in the overall collection graph.`
+              ? `Weekends are the lifeblood of the ${langConfig.adjective} film trade, and ${movie.title} is looking to capitalize on this window on Day ${targetDay}. Families and casual viewers typically flock to cinemas during these days, providing a much-needed spike in the overall collection graph.`
               : `Sustaining collections on weekdays is the real test of a film's content. On Day ${targetDay}, ${movie.title} witnessed the usual midweek settling of footfalls. The day-wise hold will be closely monitored by trade analysts to gauge the film's lifetime potential.`,
-        audienceResponse: `Word of mouth is the ultimate decider in Bbollywood. For ${movie.title}, audience feedback has been pivotal in shaping its box office journey so far. ${tagSet.has("extended-run") || tagSet.has("silver-jubilee-run") || tagSet.has("golden-run") ? "The fact that it is still running strong proves that the Hindi audience has deeply connected with the content." : "Reactions from the cinema halls across India are setting the tone for the coming days."}`,
-        performanceAnalysis: `Looking at the numbers, a total net of ${formatINR(totalNet)} (and ${formatINR(totalGross)} gross) gives ${movie.title} a respectable standing in the current Hindi cinema landscape. ${movie.budget ? `When weighed against its reported budget of ${movie.budget}, the recovery path is being closely analyzed.` : "The trajectory over the next few days will determine its ultimate box office verdict."}`,
+        audienceResponse: `Word of mouth is the ultimate decider in ${langConfig.industry}. For ${movie.title}, audience feedback has been pivotal in shaping its box office journey so far. ${tagSet.has("extended-run") || tagSet.has("silver-jubilee-run") || tagSet.has("golden-run") ? "The fact that it is still running strong proves that the ${langConfig.adjective} audience has deeply connected with the content." : "Reactions from the cinema halls across India are setting the tone for the coming days."}`,
+        performanceAnalysis: `Looking at the numbers, a total net of ${formatINR(totalNet)} (and ${formatINR(totalGross)} gross) gives ${movie.title} a respectable standing in the current ${langConfig.adjective} cinema landscape. ${movie.budget ? `When weighed against its reported budget of ${movie.budget}, the recovery path is being closely analyzed.` : "The trajectory over the next few days will determine its ultimate box office verdict."}`,
         weekendWeekdayComparison: (() => {
           if (tagSet.has("opening-weekend"))
-            return `The opening weekend (Days 1-3) is the most critical window for any Hindi film, and ${movie.title} is currently in the thick of it. Opening weekends typically set the tone for the entire theatrical run — a strong three-day total builds confidence among exhibitors and can lead to screen additions for the second week.`;
+            return `The opening weekend (Days 1-3) is the most critical window for any ${langConfig.adjective} film, and ${movie.title} is currently in the thick of it. Opening weekends typically set the tone for the entire theatrical run — a strong three-day total builds confidence among exhibitors and can lead to screen additions for the second week.`;
           if (tagSet.has("second-weekend"))
-            return `Day ${targetDay} is part of ${movie.title}'s second weekend, a crucial checkpoint after the initial buzz has settled. Second-weekend numbers reveal whether the film has genuine audience legs or was primarily a first-week phenomenon. A drop of less than 40% from the first weekend is considered healthy for an Hindi release.`;
+            return `Day ${targetDay} is part of ${movie.title}'s second weekend, a crucial checkpoint after the initial buzz has settled. Second-weekend numbers reveal whether the film has genuine audience legs or was primarily a first-week phenomenon. A drop of less than 40% from the first weekend is considered healthy for an ${langConfig.adjective} release.`;
           if (tagSet.has("third-weekend"))
-            return `By the third weekend, most Hindi films have either consolidated a strong audience base or started a steady wind-down. ${movie.title} reaching Day ${targetDay} with theatres still running is itself a sign of respectable staying power in the market.`;
+            return `By the third weekend, most ${langConfig.adjective} films have either consolidated a strong audience base or started a steady wind-down. ${movie.title} reaching Day ${targetDay} with theatres still running is itself a sign of respectable staying power in the market.`;
           if (isWeekendDay)
-            return `Day ${targetDay} falls in a weekend box-office window for ${movie.title}. Weekends typically deliver 1.5–2× the footfall of weekdays for Hindi films, driven by family audiences and leisure-time viewing. Comparing this weekend's figures to the previous one will reveal how quickly the film's appeal is evolving.`;
+            return `Day ${targetDay} falls in a weekend box-office window for ${movie.title}. Weekends typically deliver 1.5–2× the footfall of weekdays for ${langConfig.adjective} films, driven by family audiences and leisure-time viewing. Comparing this weekend's figures to the previous one will reveal how quickly the film's appeal is evolving.`;
           return `Day ${targetDay} is a weekday in ${movie.title}'s theatrical run. Weekday collections test a film's word-of-mouth strength once the opening excitement fades. A film that holds its weekday numbers close to its weekend collections is signalling strong repeat-viewing intent and broad audience approval.`;
         })(),
-        occupancyTrend: `Occupancy levels for ${movie.title} on Day ${targetDay} are estimated based on trade trends for similarly positioned Hindi releases${isWeekendDay ? ", with weekend shows typically running fuller than weekday shows" : ", with weekday shows generally running at moderate occupancy compared to the opening days"}. Exact seat-level occupancy data is not independently verified and figures here are based on collection trends.`,
+        occupancyTrend: `Occupancy levels for ${movie.title} on Day ${targetDay} are estimated based on trade trends for similarly positioned ${langConfig.adjective} releases${isWeekendDay ? ", with weekend shows typically running fuller than weekday shows" : ", with weekday shows generally running at moderate occupancy compared to the opening days"}. Exact seat-level occupancy data is not independently verified and figures here are based on collection trends.`,
         prediction: `Based on current trends, ${movie.title} is expected to maintain momentum in the coming days, especially during weekends.`,
-        industryImpact: `${movie.title}'s box office run is being closely watched within Bbollywood as a marker of audience appetite for ${Array.isArray(movie.genre) ? movie.genre.join("/") : (movie.genre || "this genre")} content in Hindi cinema. A strong showing for the film would encourage producers to continue investing in similar theatrical releases for the Hindi film industry.`,
+        industryImpact: `${movie.title}'s box office run is being closely watched within ${langConfig.industry} as a marker of audience appetite for ${Array.isArray(movie.genre) ? movie.genre.join("/") : (movie.genre || "this genre")} content in ${langConfig.adjective} cinema. A strong showing for the film would encourage producers to continue investing in similar theatrical releases for the ${langConfig.adjective} film industry.`,
         futureOutlook: (() => {
           if (milestoneCr) {
             const nextMilestone = [25, 50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000].find(m => m > Number(milestoneCr)) || (Number(milestoneCr) + 100);
-            return `Having just crossed the ₹${milestoneCr} Cr mark, ${movie.title} enters a new chapter in its box office story. In Hindi cinema, reaching this level is a significant achievement — the film now joins a select group of Bbollywood releases that have crossed this threshold in recent years. The next milestone to watch will be ₹${nextMilestone} Cr, and whether audience momentum can carry the film there.`;
+            return `Having just crossed the ₹${milestoneCr} Cr mark, ${movie.title} enters a new chapter in its box office story. In ${langConfig.adjective} cinema, reaching this level is a significant achievement — the film now joins a select group of ${langConfig.industry} releases that have crossed this threshold in recent years. The next milestone to watch will be ₹${nextMilestone} Cr, and whether audience momentum can carry the film there.`;
           }
           if (tagSet.has("approaching-ott"))
-            return `With the OTT release of ${movie.title} approaching within the next week, the theatrical window is in its final days. Audiences who have been waiting to watch at home will shortly get that chance, which may slow the final few days of theatre collections. However, a digital release on a major platform will introduce the film to a far wider audience across India and among the Hindi diaspora globally.`;
+            return `With the OTT release of ${movie.title} approaching within the next week, the theatrical window is in its final days. Audiences who have been waiting to watch at home will shortly get that chance, which may slow the final few days of theatre collections. However, a digital release on a major platform will introduce the film to a far wider audience across India and among the ${langConfig.adjective} diaspora globally.`;
           if (tagSet.has("silver-jubilee-run") || tagSet.has("extended-run"))
-            return `${movie.title} reaching Day ${targetDay} in theatres is a sign of remarkable staying power. Most Hindi releases wind down in the second or third week, so a film running this deep into its theatrical run has found a loyal core audience that keeps returning. Future days will be driven by repeat viewings, word of mouth among family and friends, and the availability of shows in smaller towns and B/C centres of India.`;
-          return `Looking ahead, ${movie.title}'s trajectory will be shaped by how it performs in the coming weekend and whether exhibitors add or reduce screens in response to audience demand. Any new competition from other Hindi or Hindi releases will also be a factor to watch.`;
+            return `${movie.title} reaching Day ${targetDay} in theatres is a sign of remarkable staying power. Most ${langConfig.adjective} releases wind down in the second or third week, so a film running this deep into its theatrical run has found a loyal core audience that keeps returning. Future days will be driven by repeat viewings, word of mouth among family and friends, and the availability of shows in smaller towns and B/C centres of India.`;
+          return `Looking ahead, ${movie.title}'s trajectory will be shaped by how it performs in the coming weekend and whether exhibitors add or reduce screens in response to audience demand. Any new competition from other ${langConfig.adjective} or ${langConfig.adjective} releases will also be a factor to watch.`;
         })(),
         finalVerdict: `${movie.title} has collected ${formatINR(totalNet)} net and ${formatINR(totalGross)} gross after ${targetDay} days. All figures are industry estimates. Source: Sacnilk via The Cinema Verse.`,
         weekOneTwoComparison: (() => {
@@ -5403,10 +5425,10 @@ async function scrapeSacnilkForMovie(movieId) {
           const w2Total = week2.reduce((s, d) => s + parseToRupeesGlobal(d.net || "0"), 0);
           if (!w1Total || !w2Total) return "";
           const drop = (((w1Total - w2Total) / w1Total) * 100).toFixed(0);
-          return `${movie.title} collected approximately ${formatINR(w1Total)} in its first week and ${formatINR(w2Total)} in the second week — a drop of around ${drop}%. A drop below 50% is considered healthy for an Hindi theatrical release, indicating the film has sustained audience interest beyond the opening-week buzz.`;
+          return `${movie.title} collected approximately ${formatINR(w1Total)} in its first week and ${formatINR(w2Total)} in the second week — a drop of around ${drop}%. A drop below 50% is considered healthy for an ${langConfig.adjective} theatrical release, indicating the film has sustained audience interest beyond the opening-week buzz.`;
         })(),
         festivalImpact: dayClassification?.festival
-          ? `${movie.title}'s box office run is coinciding with the ${dayClassification.festival} festival season in India. Hindi films traditionally see a boost in footfalls during this period as families spend leisure time at cinemas. Whether ${movie.title} has capitalised on this festival window will be reflected in the coming days' collections.`
+          ? `${movie.title}'s box office run is coinciding with the ${dayClassification.festival} festival season in India. ${langConfig.adjective} films traditionally see a boost in footfalls during this period as families spend leisure time at cinemas. Whether ${movie.title} has capitalised on this festival window will be reflected in the coming days' collections.`
           : "",
       };
       return defaults[key] || "";
@@ -5718,10 +5740,10 @@ async function scrapeSacnilkForMovie(movieId) {
     leadActresses.length ? `Actresses: ${leadActresses.join(", ")}` : "",
   ].filter(Boolean).join("\n");
 
-  const aiPrompt = `You are writing a box office collection article for the Hindi film website The Cinema Verse.
+  const aiPrompt = `You are writing a box office collection article for the ${langConfig.adjective} film website The Cinema Verse.
 
 Movie: ${movieName}${year ? ` (${year})` : ""}
-${movie.language ? `Language: ${movie.language}` : "Language: Hindi"}
+${movie.language ? `Language: ${movie.language}` : "Language: ${langConfig.adjective}"}
 Genre: ${genre}
 Release Date: ${releaseDateFmt}
 ${castLine}
@@ -5738,16 +5760,16 @@ ${dayTags.includes("opening-day") ? "This is the FILM'S OPENING DAY — focus on
 ${dayTags.includes("weekend") ? "Today falls in the WEEKEND box-office window — focus heavily on weekend vs weekday performance and family/leisure footfalls." : ""}
 ${dayTags.includes("weekday") ? "Today is a WEEKDAY — focus on how the film is holding up after the opening rush and what weekday collections reveal about word-of-mouth." : ""}
 ${dayTags.includes("first-week-closing") ? "Today marks the close of WEEK ONE — focus on the overall week-one verdict and what it signals for week two." : ""}
-${dayTags.some(t => t.startsWith("milestone-")) ? `The film has just CROSSED A COLLECTION MILESTONE today (${dayTags.find(t => t.startsWith("milestone-"))}) — lead with this milestone and what it means for the film's standing in Bbollywood.` : ""}
+${dayTags.some(t => t.startsWith("milestone-")) ? `The film has just CROSSED A COLLECTION MILESTONE today (${dayTags.find(t => t.startsWith("milestone-"))}) — lead with this milestone and what it means for the film's standing in ${langConfig.industry}.` : ""}
 ${dayTags.includes("approaching-ott") ? "The film's OTT release is approaching within the next week — mention how the theatrical run is winding down ahead of the digital premiere." : ""}
 ${dayTags.includes("extended-run") ? "The film is in an EXTENDED THEATRICAL RUN (25+ days) — focus on staying power, repeat audiences, and longevity rather than day-on-day swings." : ""}
-${dayTags.some(t => t.startsWith("festival-")) ? `Today's collection coincides with the ODISHA FESTIVAL SEASON (${dayClassification.festival}) — mention how festival footfalls typically boost Hindi cinema and whether this film is benefiting.` : ""}
+${dayTags.some(t => t.startsWith("festival-")) ? `Today's collection coincides with the ODISHA FESTIVAL SEASON (${dayClassification.festival}) — mention how festival footfalls typically boost ${langConfig.adjective} cinema and whether this film is benefiting.` : ""}
 ${dayTags.includes("second-weekend") ? "Today is the SECOND WEEKEND — compare with the first weekend and explain what the drop (or hold) means for the film's overall commercial standing." : ""}
 ${dayTags.includes("third-weekend") || dayTags.includes("fourth-weekend") ? `Today is the ${dayTags.find(t => /-(weekend|run)$/.test(t))?.replace("-", " ")} — focus on the film's incredible staying power and what sustains audience interest this far into the run.` : ""}
 ${dayTags.includes("first-week-closing") ? "Today closes the FIRST WEEK — write a full week-one verdict: total, daily average, best day, worst day, and outlook for week two." : ""}
 ${dayTags.includes("second-week-closing") ? "Today closes the SECOND WEEK — compare week-two total with week-one, analyse the drop percentage, and forecast the second half of the run." : ""}
-${dayTags.includes("silver-jubilee-run") ? "The film has crossed 25 DAYS in theatres (Silver Jubilee run) — celebrate this milestone, compare with other recent Hindi films that achieved this, and explain what it means for Bbollywood." : ""}
-${dayTags.includes("golden-run") ? "The film has crossed 50 DAYS in theatres (Golden Jubilee run) — this is exceptional for Hindi cinema; lead with this achievement." : ""}
+${dayTags.includes("silver-jubilee-run") ? "The film has crossed 25 DAYS in theatres (Silver Jubilee run) — celebrate this milestone, compare with other recent ${langConfig.adjective} films that achieved this, and explain what it means for ${langConfig.industry}." : ""}
+${dayTags.includes("golden-run") ? "The film has crossed 50 DAYS in theatres (Golden Jubilee run) — this is exceptional for ${langConfig.adjective} cinema; lead with this achievement." : ""}
 
 You must respond ONLY with a valid JSON object (no markdown, no code fences, no extra text). The JSON must have exactly these keys:
 
@@ -5755,12 +5777,12 @@ You must respond ONLY with a valid JSON object (no markdown, no code fences, no 
   "seoHeadline": "A compelling 10-15 word headline for h1. Use a DIFFERENT ANGLE than 'Day N Box Office Collection'. Choose from: milestone lead, weekend verdict, weekday hold, industry comparison, audience sentiment, OTT countdown, or running-total achievement. Never use a generic 'Day N collection report' phrasing. TODAY'S CONTEXT: ${dayTagLine}.",
   "introParagraph": "2-3 sentences introducing the film and Day ${actualDay} performance. Mention the net and gross figures naturally, and reflect today's context.",
   "boxOfficeAnalysis": "2-3 paragraphs (plain text, no HTML tags) covering the day-wise journey and trend, written specifically through today's context above — do NOT just restate yesterday's analysis with new numbers.",
-  "audienceResponse": "1-2 paragraphs about how Hindi audiences and reviewers are responding — word of mouth, social media buzz, repeat viewing. Vary the framing based on how many days the film has run.",
-  "performanceAnalysis": "2 paragraphs analysing the film's performance relative to its budget and typical Hindi cinema benchmarks. Mention total net ${totalNetStr} and gross ${totalGrossStr}.",
+  "audienceResponse": "1-2 paragraphs about how ${langConfig.adjective} audiences and reviewers are responding — word of mouth, social media buzz, repeat viewing. Vary the framing based on how many days the film has run.",
+  "performanceAnalysis": "2 paragraphs analysing the film's performance relative to its budget and typical ${langConfig.adjective} cinema benchmarks. Mention total net ${totalNetStr} and gross ${totalGrossStr}.",
   "weekendWeekdayComparison": "1-2 paragraphs specifically comparing weekend and weekday collection patterns for this film so far, and what that pattern suggests about audience type (family/youth/repeat viewers).",
   "occupancyTrend": "1 paragraph describing the likely occupancy trend (rising, falling, steady) across screens based on the collection numbers — do not invent exact percentages, describe the trend qualitatively.",
   "prediction": "1-2 paragraphs predicting upcoming weekend/week performance based on current trend.",
-  "industryImpact": "1 paragraph on what this film's performance means for the wider Bbollywood (Hindi film industry) — e.g. theatre footfalls, confidence in the genre, impact on upcoming Hindi releases.",
+  "industryImpact": "1 paragraph on what this film's performance means for the wider ${langConfig.industry} (${langConfig.adjective} film industry) — e.g. theatre footfalls, confidence in the genre, impact on upcoming ${langConfig.adjective} releases.",
   "futureOutlook": "1-2 paragraphs on the film's likely box office path from here — upcoming milestones, competition from other releases, or OTT timing if relevant.",
   "finalVerdict": "2-3 sentences summarising the film's box office status after Day ${actualDay}. Do NOT use words like Hit, Flop, Average, Super-Hit — just describe the collection factually.",
   "weekOneTwoComparison": "ONLY if day >= 14: 1-2 paragraphs comparing week-one and week-two totals, the drop percentage, and what it reveals about the audience type. Leave empty string if day < 14.",
@@ -5769,7 +5791,7 @@ You must respond ONLY with a valid JSON object (no markdown, no code fences, no 
 
 Rules:
 - All values must be plain text only — no HTML, no bullet points, no markdown
-- Write for an Hindi cinema (Bbollywood) audience
+- Write for an ${langConfig.adjective} cinema (${langConfig.industry}) audience
 - Keep each section concise but informative
 - Make this article meaningfully different from a generic "Day N" template — lean into today's specific context listed above
 - Do not invent or fabricate collection figures — only use the data provided above`;
@@ -5813,7 +5835,7 @@ Rules:
 
   const kw = [];
   kw.push(
-    `${movieName} Hindi Movie`, `${movieName} Movie Details`, `${movieName} Cast`,
+    `${movieName} ${langConfig.adjective} movie`, `${movieName} Movie Details`, `${movieName} Cast`,
     `${movieName} Cast and Crew`, `${movieName} Story`, `${movieName} Review`,
     `${movieName} Trailer`, `${movieName} Teaser`, `${movieName} Songs`, `${movieName} Music`,
     `${movieName} Release Date`,
@@ -5829,23 +5851,23 @@ Rules:
     year ? `${movieName} (${year}) Box Office Collection` : null,
     year ? `${movieName} (${year}) Total Collection` : null,
   );
-  if (directorName) kw.push(directorName, `${directorName} Movie`, `${directorName} Hindi Movie`, `${directorName} Director`);
+  if (directorName) kw.push(directorName, `${directorName} Movie`, `${directorName} ${langConfig.adjective} movie`, `${directorName} Director`);
   if (producerName) kw.push(producerName, `${producerName} Producer`);
-  leadActors.forEach(a => kw.push(a, `${a} Movie`, `${a} Hindi Movie`));
-  leadActresses.forEach(a => kw.push(a, `${a} Movie`, `${a} Hindi Movie`));
+  leadActors.forEach(a => kw.push(a, `${a} Movie`, `${a} ${langConfig.adjective} movie`));
+  leadActresses.forEach(a => kw.push(a, `${a} Movie`, `${a} ${langConfig.adjective} movie`));
   if (musicDirector) kw.push(musicDirector, `${musicDirector} Music Director`);
   if (writer) kw.push(writer, `${writer} Writer`);
   if (dop) kw.push(dop, `${dop} Cinematographer`);
   if (editor) kw.push(editor, `${editor} Editor`);
-  genreArr.forEach(g => kw.push(`${g} Hindi Movie`, `Hindi ${g} Film`));
+  genreArr.forEach(g => kw.push(`${g} ${langConfig.adjective} movie`, `${langConfig.adjective} ${g} Film`));
   kw.push(
-    "Hindi Movie Collection", "Hindi Movie Details", "Hindi Movie Cast", "Hindi Movie Review",
-    "Hindi Movie Trailer", "Hindi Movie Release Date", "Hindi Movie Box Office",
-    "Hindi Box Office Collection", "Bbollywood Box Office Collection", "Bbollywood Movie Collection",
-    "Bbollywood Movie Details", "Bbollywood News", "Latest Hindi Movie News", "Hindi Cinema News",
-    "Hindi Film Industry", "Trending Hindi Movie",
-    year ? `New Hindi Movie ${year}` : "New Hindi Movie",
-    "Best Hindi Movies", "Bbollywood Updates",
+    "${langConfig.adjective} movie Collection", "${langConfig.adjective} movie Details", "${langConfig.adjective} movie Cast", "${langConfig.adjective} movie Review",
+    "${langConfig.adjective} movie Trailer", "${langConfig.adjective} movie Release Date", "${langConfig.adjective} movie Box Office",
+    "${langConfig.adjective} box office Collection", "${langConfig.industry} Box Office Collection", "${langConfig.industry} Movie Collection",
+    "${langConfig.industry} Movie Details", "${langConfig.industry} News", "Latest ${langConfig.adjective} movie News", "${langConfig.adjective} cinema News",
+    "${langConfig.adjective} film Industry", "Trending ${langConfig.adjective} movie",
+    year ? `New ${langConfig.adjective} movie ${year}` : "New ${langConfig.adjective} movie",
+    "Best ${langConfig.adjective} movies", "${langConfig.industry} Updates",
   );
   const keywordsStr = kw.filter(Boolean).join(",\n");
 
@@ -5861,9 +5883,9 @@ Rules:
     musicDirector ? `#${musicDirector.replace(/\s+/g, "")}` : null,
     ...leadActors.map(a => `#${a.replace(/\s+/g, "")}`),
     ...leadActresses.map(a => `#${a.replace(/\s+/g, "")}`),
-    "#HindiMovie", "#Bbollywood", "#HindiCinema", "#The Cinema Verse",
-    "#BoxOfficeCollection", "#BbollywoodBoxOffice", "#BbollywoodNews",
-    year ? `#HindiMovie${year}` : null,
+    `#${langConfig.adjective}Movie`, `#${langConfig.industry}`, `#${langConfig.adjective}Cinema`, "#The Cinema Verse",
+    "#BoxOfficeCollection", "#${langConfig.industry}BoxOffice", "#${langConfig.industry}News",
+    year ? `#${langConfig.adjective}Movie${year}` : null,
   ].filter(Boolean);
 
   const tagChips = tags
@@ -5876,8 +5898,8 @@ Rules:
 
   const infoRows = [
     ["Movie Name", movieName],
-    ["Language", "Hindi"],
-    ["Industry", "Bbollywood"],
+    ["Language", "${langConfig.adjective}"],
+    ["Industry", langConfig.industry],
     ["Genre", genre],
     releaseDateFmt ? ["Release Date", releaseDateFmt] : null,
     directorName ? ["Director", directorName] : null,
@@ -5966,32 +5988,32 @@ Rules:
   // Day-stage AI system prompt — varies editorial persona + bans AI clichés
   const getDayStageSystemPrompt = (() => {
     const _ts = new Set(dayTags);
-    const _anti = `Forbidden phrases — never write: "it is worth noting", "it is important to note", "needless to say", "in conclusion", "in summary", "it goes without saying", "delve into", "dive deep", "leverage", "in the realm of", "as we know", "at the end of the day". Never start two consecutive sentences with the same word. Avoid passive constructions such as "it has been observed" or "it can be seen". Every paragraph must open with something other than the film title. Mix short punchy sentences with longer analytical ones. Reference specific Hindi cities (Mumbai, Delhi, Bengaluru, Pune, Hyderabad) when discussing audience patterns. Write as a journalist who personally tracked the footfalls — not someone reading a spreadsheet.`;
+    const _anti = `Forbidden phrases — never write: "it is worth noting", "it is important to note", "needless to say", "in conclusion", "in summary", "it goes without saying", "delve into", "dive deep", "leverage", "in the realm of", "as we know", "at the end of the day". Never start two consecutive sentences with the same word. Avoid passive constructions such as "it has been observed" or "it can be seen". Every paragraph must open with something other than the film title. Mix short punchy sentences with longer analytical ones. Reference specific ${langConfig.adjective} cities (Mumbai, Delhi, Bengaluru, Pune, Hyderabad) when discussing audience patterns. Write as a journalist who personally tracked the footfalls — not someone reading a spreadsheet.`;
     if (actualDay === 1)
-      return `You are a senior Hindi entertainment journalist writing the Opening Day box office report for The Cinema Verse — the most-read article in any film's box office series. Write with the energy of a reporter who just returned from the cinema hall. Thousands of Hindi cinema fans want to know if this film delivered on opening day. Your writing must feel human, warm, and editorially authoritative. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
+      return `You are a senior ${langConfig.adjective} entertainment journalist writing the Opening Day box office report for The Cinema Verse — the most-read article in any film's box office series. Write with the energy of a reporter who just returned from the cinema hall. Thousands of ${langConfig.adjective} cinema fans want to know if this film delivered on opening day. Your writing must feel human, warm, and editorially authoritative. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
     if (actualDay <= 3 || _ts.has("opening-weekend"))
-      return `You are a senior Hindi film trade analyst writing the Opening Weekend verdict for The Cinema Verse. Think like someone who personally monitored footfalls at cinemas across Mumbai, Delhi, and Bengaluru this weekend. Opening weekend numbers decide how exhibitors treat this film in the weeks ahead — write with that commercial urgency and insider intelligence. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
+      return `You are a senior ${langConfig.adjective} film trade analyst writing the Opening Weekend verdict for The Cinema Verse. Think like someone who personally monitored footfalls at cinemas across Mumbai, Delhi, and Bengaluru this weekend. Opening weekend numbers decide how exhibitors treat this film in the weeks ahead — write with that commercial urgency and insider intelligence. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
     if (actualDay === 7 || _ts.has("first-week-closing"))
-      return `You are writing the definitive First Week closing verdict for The Cinema Verse. This is a considered editorial, not a collection note — give your honest, nuanced professional assessment of what week-one performance means for the filmmakers, the cast, and Hindi cinema broadly. Write it with the weight it deserves. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
+      return `You are writing the definitive First Week closing verdict for The Cinema Verse. This is a considered editorial, not a collection note — give your honest, nuanced professional assessment of what week-one performance means for the filmmakers, the cast, and ${langConfig.adjective} cinema broadly. Write it with the weight it deserves. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
     if (actualDay <= 14 || _ts.has("second-week-closing"))
-      return `You are a film trade journalist writing the second-week box office analysis for The Cinema Verse. The opening buzz has settled — this is about whether the film has genuine audience legs. Compare the week-two trend to week-one with real editorial judgment. Your reader is a sophisticated Hindi cinema follower who will instantly spot generic filler. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
+      return `You are a film trade journalist writing the second-week box office analysis for The Cinema Verse. The opening buzz has settled — this is about whether the film has genuine audience legs. Compare the week-two trend to week-one with real editorial judgment. Your reader is a sophisticated ${langConfig.adjective} cinema follower who will instantly spot generic filler. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
     if (_ts.has("golden-run"))
-      return `You are covering a historic moment in Hindi cinema — a film crossing 50 days in theatres. Write with the gravitas this achievement deserves. This is a landmark editorial piece, not a daily collection note, and it will be widely shared and cited. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
+      return `You are covering a historic moment in ${langConfig.adjective} cinema — a film crossing 50 days in theatres. Write with the gravitas this achievement deserves. This is a landmark editorial piece, not a daily collection note, and it will be widely shared and cited. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
     if (_ts.has("silver-jubilee-run") || _ts.has("extended-run") || actualDay >= 15)
-      return `You are writing about an Hindi film that has defied industry expectations and is still drawing audiences weeks into its run. Write with genuine editorial admiration for its staying power — sustained theatrical runs are rare in Bbollywood and deserve analysis that goes beyond day-on-day number comparisons. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
-    return `You are a senior Hindi entertainment journalist writing a box office update for The Cinema Verse. Write with the authority of someone who deeply understands both the commercial mechanics and cultural significance of Hindi cinema. Every sentence must earn its place — no filler, no obvious observations, no AI-pattern phrasing. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
+      return `You are writing about an ${langConfig.adjective} film that has defied industry expectations and is still drawing audiences weeks into its run. Write with genuine editorial admiration for its staying power — sustained theatrical runs are rare in ${langConfig.industry} and deserve analysis that goes beyond day-on-day number comparisons. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
+    return `You are a senior ${langConfig.adjective} entertainment journalist writing a box office update for The Cinema Verse. Write with the authority of someone who deeply understands both the commercial mechanics and cultural significance of ${langConfig.adjective} cinema. Every sentence must earn its place — no filler, no obvious observations, no AI-pattern phrasing. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML. ${_anti}`;
   })();
 
   // Day-stage H2 headings — 8 distinct ranges so no two day-stage blogs share headings
   const headings = (() => {
     const _ts = new Set(dayTags);
     if (actualDay === 1) return {
-      boxOfficeAnalysis: `Opening Day at the Hindi Box Office`,
+      boxOfficeAnalysis: `Opening Day at the ${langConfig.adjective} box office`,
       weekendWeekday: `Day 1 Footfalls — What the Numbers Signal`,
       audienceResponse: `First Impressions — Audience Reaction on Opening Day`,
       occupancy: `Theatre Occupancy on Opening Day`,
       performance: `Opening Day Performance in Context`,
-      industryImpact: `What This Opening Means for Bbollywood`,
+      industryImpact: `What This Opening Means for ${langConfig.industry}`,
       outlook: `Heading Into the Weekend — The Week Ahead`,
       verdict: `Opening Day Verdict`,
     };
@@ -6001,7 +6023,7 @@ Rules:
       audienceResponse: `Opening Weekend Audience Buzz`,
       occupancy: `Weekend Occupancy Across India`,
       performance: `Opening Weekend in Numbers`,
-      industryImpact: `What This Opening Weekend Signals for Hindi Cinema`,
+      industryImpact: `What This Opening Weekend Signals for ${langConfig.adjective} cinema`,
       outlook: `Heading Into the Weekdays`,
       verdict: `Opening Weekend Verdict`,
     };
@@ -6011,7 +6033,7 @@ Rules:
       audienceResponse: `Word of Mouth — What's Driving Tickets Midweek`,
       occupancy: `Weekday Occupancy Trends`,
       performance: `Weekday Performance Assessment`,
-      industryImpact: `What the Weekday Hold Tells the Hindi Film Trade`,
+      industryImpact: `What the Weekday Hold Tells the ${langConfig.adjective} film Trade`,
       outlook: `Approaching the First Week Close`,
       verdict: `Weekday Hold Verdict`,
     };
@@ -6021,7 +6043,7 @@ Rules:
       audienceResponse: `One Week of Audience Reaction — The Honest Picture`,
       occupancy: `Week-One Occupancy — How Full Were India's Halls?`,
       performance: `First Week Performance — A Complete Breakdown`,
-      industryImpact: `What ${movieName}'s First Week Means for Hindi Cinema`,
+      industryImpact: `What ${movieName}'s First Week Means for ${langConfig.adjective} cinema`,
       outlook: `Second Week Outlook — Will the Momentum Hold?`,
       verdict: `First Week Closing Verdict`,
     };
@@ -6031,7 +6053,7 @@ Rules:
       audienceResponse: `Who's Still Watching? The Second-Week Audience Profile`,
       occupancy: `Second Week Occupancy Across India`,
       performance: `Week Two vs Week One — The Numbers`,
-      industryImpact: `Second Week Signals for the Hindi Film Trade`,
+      industryImpact: `Second Week Signals for the ${langConfig.adjective} film Trade`,
       outlook: `Third Week and the Lifetime Collection Path`,
       verdict: `Second Week Verdict`,
     };
@@ -6040,8 +6062,8 @@ Rules:
       weekendWeekday: `Three Weekends In — The Pattern That Has Emerged`,
       audienceResponse: `Loyal Audiences — Who Is Still Filling the Seats`,
       occupancy: `Third Week Occupancy — The Long Tail`,
-      performance: `Three Weeks at the Hindi Box Office`,
-      industryImpact: `What a Three-Week Run Tells Bbollywood`,
+      performance: `Three Weeks at the ${langConfig.adjective} box office`,
+      industryImpact: `What a Three-Week Run Tells ${langConfig.industry}`,
       outlook: `Lifetime Collection Forecast`,
       verdict: `Third Week Verdict`,
     };
@@ -6050,8 +6072,8 @@ Rules:
       weekendWeekday: `Weekend vs Weekday Deep in the Run`,
       audienceResponse: `The Repeat Viewer Effect — A Month In`,
       occupancy: `Late-Run Occupancy — Single Screens Leading the Way`,
-      performance: `Four Weeks at the Hindi Box Office`,
-      industryImpact: `An Extended Run and Its Significance for Bbollywood`,
+      performance: `Four Weeks at the ${langConfig.adjective} box office`,
+      industryImpact: `An Extended Run and Its Significance for ${langConfig.industry}`,
       outlook: `The Final Stretch of the Theatrical Run`,
       verdict: `Extended Run Verdict`,
     };
@@ -6061,7 +6083,7 @@ Rules:
       audienceResponse: `A Devoted Audience — The Community Around This Film`,
       occupancy: `Long-Run Occupancy — A Different Kind of Success`,
       performance: `A Remarkable Theatrical Run, by the Numbers`,
-      industryImpact: `What ${movieName}'s Run Teaches Hindi Cinema`,
+      industryImpact: `What ${movieName}'s Run Teaches ${langConfig.adjective} cinema`,
       outlook: `Legacy Collection and What Lies Ahead`,
       verdict: `Long-Run Theatrical Verdict`,
     };
@@ -6072,20 +6094,20 @@ Rules:
     const _ts = new Set(dayTags);
     const _f = `${movieName}${year ? ` (${year})` : ""}`;
     if (actualDay === 1)
-      return `${_f} opens at the Hindi box office! Day 1 collection: ${dayNet} net. Opening day analysis, audience reaction, and first impressions on The Cinema Verse.`.slice(0, 160);
+      return `${_f} opens at the ${langConfig.adjective} box office! Day 1 collection: ${dayNet} net. Opening day analysis, audience reaction, and first impressions on The Cinema Verse.`.slice(0, 160);
     if (actualDay <= 3 || _ts.has("opening-weekend"))
-      return `${_f} Opening Weekend: ${totalNetStr} net over ${actualDay} days. Day-wise breakdown, occupancy, and audience verdict from the Hindi box office on The Cinema Verse.`.slice(0, 160);
+      return `${_f} Opening Weekend: ${totalNetStr} net over ${actualDay} days. Day-wise breakdown, occupancy, and audience verdict from the ${langConfig.adjective} box office on The Cinema Verse.`.slice(0, 160);
     if (actualDay >= 4 && actualDay <= 6)
       return `${_f} Day ${actualDay}: ${totalNetStr} total net. Weekday hold analysis, word-of-mouth verdict, and box office performance on The Cinema Verse.`.slice(0, 160);
     if (actualDay === 7 || _ts.has("first-week-closing"))
       return `${_f} First Week Verdict: ${totalNetStr} net in 7 days. Complete day-wise breakdown, first week analysis, and Week 2 outlook on The Cinema Verse.`.slice(0, 160);
     if (actualDay <= 14)
-      return `${_f} enters Week 2 with ${totalNetStr} cumulative net. Week-on-week analysis and Hindi box office verdict on The Cinema Verse.`.slice(0, 160);
+      return `${_f} enters Week 2 with ${totalNetStr} cumulative net. Week-on-week analysis and ${langConfig.adjective} box office verdict on The Cinema Verse.`.slice(0, 160);
     if (_ts.has("silver-jubilee-run"))
       return `${_f} Silver Jubilee Run — 25 days in theatres! Total ${totalNetStr} net. Extended run analysis and longevity report on The Cinema Verse.`.slice(0, 160);
     if (_ts.has("golden-run"))
       return `${_f} Golden Jubilee — 50 days in theatres! Total ${totalNetStr} net. Historic theatrical run landmark report on The Cinema Verse.`.slice(0, 160);
-    return `${_f} Day ${actualDay}: ${totalNetStr} net total at the Hindi box office. Day-wise breakdown, audience analysis, and performance verdict on The Cinema Verse.`.slice(0, 160);
+    return `${_f} Day ${actualDay}: ${totalNetStr} net total at the ${langConfig.adjective} box office. Day-wise breakdown, audience analysis, and performance verdict on The Cinema Verse.`.slice(0, 160);
   })();
 
   // Callout box variables (day-stage specific emoji, label, body)
@@ -6121,8 +6143,8 @@ Rules:
     if (actualDay <= 14)
       return `The opening buzz has settled. <strong style="color:#fff;">${movieName}</strong> carries <strong style="color:#c9973a;">${totalNetStr} net</strong> into its second week. Now the real test begins.`;
     if (_ts.has("silver-jubilee-run") || _ts.has("golden-run"))
-      return `Day ${actualDay}, and <strong style="color:#fff;">${movieName}</strong> is still running in Hindi theatres. Cumulative: <strong style="color:#c9973a;">${totalNetStr} net</strong> and <strong style="color:#7ec8e3;">${totalGrossStr} gross</strong>.`;
-    return `<strong style="color:#fff;">${movieName}</strong> has collected an estimated <strong style="color:#c9973a;">${totalNetStr} net</strong> and <strong style="color:#7ec8e3;">${totalGrossStr} gross</strong> after <strong style="color:#fff;">${actualDay} day${actualDay !== 1 ? "s" : ""}</strong> in theatres.${totalNet >= 1_00_00_000 ? ` The film has crossed the <strong style="color:#c9973a;">&#8377;${(totalNet / 1_00_00_000).toFixed(0)} Cr mark</strong> at the Hindi box office.` : ""}`;
+      return `Day ${actualDay}, and <strong style="color:#fff;">${movieName}</strong> is still running in ${langConfig.adjective} theatres. Cumulative: <strong style="color:#c9973a;">${totalNetStr} net</strong> and <strong style="color:#7ec8e3;">${totalGrossStr} gross</strong>.`;
+    return `<strong style="color:#fff;">${movieName}</strong> has collected an estimated <strong style="color:#c9973a;">${totalNetStr} net</strong> and <strong style="color:#7ec8e3;">${totalGrossStr} gross</strong> after <strong style="color:#fff;">${actualDay} day${actualDay !== 1 ? "s" : ""}</strong> in theatres.${totalNet >= 1_00_00_000 ? ` The film has crossed the <strong style="color:#c9973a;">&#8377;${(totalNet / 1_00_00_000).toFixed(0)} Cr mark</strong> at the ${langConfig.adjective} box office.` : ""}`;
   })();
 
   // Day Hold % mini-card (Days 4–14 only, requires Day 1 data)
@@ -6139,7 +6161,7 @@ Rules:
     const _hNote = _holdPct >= 70
       ? "Strong hold — word-of-mouth is carrying this film effectively."
       : _holdPct >= 45
-        ? "Healthy hold — within the expected range for well-received Hindi releases."
+        ? "Healthy hold — within the expected range for well-received ${langConfig.adjective} releases."
         : "Standard midweek drop — footfalls settling after the opening rush.";
     return `<div style="background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:16px 20px;margin-bottom:22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
   <div style="text-align:center;min-width:72px;">
@@ -6187,7 +6209,7 @@ Rules:
       <div style="font-size:0.7rem;color:#666;">vs Day 1</div>
     </div>
   </div>
-  <p style="color:#888;font-size:0.82rem;line-height:1.7;margin:0;">A Day 7 hold of ${_hp}% against opening day is ${_hp >= 55 ? "solid for an Hindi release — this film has genuine legs heading into Week 2" : _hp >= 35 ? "within the normal range for Hindi theatrical runs at this stage" : "a signal that Week 2 will depend heavily on fresh competition and screen availability"}.</p>
+  <p style="color:#888;font-size:0.82rem;line-height:1.7;margin:0;">A Day 7 hold of ${_hp}% against opening day is ${_hp >= 55 ? "solid for an ${langConfig.adjective} release — this film has genuine legs heading into Week 2" : _hp >= 35 ? "within the normal range for ${langConfig.adjective} theatrical runs at this stage" : "a signal that Week 2 will depend heavily on fresh competition and screen availability"}.</p>
 </section>`;
   })();
 
@@ -6221,8 +6243,8 @@ Rules:
     const _bg = _isGolden ? "#1a1500" : "#1a0a2e";
     const _bdr = _isGolden ? "#3a3000" : "#3a1a5a";
     const _note = _isGolden
-      ? `Crossing 50 days in Hindi theatres is a feat achieved by very few films. ${movieName} has joined a select group of Bbollywood releases with this kind of sustained audience loyalty.`
-      : `Reaching 25 days in Hindi theatres separates content-driven successes from one-week wonders. ${movieName} has earned this milestone through genuine audience commitment.`;
+      ? `Crossing 50 days in ${langConfig.adjective} theatres is a feat achieved by very few films. ${movieName} has joined a select group of ${langConfig.industry} releases with this kind of sustained audience loyalty.`
+      : `Reaching 25 days in ${langConfig.adjective} theatres separates content-driven successes from one-week wonders. ${movieName} has earned this milestone through genuine audience commitment.`;
     return `<div style="background:${_bg};border:1px solid ${_bdr};border-radius:12px;padding:18px 22px;margin-bottom:22px;">
   <div style="font-size:0.85rem;font-weight:800;color:${_color};margin-bottom:8px;">${_label}</div>
   <p style="color:#aaa;font-size:0.85rem;line-height:1.7;margin:0;">${_note}</p>
@@ -6358,7 +6380,7 @@ Rules:
         "@type": "Movie",
         "name":       "${movieName}",
         "url": "${SITE_URL}${boxOfficeUrl}",
-        "inLanguage": "Hindi",
+        "inLanguage": langConfig.adjective,
         "genre":      "${genre}"${releaseDateFmt ? `,
         "datePublished": "${releaseDateFmt}"` : ""}${directorName ? `,
         "director": { "@type": "Person", "name": "${directorName}" }` : ""}${producerName ? `,
@@ -6383,7 +6405,7 @@ Rules:
           "name": "What is the total box office collection of ${movieName}${year ? ` (${year})` : ""}?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "As of Day ${actualDay}, ${movieName} has collected a total of ${totalNetStr} net and ${totalGrossStr} gross at the Hindi box office. These are industry estimates updated daily on The Cinema Verse."
+            "text": "As of Day ${actualDay}, ${movieName} has collected a total of ${totalNetStr} net and ${totalGrossStr} gross at the ${langConfig.adjective} box office. These are industry estimates updated daily on The Cinema Verse."
           }
         },
         {
@@ -6399,7 +6421,7 @@ Rules:
           "name": "Who directed ${movieName}?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "${movieName} is directed by ${directorName}.${producerName ? ` The film is produced by ${producerName}.` : ""} It is an Hindi language film released in ${year || new Date().getFullYear()} under the Bbollywood banner."
+            "text": "${movieName} is directed by ${directorName}.${producerName ? ` The film is produced by ${producerName}.` : ""} It is an ${langConfig.adjective} language film released in ${year || new Date().getFullYear()} under the ${langConfig.industry} banner."
           }
         }` : ""}${leadActors.length ? `,
         {
@@ -6415,7 +6437,7 @@ Rules:
           "name": "Is ${movieName} a hit or flop at the box office?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Based on ${actualDay} day${actualDay !== 1 ? "s" : ""} of data, ${movieName} has collected ${totalNetStr} net at the Hindi box office.${movie.budget ? ` The film had an estimated budget of ${movie.budget}.` : ""} The Cinema Verse updates collection figures daily based on industry trade estimates."
+            "text": "Based on ${actualDay} day${actualDay !== 1 ? "s" : ""} of data, ${movieName} has collected ${totalNetStr} net at the ${langConfig.adjective} box office.${movie.budget ? ` The film had an estimated budget of ${movie.budget}.` : ""} The Cinema Verse updates collection figures daily based on industry trade estimates."
           }
         }
       ]
@@ -6785,7 +6807,7 @@ ${editorialSectionsHtml}
     <p style="color:#aaa;font-size:0.9rem;line-height:1.8;margin:0;">
       As of Day ${actualDay}, <strong style="color:#fff;">${movieName}</strong> has collected a total of
       <strong style="color:#c9973a;">${totalNetStr} net</strong> and
-      <strong style="color:#7ec8e3;">${totalGrossStr} gross</strong> at the Hindi box office.
+      <strong style="color:#7ec8e3;">${totalGrossStr} gross</strong> at the ${langConfig.adjective} box office.
       These are industry estimates and figures are updated daily on The Cinema Verse.
     </p>
   </div>
@@ -6808,7 +6830,7 @@ ${editorialSectionsHtml}
     <p style="color:#aaa;font-size:0.9rem;line-height:1.8;margin:0;">
       <strong style="color:#fff;">${movieName}</strong> is directed by <strong style="color:#ddd;">${directorName}</strong>.
       ${producerName ? `The film is produced by <strong style="color:#ddd;">${producerName}</strong>.` : ""}
-      It is an Hindi language film released in ${year || new Date().getFullYear()} under the Bbollywood banner.
+      It is an ${langConfig.adjective} language film released in ${year || new Date().getFullYear()} under the ${langConfig.industry} banner.
     </p>
   </div>` : ""}
 
@@ -6826,7 +6848,7 @@ ${editorialSectionsHtml}
     <h3 style="font-size:0.93rem;font-weight:700;color:#ddd;margin:0 0 8px;">Is ${movieName} a hit or flop at the box office?</h3>
     <p style="color:#aaa;font-size:0.9rem;line-height:1.8;margin:0;">
       Based on ${actualDay} day${actualDay !== 1 ? "s" : ""} of data, <strong style="color:#fff;">${movieName}</strong> has collected
-      <strong style="color:#c9973a;">${totalNetStr} net</strong> at the Hindi box office.
+      <strong style="color:#c9973a;">${totalNetStr} net</strong> at the ${langConfig.adjective} box office.
       ${movie.budget ? `The film had an estimated budget of <strong style="color:#ddd;">${movie.budget}</strong>.` : ""}
       A detailed performance analysis is available above. The Cinema Verse updates collection figures daily based on industry trade estimates.
     </p>
@@ -6850,8 +6872,8 @@ ${editorialSectionsHtml}
     <a href="/box-office" style="display:flex;align-items:center;gap:10px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;text-decoration:none;">
       <span style="font-size:1.3rem;flex-shrink:0;">🎬</span>
       <div>
-        <div style="font-size:0.82rem;font-weight:700;color:#ddd;line-height:1.4;">Bbollywood Box Office Collection</div>
-        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Latest Hindi movie collections</div>
+        <div style="font-size:0.82rem;font-weight:700;color:#ddd;line-height:1.4;">${langConfig.industry} Box Office Collection</div>
+        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Latest ${langConfig.adjective} movie collections</div>
       </div>
     </a>
     <a href="/movie/${movieSlug}" style="display:flex;align-items:center;gap:10px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;text-decoration:none;">
@@ -6886,7 +6908,7 @@ ${editorialSectionsHtml}
       <span style="font-size:1.3rem;flex-shrink:0;">📰</span>
       <div>
         <div style="font-size:0.82rem;font-weight:700;color:#ddd;line-height:1.4;">More Box Office Reports</div>
-        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Latest Bbollywood collection news</div>
+        <div style="font-size:0.72rem;color:#666;margin-top:2px;">Latest ${langConfig.industry} collection news</div>
       </div>
     </a>
     <a href="/blog?category=Box%20Office&movie=${encMovieName}"
@@ -6965,7 +6987,7 @@ ${editorialSectionsHtml}
       content: blogContent,
       category: "Box Office",
       tags: [
-        movieName, "Box Office", "Hindi Cinema", "Bbollywood",
+        movieName, "Box Office", `${langConfig.adjective} Cinema`, langConfig.industry,
         `Day ${actualDay}`, year ? String(year) : null,
         directorName, producerName, musicDirector,
         ...leadActors, ...leadActresses,
@@ -7152,55 +7174,56 @@ function buildMilestoneSlug(movie, milestoneLabel) {
 }
 
 function buildComparisonSlug(movie) {
-  return trimSlugToLength(`${movie.slug}-first-week-comparison-hindi-box-office`, 80);
+  return trimSlugToLength(`${movie.slug}-first-week-comparison-${langConfig.adjective.toLowerCase()}-box-office`, 80);
 }
 
-function getFirstWeekTitle(movieTitle, totalNetStr, seed) {
+function getFirstWeekTitle(movieTitle, totalNetStr, seed, langConfig) {
   const templates = [
     `${movieTitle} First Week Box Office Collection: ${totalNetStr} Net in 7 Days`,
     `${movieTitle} Completes First Week at Box Office — ${totalNetStr} Net Collection Report`,
     `${movieTitle} 7-Day Box Office: First Week Performance Analysis & Verdict`,
     `${movieTitle} One Week Box Office Review: Opening to Day 7 Collection Breakdown`,
-    `${movieTitle} First Week at Bbollywood Box Office: Complete Day-Wise Collection Report`
+    `${movieTitle} First Week at ${langConfig.industry} Box Office: Complete Day-Wise Collection Report`
   ];
   return templates[seed % templates.length];
 }
 
-function getWeekendTitle(movieTitle, weekendLabel, totalNetStr, seed) {
+function getWeekendTitle(movieTitle, weekendLabel, totalNetStr, seed, langConfig) {
   const templates = [
     `${movieTitle} ${weekendLabel} Box Office Collection Report: ${totalNetStr} Cumulative`,
     `${movieTitle} Box Office: Strong ${weekendLabel} Collections and Verdict`,
     `${movieTitle} ${weekendLabel} Analysis: Theatrical Performance & Highlights`,
     `${movieTitle} Hits New Heights: Complete ${weekendLabel} Box Office Breakdown`,
-    `${movieTitle} ${weekendLabel} at Bbollywood Box Office: Collection Report`
+    `${movieTitle} ${weekendLabel} at ${langConfig.industry} Box Office: Collection Report`
   ];
   return templates[seed % templates.length];
 }
 
-function getMilestoneTitle(movieTitle, milestoneClean, seed) {
+function getMilestoneTitle(movieTitle, milestoneClean, seed, langConfig) {
   const templates = [
     `${movieTitle} Crosses ₹${milestoneClean} at Box Office — Collection Milestone Report`,
     `${movieTitle} Box Office: ₹${milestoneClean} Milestone Achieved! Complete Details`,
-    `${movieTitle} Hits ₹${milestoneClean} Net Collection — Bbollywood Box Office Milestone`,
-    `${movieTitle} Surpasses ₹${milestoneClean} Net at Hindi Box Office`,
+    `${movieTitle} Hits ₹${milestoneClean} Net Collection — ${langConfig.industry} Box Office Milestone`,
+    `${movieTitle} Surpasses ₹${milestoneClean} Net at ${langConfig.adjective} Box Office`,
     `${movieTitle} Collected ₹${milestoneClean} and Counting — Milestone Box Office Report`
   ];
   return templates[seed % templates.length];
 }
 
-function getComparisonTitle(movieTitle, seed) {
+function getComparisonTitle(movieTitle, seed, langConfig) {
   const templates = [
-    `${movieTitle} vs Other Hindi Hits: First Week Box Office Comparison`,
-    `${movieTitle} First Week Comparison Report: How it Ranks Against Recent Hindi Releases`,
+    `${movieTitle} vs Other ${langConfig.adjective} Hits: First Week Box Office Comparison`,
+    `${movieTitle} First Week Comparison Report: How it Ranks Against Recent ${langConfig.adjective} Releases`,
     `${movieTitle} Completes Week 1: First Week Box Office Clash & Comparative Standings`,
-    `${movieTitle} 7-Day Box Office Battle: Head-to-Head Comparison with Hindi Blockbusters`,
-    `${movieTitle} vs Recent Bbollywood Releases: First Week Box Office Showdown`
+    `${movieTitle} 7-Day Box Office Battle: Head-to-Head Comparison with ${langConfig.adjective} Blockbusters`,
+    `${movieTitle} vs Recent ${langConfig.industry} Releases: First Week Box Office Showdown`
   ];
   return templates[seed % templates.length];
 }
 
 // ── AI Content Generators ────────────────────────────────────────────────────
 async function generateFirstWeekAI(movie, days, totalNet) {
+  const langConfig = getLangConfig(movie.language);
   const movieName = movie.title;
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const totalNetStr = formatINR(totalNet);
@@ -7215,23 +7238,23 @@ async function generateFirstWeekAI(movie, days, totalNet) {
   const dayDataStr = days.slice(0, 7).map(d => `Day ${d.day}: ${d.net || "N/A"}`).join("; ");
 
   const fallbacks = {
-    metaDescription: `${movieName} First Week Box Office: Collected ${totalNetStr} net in 7 days at the Hindi box office. Complete day-wise breakdown and analysis inside.`,
+    metaDescription: `${movieName} First Week Box Office: Collected ${totalNetStr} net in 7 days at the ${langConfig.adjective} box office. Complete day-wise breakdown and analysis inside.`,
     headline: `${movieName} Completes First Week: ${totalNetStr} Net and a Theatrical Run Worth Celebrating`,
-    introParagraph: `${movieName}${year ? ` (${year})` : ""} has wrapped up its crucial first seven days at the Hindi box office, scripting an encouraging commercial chapter for Bbollywood. With a cumulative net collection of ${totalNetStr}, the film has demonstrated what consistent audience interest can do to a theatrical run when content resonates genuinely. From its opening-day collection of ${openingDayNet} to the quiet but steady Day 7 figure of ${day7Net}, the film's week-one arc has been one of measured, content-driven success that trade observers have noted with approval.`,
-    performanceOverview: `The opening three-day weekend — the most critical window for any new Hindi release — gave ${movieName} a strong launchpad with a combined collection of ${openingWeekendStr}. Cinemas across Mumbai, Delhi, Bengaluru, Pune, and Hyderabad reported healthy footfalls throughout Friday evening, Saturday, and Sunday, with Saturday emerging as the peak day as is typical for Hindi theatrical releases. The film's opening weekend created organic buzz on social media and among cinema circuits — genuine audience enthusiasm translating directly into ticket sales and repeat screenings.`,
+    introParagraph: `${movieName}${year ? ` (${year})` : ""} has wrapped up its crucial first seven days at the ${langConfig.adjective} box office, scripting an encouraging commercial chapter for ${langConfig.industry}. With a cumulative net collection of ${totalNetStr}, the film has demonstrated what consistent audience interest can do to a theatrical run when content resonates genuinely. From its opening-day collection of ${openingDayNet} to the quiet but steady Day 7 figure of ${day7Net}, the film's week-one arc has been one of measured, content-driven success that trade observers have noted with approval.`,
+    performanceOverview: `The opening three-day weekend — the most critical window for any new ${langConfig.adjective} release — gave ${movieName} a strong launchpad with a combined collection of ${openingWeekendStr}. Cinemas across Mumbai, Delhi, Bengaluru, Pune, and Hyderabad reported healthy footfalls throughout Friday evening, Saturday, and Sunday, with Saturday emerging as the peak day as is typical for ${langConfig.adjective} theatrical releases. The film's opening weekend created organic buzz on social media and among cinema circuits — genuine audience enthusiasm translating directly into ticket sales and repeat screenings.`,
     weekdayHoldAnalysis: `The real test for ${movieName} began from Day 4, when the promotional noise had settled and the film had to rely entirely on its own merit to draw audiences to theatre seats on working weekdays. The combined weekday collection of ${weekdayStr} from Days 4 through 6 reflects a healthy retention rate that would encourage distributors to maintain or even expand screen count into Week 2. Films that hold their weekday business at 55–65% of their opening day figure — which appears to be the case here — are the ones that ultimately cross meaningful milestones in their lifetime box office run.`,
-    audienceResponseSection: `Audience feedback for ${movieName} has been overwhelmingly positive across multiple platforms, from cinema exit polls to social media conversations and word-of-mouth in Hindi communities. Viewers have particularly appreciated the film's narrative authenticity, performance quality, and production values. Morning and matinee shows, which typically remain underutilised for mid-budget Hindi films, have reported improved occupancy, suggesting that the film's appeal is not limited to any single demographic or show-timing preference.`,
+    audienceResponseSection: `Audience feedback for ${movieName} has been overwhelmingly positive across multiple platforms, from cinema exit polls to social media conversations and word-of-mouth in ${langConfig.adjective} communities. Viewers have particularly appreciated the film's narrative authenticity, performance quality, and production values. Morning and matinee shows, which typically remain underutilised for mid-budget ${langConfig.adjective} films, have reported improved occupancy, suggesting that the film's appeal is not limited to any single demographic or show-timing preference.`,
     dayWiseParagraph: `The day-by-day collection trajectory for ${movieName} reads as follows: ${dayDataStr}. This pattern is characteristic of a content-driven success — a promising Day 1 to establish buzz, a Day 2 peak as weekend audiences flood theatres, a slightly softer Sunday, and then a gradual but controlled weekday descent that speaks to sustained interest. Day 7 completing the week on a solid note signals that the film still has a willing audience heading into Week 2.`,
-    week2OutlookSection: `With ${totalNetStr} secured after the first seven days, ${movieName} enters its second week from a commercially comfortable position. Industry insiders who track Hindi box office patterns note that films earning at this pace in their first week typically add between 30% and 50% of their Week 1 total across the remaining weeks of their theatrical run, assuming competition from new releases doesn't dramatically erode screen count. The key variable is the second weekend — if the film posts numbers within 55–65% of its opening weekend, the trajectory toward a profitable full run remains intact.`,
-    conclusionParagraph: `In conclusion, the first-week chapter of ${movieName} at the Hindi box office has been one that the filmmakers, cast, and entire production team can look back on with genuine pride. A net collection of ${totalNetStr} in seven days is not merely a commercial figure — it is an audience endorsement, a critical verdict delivered through the most democratic of all channels: the ticket window. As the film moves into its second week and beyond, the story of its theatrical journey will continue to unfold.`
+    week2OutlookSection: `With ${totalNetStr} secured after the first seven days, ${movieName} enters its second week from a commercially comfortable position. Industry insiders who track ${langConfig.adjective} box office patterns note that films earning at this pace in their first week typically add between 30% and 50% of their Week 1 total across the remaining weeks of their theatrical run, assuming competition from new releases doesn't dramatically erode screen count. The key variable is the second weekend — if the film posts numbers within 55–65% of its opening weekend, the trajectory toward a profitable full run remains intact.`,
+    conclusionParagraph: `In conclusion, the first-week chapter of ${movieName} at the ${langConfig.adjective} box office has been one that the filmmakers, cast, and entire production team can look back on with genuine pride. A net collection of ${totalNetStr} in seven days is not merely a commercial figure — it is an audience endorsement, a critical verdict delivered through the most democratic of all channels: the ticket window. As the film moves into its second week and beyond, the story of its theatrical journey will continue to unfold.`
   };
 
-  const systemPrompt = "You are a senior Hindi cinema (Bbollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse — India's leading entertainment portal. Your writing style is warm, authoritative, and genuinely human — like a veteran film correspondent who deeply loves cinema. Avoid all AI writing patterns: no bullet-pointed sentences, no generic filler like 'it is worth noting' or 'needless to say'. Write with a real journalist's voice. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. Every value must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences, rich in specific data references, contextual storytelling, and editorial insight.";
-  const userPrompt = `Write a first week box office report for the Hindi movie "${movieName}" (${year}).
+  const systemPrompt = "You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse — India's leading entertainment portal. Your writing style is warm, authoritative, and genuinely human — like a veteran film correspondent who deeply loves cinema. Avoid all AI writing patterns: no bullet-pointed sentences, no generic filler like 'it is worth noting' or 'needless to say'. Write with a real journalist's voice. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. Every value must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences, rich in specific data references, contextual storytelling, and editorial insight.";
+  const userPrompt = `Write a first week box office report for the ${langConfig.adjective} movie "${movieName}" (${year}).
 Day-wise data: ${dayDataStr}.
 Opening day: ${openingDayNet}. Opening weekend (Days 1-3): ${openingWeekendStr}. Weekdays (Days 4-6): ${weekdayStr}. Day 7: ${day7Net}. Total Week 1 net: ${totalNetStr}.
 
-Write like a senior entertainment journalist who knows Hindi cinema deeply. Reference the actual numbers throughout. Make every paragraph feel genuinely human and editorial, not AI-generated.
+Write like a senior entertainment journalist who knows ${langConfig.adjective} cinema deeply. Reference the actual numbers throughout. Make every paragraph feel genuinely human and editorial, not AI-generated.
 
 Include the following JSON keys:
 - metaDescription (155–165 chars, include film name and total Week 1 figure)
@@ -7242,7 +7265,7 @@ Include the following JSON keys:
 - audienceResponseSection (audience demographic: families, youth, couples; show timing patterns; morning vs evening occupancy; social feedback; repeat viewership signals)
 - dayWiseParagraph (narrative analysis of day-by-day trend using actual data above; what the trajectory reveals about the film's connect)
 - week2OutlookSection (what Week 2 holds: screen count expectations, second weekend as key test, lifetime collection projection logic)
-- conclusionParagraph (editorial wrap-up: what ${totalNetStr} means for the filmmakers, the cast, and Hindi cinema at large)`;
+- conclusionParagraph (editorial wrap-up: what ${totalNetStr} means for the filmmakers, the cast, and ${langConfig.adjective} cinema at large)`;
 
   return callGroqStructured(
     systemPrompt,
@@ -7254,6 +7277,7 @@ Include the following JSON keys:
 }
 
 async function generateWeekendAI(movie, days, weekendNum, totalNet) {
+  const langConfig = getLangConfig(movie.language);
   const movieName = movie.title;
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const totalNetStr = formatINR(totalNet);
@@ -7276,20 +7300,20 @@ async function generateWeekendAI(movie, days, weekendNum, totalNet) {
   }
 
   const fallbacks = {
-    metaDescription: `${movieName} ${weekendLabel} Box Office: ${weekendTotalStr} weekend collection, ${totalNetStr} cumulative. Full analysis of the ${wName.toLowerCase()} weekend at the Hindi box office.`,
+    metaDescription: `${movieName} ${weekendLabel} Box Office: ${weekendTotalStr} weekend collection, ${totalNetStr} cumulative. Full analysis of the ${wName.toLowerCase()} weekend at the ${langConfig.adjective} box office.`,
     headline: `${movieName} ${weekendLabel}: ${weekendTotalStr} Weekend Collection and What It Means`,
-    introParagraph: `${movieName}${year ? ` (${year})` : ""} has successfully navigated another crucial box office milestone with the completion of its ${weekendLabel.toLowerCase()} in Hindi theatres. The three-day window brought in a combined collection of ${weekendTotalStr} (${weekendDataStr}), pushing the film's cumulative net total to ${totalNetStr}. Cinema halls across India continued to see encouraging turnout, with audiences clearly not yet done with this particular cinematic experience — a fact that speaks volumes about the quality of content and the level of audience connection the film has managed to sustain.`,
+    introParagraph: `${movieName}${year ? ` (${year})` : ""} has successfully navigated another crucial box office milestone with the completion of its ${weekendLabel.toLowerCase()} in ${langConfig.adjective} theatres. The three-day window brought in a combined collection of ${weekendTotalStr} (${weekendDataStr}), pushing the film's cumulative net total to ${totalNetStr}. Cinema halls across India continued to see encouraging turnout, with audiences clearly not yet done with this particular cinematic experience — a fact that speaks volumes about the quality of content and the level of audience connection the film has managed to sustain.`,
     weekendBreakdownParagraph: `Breaking down the ${weekendLabel.toLowerCase()} day-by-day, the collection pattern tells an illuminating story about how ${movieName} is performing. ${weekendDataStr ? `The three-day breakdown reads: ${weekendDataStr}.` : ""} Saturday emerged as the strongest day of the weekend, driven by a combination of advance bookings and walk-in audiences drawn by strong word-of-mouth. Friday set a healthy base, while Sunday maintained a commendable hold — a pattern that trade observers associate with films that have genuine repeat viewing appeal.`,
-    occupancyTrendSection: `Occupancy levels during this weekend at major Hindi cinema centres were encouraging across both the multiplex and single-screen segments. Major multiplexes in Mumbai reported healthy evening and night show occupancy, while the price-sensitive single-screen market in districts like Khurda, Delhi, Angul, and Sundargarh showed steady footfalls, particularly at the afternoon shows favoured by family audiences. The fact that occupancy held firm across these demographically different exhibition segments is a strong signal of the film's broad audience appeal.`,
+    occupancyTrendSection: `Occupancy levels during this weekend at major ${langConfig.adjective} cinema centres were encouraging across both the multiplex and single-screen segments. Major multiplexes in Mumbai reported healthy evening and night show occupancy, while the price-sensitive single-screen market in districts like Khurda, Delhi, Angul, and Sundargarh showed steady footfalls, particularly at the afternoon shows favoured by family audiences. The fact that occupancy held firm across these demographically different exhibition segments is a strong signal of the film's broad audience appeal.`,
     audienceProfileSection: `The audience composition driving ${movieName}'s continued box office performance reveals a film that has successfully transcended its initial target demographic. Family groups have been a consistent presence, particularly at the 3 PM and 6 PM shows. Evening and late-night shows at multiplexes have attracted younger couples and friend groups, while morning shows in single-screen theatres have drawn a more mature, mixed demographic. This multi-demographic appeal is the hallmark of a commercially durable film.`,
-    holdAnalysisParagraph: `${weekendNum > 1 && prevWeekendStr ? `Placed in context against the previous weekend's total of ${prevWeekendStr}, this weekend's collection of ${weekendTotalStr} represents the film's continued audience draw.` : "The hold percentage during this weekend"} A healthy hold — particularly on Sunday — signals that word-of-mouth continues to work in the film's favour. Industry observers tracking Bbollywood releases have noted that ${movieName}'s weekend retention is performing ahead of most releases of a similar scale from the past year.`,
-    industryContextSection: `Within the context of Hindi cinema's theatrical landscape, ${movieName}'s ${weekendLabel.toLowerCase()} performance carries significant weight. The Bbollywood industry has been navigating a post-OTT-disruption era where weekend holds have become increasingly difficult to sustain beyond the opening weekend. That ${movieName} is maintaining meaningful audience interest deep into its theatrical run is a positive signal for producers, distributors, and theatre owners alike — all of whom benefit when a film sustains strong collections over multiple weekends.`,
+    holdAnalysisParagraph: `${weekendNum > 1 && prevWeekendStr ? `Placed in context against the previous weekend's total of ${prevWeekendStr}, this weekend's collection of ${weekendTotalStr} represents the film's continued audience draw.` : "The hold percentage during this weekend"} A healthy hold — particularly on Sunday — signals that word-of-mouth continues to work in the film's favour. Industry observers tracking ${langConfig.industry} releases have noted that ${movieName}'s weekend retention is performing ahead of most releases of a similar scale from the past year.`,
+    industryContextSection: `Within the context of ${langConfig.adjective} cinema's theatrical landscape, ${movieName}'s ${weekendLabel.toLowerCase()} performance carries significant weight. The ${langConfig.industry} industry has been navigating a post-OTT-disruption era where weekend holds have become increasingly difficult to sustain beyond the opening weekend. That ${movieName} is maintaining meaningful audience interest deep into its theatrical run is a positive signal for producers, distributors, and theatre owners alike — all of whom benefit when a film sustains strong collections over multiple weekends.`,
     weekdayOutlookSection: `As the film transitions from the ${weekendLabel.toLowerCase()} into the upcoming weekdays, the critical question is whether it can maintain a hold of 60–70% on Monday relative to its Friday number. If it manages that, the week's total addition could be substantial enough to make a meaningful difference to the lifetime collection. Screen availability and competition from any new releases will also play a pivotal role in determining how much breathing room ${movieName} gets to continue its impressive run.`,
-    conclusionParagraph: `The ${weekendLabel.toLowerCase()} has reaffirmed ${movieName}'s status as one of the standout Hindi theatrical releases of the season. With a cumulative total of ${totalNetStr} and audience enthusiasm showing no signs of dramatic decline, the film remains firmly in the conversation for a memorable theatrical run. The production team, distributors, and exhibitors can take genuine satisfaction from what has been an encouraging weekend at the Hindi box office.`
+    conclusionParagraph: `The ${weekendLabel.toLowerCase()} has reaffirmed ${movieName}'s status as one of the standout ${langConfig.adjective} theatrical releases of the season. With a cumulative total of ${totalNetStr} and audience enthusiasm showing no signs of dramatic decline, the film remains firmly in the conversation for a memorable theatrical run. The production team, distributors, and exhibitors can take genuine satisfaction from what has been an encouraging weekend at the ${langConfig.adjective} box office.`
   };
 
-  const systemPrompt = "You are a senior Hindi cinema (Bbollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic warmth and authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences, incorporating the actual data provided.";
-  const userPrompt = `Write a box office report for the ${weekendLabel} of the Hindi movie "${movieName}" (${year}).
+  const systemPrompt = "You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic warmth and authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences, incorporating the actual data provided.";
+  const userPrompt = `Write a box office report for the ${weekendLabel} of the ${langConfig.adjective} movie "${movieName}" (${year}).
 Weekend breakdown (${weekendDataStr}): ${weekendTotalStr}.
 Total cumulative net: ${totalNetStr}, Gross: ${totalGrossStr}, Overseas: ${totalOverseasStr}.
 ${weekendNum > 1 && prevWeekendStr ? `Previous weekend total: ${prevWeekendStr}.` : ""}
@@ -7301,10 +7325,10 @@ Include the following JSON keys:
 - headline (strong editorial headline, max 90 chars, no HTML)
 - introParagraph (weekend complete: days in run, weekend collection figure, cumulative total, overall theatrical atmosphere)
 - weekendBreakdownParagraph (day-by-day: peak day, Friday base, Sunday hold, what the pattern reveals about audience type and word-of-mouth)
-- occupancyTrendSection (occupancy at multiplexes and single screens; specific Hindi cities like Mumbai, Delhi, Bengaluru; show timing patterns)
+- occupancyTrendSection (occupancy at multiplexes and single screens; specific ${langConfig.adjective} cities like Mumbai, Delhi, Bengaluru; show timing patterns)
 - audienceProfileSection (demographic breakdown: families, youth, couples; show timing preferences; multi-demographic appeal analysis)
 - holdAnalysisParagraph (this weekend vs previous if applicable; hold percentage analysis; what strong hold signals about word-of-mouth and distributor confidence)
-- industryContextSection (Bbollywood context: post-OTT theatrical challenges, what sustained holds mean for the industry, investor confidence)
+- industryContextSection (${langConfig.industry} context: post-OTT theatrical challenges, what sustained holds mean for the industry, investor confidence)
 - weekdayOutlookSection (Monday hold target, screen count, competitor releases, what this week needs to look like)
 - conclusionParagraph (editorial wrap-up: what this weekend means for the film's legacy and production team satisfaction)`;
 
@@ -7318,6 +7342,7 @@ Include the following JSON keys:
 }
 
 async function generateMilestoneAI(movie, milestoneLabel, totalNet, sortedDays) {
+  const langConfig = getLangConfig(movie.language);
   const movieName = movie.title;
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const totalNetStr = formatINR(totalNet);
@@ -7328,27 +7353,27 @@ async function generateMilestoneAI(movie, milestoneLabel, totalNet, sortedDays) 
   const openingDayMilestone = sortedDays && sortedDays.length > 0 ? formatINR(parseToRupeesGlobal(sortedDays[0]?.net || "0")) : "—";
 
   const fallbacks = {
-    metaDescription: `${movieName} Crosses ₹${milestoneClean} at Hindi Box Office! Total collection now stands at ${totalNetStr} net. Complete milestone report and analysis.`,
-    headline: `${movieName} Hits ₹${milestoneClean} — A Historic Milestone for Hindi Cinema`,
-    introParagraph: `${movieName}${year ? ` (${year})` : ""} has etched its name in Hindi box office history by crossing the prestigious ₹${milestoneClean} net collection mark in its theatrical run of ${dayReached} days. The film, which set the stage with an opening day collection of ${openingDayMilestone}, has now accumulated a remarkable ${totalNetStr} in net earnings — a figure that places it firmly among the notable commercial successes in recent Bbollywood history. This milestone represents not just a financial achievement, but a resounding verdict from Hindi audiences who have repeatedly chosen to experience this film in the theatrical setting.`,
-    milestoneSignificanceParagraph: `The ₹${milestoneClean} milestone carries enormous significance in the context of Hindi cinema's evolving commercial landscape. In an era where OTT platforms have dramatically compressed theatrical windows and altered viewing habits, reaching this mark requires a film to achieve a rare combination of factors: exceptional content quality, effective release timing, strong promotional execution, and crucially, the organic word-of-mouth that no marketing budget can manufacture. ${movieName} has demonstrated mastery of all these elements.`,
-    journeyTimelineSection: `The box office journey of ${movieName} to the ₹${milestoneClean} milestone has been one of the more compelling stories in recent Bbollywood history. From its energetic opening, through multiple weekends where audiences continued to turn up in meaningful numbers, to the weekday collections that defied the usual drop patterns seen in most Hindi releases, the film has shown remarkable consistency. ${recentStr ? `Recent daily collections — ${recentStr} — indicate that the theatrical appetite for the film has not yet been exhausted,` : "The film's consistent daily performance indicates"} suggesting additional milestones may be within reach.`,
-    industryImpactSection: `The commercial success of ${movieName} carries implications well beyond the immediate production house and distribution team. For Bbollywood as an ecosystem, every film that crosses the ₹${milestoneClean} threshold provides essential ammunition in the industry's ongoing case to multiplex chains, satellite buyers, OTT platforms, and production financiers that quality Hindi content can generate meaningful commercial returns. This creates a positive feedback loop encouraging larger budgets, better technical standards, and more aggressive pan-India distribution efforts.`,
-    castDirectorContextSection: `Behind the ₹${milestoneClean} milestone are the creative decisions of a director and cast who believed deeply in their project at a time when every Hindi production is a calculated risk. The lead performers' investment in their characters, the director's clarity of vision, the music team's compositions, and the producer's faith in the project — each element contributed to the box office edifice that has now risen past the ₹${milestoneClean} mark. In Bbollywood, where marketing budgets are a fraction of what larger industries operate with, a film crossing this kind of milestone on the strength of content is an extraordinary achievement.`,
-    futureOutlookSection: `With ${totalNetStr} already secured and the theatrical run still active, the question now turns to how much further ${movieName} can push its lifetime collection. Trade analysts tracking Bbollywood market patterns estimate that films at this stage with this level of daily activity typically continue to add between 15–25% to the current cumulative figure before screens are released. The satellite and OTT rights value of the film will also have been considerably enhanced by this box office performance, ensuring meaningful financial returns for all stakeholders.`,
-    conclusionParagraph: `The ₹${milestoneClean} milestone crossed by ${movieName} is a moment deserving of genuine celebration — for the production team, for the cast and crew, and for Hindi cinema as a whole. It is a powerful reminder that audiences in India are ready and willing to support quality content at the box office, and that Bbollywood, despite its resource constraints, is capable of producing commercially viable, artistically compelling cinema. As the theatrical run continues, the legacy of ${movieName} at the box office will be studied and referenced as a benchmark for future Hindi productions.`,
+    metaDescription: `${movieName} Crosses ₹${milestoneClean} at ${langConfig.adjective} Box Office! Total collection now stands at ${totalNetStr} net. Complete milestone report and analysis.`,
+    headline: `${movieName} Hits ₹${milestoneClean} — A Historic Milestone for ${langConfig.adjective} Cinema`,
+    introParagraph: `${movieName}${year ? ` (${year})` : ""} has etched its name in ${langConfig.adjective} box office history by crossing the prestigious ₹${milestoneClean} net collection mark in its theatrical run of ${dayReached} days. The film, which set the stage with an opening day collection of ${openingDayMilestone}, has now accumulated a remarkable ${totalNetStr} in net earnings — a figure that places it firmly among the notable commercial successes in recent ${langConfig.industry} history. This milestone represents not just a financial achievement, but a resounding verdict from ${langConfig.adjective} audiences who have repeatedly chosen to experience this film in the theatrical setting.`,
+    milestoneSignificanceParagraph: `The ₹${milestoneClean} milestone carries enormous significance in the context of ${langConfig.adjective} cinema's evolving commercial landscape. In an era where OTT platforms have dramatically compressed theatrical windows and altered viewing habits, reaching this mark requires a film to achieve a rare combination of factors: exceptional content quality, effective release timing, strong promotional execution, and crucially, the organic word-of-mouth that no marketing budget can manufacture. ${movieName} has demonstrated mastery of all these elements.`,
+    journeyTimelineSection: `The box office journey of ${movieName} to the ₹${milestoneClean} milestone has been one of the more compelling stories in recent ${langConfig.industry} history. From its energetic opening, through multiple weekends where audiences continued to turn up in meaningful numbers, to the weekday collections that defied the usual drop patterns seen in most ${langConfig.adjective} releases, the film has shown remarkable consistency. ${recentStr ? `Recent daily collections — ${recentStr} — indicate that the theatrical appetite for the film has not yet been exhausted,` : "The film's consistent daily performance indicates"} suggesting additional milestones may be within reach.`,
+    industryImpactSection: `The commercial success of ${movieName} carries implications well beyond the immediate production house and distribution team. For ${langConfig.industry} as an ecosystem, every film that crosses the ₹${milestoneClean} threshold provides essential ammunition in the industry's ongoing case to multiplex chains, satellite buyers, OTT platforms, and production financiers that quality ${langConfig.adjective} content can generate meaningful commercial returns. This creates a positive feedback loop encouraging larger budgets, better technical standards, and more aggressive pan-India distribution efforts.`,
+    castDirectorContextSection: `Behind the ₹${milestoneClean} milestone are the creative decisions of a director and cast who believed deeply in their project at a time when every ${langConfig.adjective} production is a calculated risk. The lead performers' investment in their characters, the director's clarity of vision, the music team's compositions, and the producer's faith in the project — each element contributed to the box office edifice that has now risen past the ₹${milestoneClean} mark. In ${langConfig.industry}, where marketing budgets are a fraction of what larger industries operate with, a film crossing this kind of milestone on the strength of content is an extraordinary achievement.`,
+    futureOutlookSection: `With ${totalNetStr} already secured and the theatrical run still active, the question now turns to how much further ${movieName} can push its lifetime collection. Trade analysts tracking ${langConfig.industry} market patterns estimate that films at this stage with this level of daily activity typically continue to add between 15–25% to the current cumulative figure before screens are released. The satellite and OTT rights value of the film will also have been considerably enhanced by this box office performance, ensuring meaningful financial returns for all stakeholders.`,
+    conclusionParagraph: `The ₹${milestoneClean} milestone crossed by ${movieName} is a moment deserving of genuine celebration — for the production team, for the cast and crew, and for ${langConfig.adjective} cinema as a whole. It is a powerful reminder that audiences in India are ready and willing to support quality content at the box office, and that ${langConfig.industry}, despite its resource constraints, is capable of producing commercially viable, artistically compelling cinema. As the theatrical run continues, the legacy of ${movieName} at the box office will be studied and referenced as a benchmark for future ${langConfig.adjective} productions.`,
     seoHeadline: `${movieName} Box Office Collection: Crosses ₹${milestoneClean} Milestone`,
-    seoTags: `${movieName}, ${movieName} Box Office, ₹${milestoneClean} Milestone, Hindi Cinema, Bbollywood Hit, Box Office Collection`
+    seoTags: `${movieName}, ${movieName} Box Office, ₹${milestoneClean} Milestone, ${langConfig.adjective} Cinema, ${langConfig.industry} Hit, Box Office Collection`
   };
 
-  const systemPrompt = "You are a senior Hindi cinema (Bbollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic warmth and authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences with specific references to the milestone, box office data, and Bbollywood industry context.";
-  const userPrompt = `Write a box office milestone report for the Hindi movie "${movieName}" (${year}).
+  const systemPrompt = "You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic warmth and authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences with specific references to the milestone, box office data, and ${langConfig.industry} industry context.";
+  const userPrompt = `Write a box office milestone report for the ${langConfig.adjective} movie "${movieName}" (${year}).
 Milestone crossed: ₹${milestoneClean} net.
 Current total net collection: ${totalNetStr}.
 Days in theatrical run: ${dayReached}. Opening day collection: ${openingDayMilestone}.
 Recent daily collections: ${recentStr || "not available"}.
 
-Write with the authority of a senior film journalist who covers Bbollywood professionally. Reference actual figures throughout. Make every paragraph feel human, analytical, and editorial.
+Write with the authority of a senior film journalist who covers ${langConfig.industry} professionally. Reference actual figures throughout. Make every paragraph feel human, analytical, and editorial.
 
 Include the following JSON keys:
 - seoHeadline (A highly searched SEO H1 headline, e.g. "Movie Name Box Office Collection: Hits X Crore")
@@ -7356,12 +7381,12 @@ Include the following JSON keys:
 - metaDescription (155–165 chars, include milestone amount and current total collection)
 - headline (celebratory editorial headline, no HTML, max 90 chars)
 - introParagraph (announce the milestone: days in run, opening day, current total, what crossing this milestone represents)
-- milestoneSignificanceParagraph (why ₹${milestoneClean} matters in Hindi cinema context; OTT-era challenges; what it takes to achieve this milestone)
+- milestoneSignificanceParagraph (why ₹${milestoneClean} matters in ${langConfig.adjective} cinema context; OTT-era challenges; what it takes to achieve this milestone)
 - journeyTimelineSection (box office journey: opening, weekend holds, weekday patterns, recent daily collections, overall trajectory)
-- industryImpactSection (impact on Bbollywood ecosystem: investor confidence, multiplex support, OTT rights enhancement, industry morale)
-- castDirectorContextSection (the creative team: director's vision, lead actors' performances, what this milestone means for their careers in Hindi cinema)
+- industryImpactSection (impact on ${langConfig.industry} ecosystem: investor confidence, multiplex support, OTT rights enhancement, industry morale)
+- castDirectorContextSection (the creative team: director's vision, lead actors' performances, what this milestone means for their careers in ${langConfig.adjective} cinema)
 - futureOutlookSection (remaining theatrical potential, next possible milestones, OTT/satellite rights value, trade projections)
-- conclusionParagraph (editorial celebration: what this milestone means for Hindi cinema's future and audience endorsement narrative)`;
+- conclusionParagraph (editorial celebration: what this milestone means for ${langConfig.adjective} cinema's future and audience endorsement narrative)`;
 
   return callGroqStructured(
     systemPrompt,
@@ -7373,6 +7398,7 @@ Include the following JSON keys:
 }
 
 async function generateComparisonAI(movie, comparators, totalNet) {
+  const langConfig = getLangConfig(movie.language);
   const movieName = movie.title;
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const totalNetStr = formatINR(totalNet);
@@ -7382,19 +7408,19 @@ async function generateComparisonAI(movie, comparators, totalNet) {
   const moviesBelow = comparators.filter(c => c.firstWeekNet <= totalNet).length;
 
   const fallbacks = {
-    metaDescription: `${movieName} First Week Box Office Comparison: ${totalNetStr} net in Week 1. See how it ranks against ${comparators.length} recent Hindi films in this detailed comparison.`,
-    headline: `${movieName} vs Hindi Box Office Hits: First Week Comparison & Rankings`,
-    introParagraph: `The completion of ${movieName}${year ? ` (${year})` : ""}'s first seven days at the Hindi box office — with a net collection of ${totalNetStr} — naturally invites comparison with other notable Hindi theatrical releases that have completed their own first-week runs. In the Bbollywood industry, first-week comparisons are more than a matter of pride — they serve as essential benchmarks for producers, distributors, and OTT buyers when evaluating the commercial potential of future projects. This detailed analysis places ${movieName} side-by-side with ${comparators.length} significant recent Hindi releases to understand exactly where it stands in the contemporary box office hierarchy.`,
-    rankingContextSection: `Among the ${comparators.length} Hindi films included in this first-week comparison, ${movieName}'s Week 1 collection of ${totalNetStr} places it ${moviesAbove > 0 ? `behind ${moviesAbove} film${moviesAbove > 1 ? "s" : ""}` : "at the top"}${moviesBelow > 0 ? ` and ahead of ${moviesBelow} film${moviesBelow > 1 ? "s" : ""}` : ""} in this ranking. ${topComp ? `The current benchmark for Hindi first-week collections in this comparison is set by "${topComp.title}" with ${topComp.firstWeekNetStr}, representing the commercial ceiling that the industry is aspiring toward.` : ""} Raw ranking, however, tells only part of the story — the context of each film's budget, release scale, screen count, and promotional spend is essential to interpreting what the numbers actually represent.`,
+    metaDescription: `${movieName} First Week Box Office Comparison: ${totalNetStr} net in Week 1. See how it ranks against ${comparators.length} recent ${langConfig.adjective} films in this detailed comparison.`,
+    headline: `${movieName} vs ${langConfig.adjective} Box Office Hits: First Week Comparison & Rankings`,
+    introParagraph: `The completion of ${movieName}${year ? ` (${year})` : ""}'s first seven days at the ${langConfig.adjective} box office — with a net collection of ${totalNetStr} — naturally invites comparison with other notable ${langConfig.adjective} theatrical releases that have completed their own first-week runs. In the ${langConfig.industry} industry, first-week comparisons are more than a matter of pride — they serve as essential benchmarks for producers, distributors, and OTT buyers when evaluating the commercial potential of future projects. This detailed analysis places ${movieName} side-by-side with ${comparators.length} significant recent ${langConfig.adjective} releases to understand exactly where it stands in the contemporary box office hierarchy.`,
+    rankingContextSection: `Among the ${comparators.length} ${langConfig.adjective} films included in this first-week comparison, ${movieName}'s Week 1 collection of ${totalNetStr} places it ${moviesAbove > 0 ? `behind ${moviesAbove} film${moviesAbove > 1 ? "s" : ""}` : "at the top"}${moviesBelow > 0 ? ` and ahead of ${moviesBelow} film${moviesBelow > 1 ? "s" : ""}` : ""} in this ranking. ${topComp ? `The current benchmark for ${langConfig.adjective} first-week collections in this comparison is set by "${topComp.title}" with ${topComp.firstWeekNetStr}, representing the commercial ceiling that the industry is aspiring toward.` : ""} Raw ranking, however, tells only part of the story — the context of each film's budget, release scale, screen count, and promotional spend is essential to interpreting what the numbers actually represent.`,
     comparisonParagraph: `A deeper look at the comparative data reveals fascinating patterns about how ${movieName} has performed relative to its peers. ${topComp && topComp.firstWeekNet > totalNet ? `While "${topComp.title}" leads the pack with a formidable ${topComp.firstWeekNetStr} in its first week, it is crucial to contextualise that figure against the promotional machinery and star-power that may have driven its opening.` : `${movieName} leading this comparative field with ${totalNetStr} is a significant achievement.`} The most meaningful metric in such comparisons is the weekday hold percentage — which indicates how much of the opening-weekend audience returned during the less glamorous working days. Films with strong weekday holds are the ones that tend to cross major milestones in their lifetime run.`,
-    openingWeekendCompareSection: `Opening weekends across the films in this comparison tell a particularly instructive story about the evolving Hindi box office. The relationship between a film's opening weekend performance and its first-week total has shifted in the post-OTT era — films that were once able to rely on a heavy front-load are now finding that audiences are more selective, choosing to wait for social media reviews before committing to a theatre visit. ${movieName}'s opening weekend, which contributed significantly to its ${totalNetStr} first-week total, reflects an audience persuaded by both pre-release promotional content and early positive word-of-mouth.`,
-    verdictComparisonSection: `The comparative verdict from this analysis is that ${movieName} has earned a creditable position in the first-week box office hierarchy of contemporary Hindi cinema. Whether it sits at the top, middle, or lower end of this particular comparison table, the efficiency of its collection — considering its likely production and marketing budget — speaks more clearly to its actual commercial success. Films in Bbollywood that achieve first-week totals in the range that ${movieName} has achieved are the engine that keeps the industry's commercial cycle alive.`,
-    industryImpactSection: `Comparative box office analysis serves a broader purpose in Hindi cinema beyond satisfying trade curiosity. When ${movieName} and the films it is being compared with collectively perform at meaningful levels, they create a rising tide that benefits the entire Hindi film ecosystem. Theatre owners are encouraged to maintain dedicated screens for Hindi content. OTT platforms raise their acquisition bids. And the industry as a whole builds the commercial foundation needed for more ambitious productions in future.`,
-    conclusionParagraph: `In the final analysis, placing ${movieName} in comparison with other Hindi box office performers of recent vintage allows us to appreciate both its achievements and the broader commercial landscape within which those achievements have been earned. The film's ${totalNetStr} first-week net is a figure that the production team, distributors, and theatre owners can look back on with legitimate satisfaction. More importantly, it contributes another credible data point to the ongoing story of Hindi cinema's commercial evolution.`
+    openingWeekendCompareSection: `Opening weekends across the films in this comparison tell a particularly instructive story about the evolving ${langConfig.adjective} box office. The relationship between a film's opening weekend performance and its first-week total has shifted in the post-OTT era — films that were once able to rely on a heavy front-load are now finding that audiences are more selective, choosing to wait for social media reviews before committing to a theatre visit. ${movieName}'s opening weekend, which contributed significantly to its ${totalNetStr} first-week total, reflects an audience persuaded by both pre-release promotional content and early positive word-of-mouth.`,
+    verdictComparisonSection: `The comparative verdict from this analysis is that ${movieName} has earned a creditable position in the first-week box office hierarchy of contemporary ${langConfig.adjective} cinema. Whether it sits at the top, middle, or lower end of this particular comparison table, the efficiency of its collection — considering its likely production and marketing budget — speaks more clearly to its actual commercial success. Films in ${langConfig.industry} that achieve first-week totals in the range that ${movieName} has achieved are the engine that keeps the industry's commercial cycle alive.`,
+    industryImpactSection: `Comparative box office analysis serves a broader purpose in ${langConfig.adjective} cinema beyond satisfying trade curiosity. When ${movieName} and the films it is being compared with collectively perform at meaningful levels, they create a rising tide that benefits the entire ${langConfig.adjective} film ecosystem. Theatre owners are encouraged to maintain dedicated screens for ${langConfig.adjective} content. OTT platforms raise their acquisition bids. And the industry as a whole builds the commercial foundation needed for more ambitious productions in future.`,
+    conclusionParagraph: `In the final analysis, placing ${movieName} in comparison with other ${langConfig.adjective} box office performers of recent vintage allows us to appreciate both its achievements and the broader commercial landscape within which those achievements have been earned. The film's ${totalNetStr} first-week net is a figure that the production team, distributors, and theatre owners can look back on with legitimate satisfaction. More importantly, it contributes another credible data point to the ongoing story of ${langConfig.adjective} cinema's commercial evolution.`
   };
 
-  const systemPrompt = "You are a senior Hindi cinema (Bbollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences with specific references to the comparison data. Reference actual film titles and figures from the data provided.";
-  const userPrompt = `Write a first week box office comparison report for the Hindi movie "${movieName}" (${year}).
+  const systemPrompt = "You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences with specific references to the comparison data. Reference actual film titles and figures from the data provided.";
+  const userPrompt = `Write a first week box office comparison report for the ${langConfig.adjective} movie "${movieName}" (${year}).
 ${movieName} Week 1 net: ${totalNetStr}.
 
 Comparison films (sorted by first week collection, highest first):
@@ -7408,13 +7434,13 @@ Write as a senior film trade journalist doing a proper comparative analysis. Ref
 Include the following JSON keys:
 - metaDescription (155–165 chars, include film name, week 1 total, and "comparison" keyword)
 - headline (comparative editorial headline, max 90 chars, no HTML)
-- introParagraph (why this comparison matters for Bbollywood: OTT era context, what first-week rankings mean for the industry, scope of this analysis)
+- introParagraph (why this comparison matters for ${langConfig.industry}: OTT era context, what first-week rankings mean for the industry, scope of this analysis)
 - rankingContextSection (where ${movieName} ranks in this comparison, what the ranking means, reference to top benchmark film, caveat about budget/scale context)
 - comparisonParagraph (deep-dive into comparative data: reference specific film names and numbers, weekday hold discussion, what the variations reveal)
 - openingWeekendCompareSection (how opening weekends compare across films, post-OTT audience behaviour, front-loading vs content-driven audiences)
 - verdictComparisonSection (final comparative verdict: ${movieName}'s position in the hierarchy, collection efficiency as a metric, budget-relative performance)
-- industryImpactSection (broader implications: theatre owner confidence, OTT acquisition bids, rising tide effect on Bbollywood)
-- conclusionParagraph (editorial conclusion referencing specific numbers and ${movieName}'s place in Hindi film history)`;
+- industryImpactSection (broader implications: theatre owner confidence, OTT acquisition bids, rising tide effect on ${langConfig.industry})
+- conclusionParagraph (editorial conclusion referencing specific numbers and ${movieName}'s place in ${langConfig.adjective} film history)`;
 
   return callGroqStructured(
     systemPrompt,
@@ -7427,6 +7453,7 @@ Include the following JSON keys:
 
 // ── HTML Builders ────────────────────────────────────────────────────────────
 function buildFirstWeekBlogHTML(movie, days, totalNet, ai, slug, title, relatedMovies) {
+  const langConfig = getLangConfig(movie.language);
   const movieName = movie.title;
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const totalNetStr = formatINR(totalNet);
@@ -7468,7 +7495,7 @@ function buildFirstWeekBlogHTML(movie, days, totalNet, ai, slug, title, relatedM
 
   const keywordsArr = [
     movieName, `${movieName} first week`, `${movieName} 7 days collection`,
-    `${movieName} box office`, "Hindi box office", "Bbollywood first week report"
+    `${movieName} box office`, "${langConfig.adjective} box office", "${langConfig.industry} first week report"
   ];
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
   const plainWordCount = [ai.introParagraph, ai.performanceOverview, ai.weekdayHoldAnalysis, ai.audienceResponseSection, ai.dayWiseParagraph, ai.week2OutlookSection, ai.conclusionParagraph]
@@ -7649,6 +7676,7 @@ ${relatedMovies.length ? `
 }
 
 function buildWeekendBlogHTML(movie, days, totalNet, weekendLabel, ai, slug, title, relatedMovies) {
+  const langConfig = getLangConfig(movie.language);
   const movieName = movie.title;
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const totalNetStr = formatINR(totalNet);
@@ -7700,7 +7728,7 @@ function buildWeekendBlogHTML(movie, days, totalNet, weekendLabel, ai, slug, tit
 
   const keywordsArr = [
     movieName, `${movieName} ${weekendLabel.toLowerCase()} collection`, `${movieName} weekend box office`,
-    "Hindi box office", "Bbollywood weekend report"
+    "${langConfig.adjective} box office", "${langConfig.industry} weekend report"
   ];
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
   const plainWordCount = Object.values(ai).join(" ").split(/\s+/).filter(Boolean).length;
@@ -7858,7 +7886,7 @@ ${EVENT_BLOG_RESPONSIVE_STYLES}
 </section>
 
 <section id="industry-context" style="${css.card}">
-  <h2 style="${css.h2}">Bbollywood Industry Context</h2>
+  <h2 style="${css.h2}">${langConfig.industry} Industry Context</h2>
   <p style="color:#ccc;line-height:1.8;font-size:0.95rem;margin:0;">
     ${ai.industryContextSection}
   </p>
@@ -7889,6 +7917,7 @@ ${relatedMovies.length ? `
 }
 
 function buildMilestoneBlogHTML(movie, milestoneKey, totalNet, ai, slug, title, relatedMovies, sortedDays) {
+  const langConfig = getLangConfig(movie.language);
   const movieName = movie.title;
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const totalNetStr = formatINR(totalNet);
@@ -7918,7 +7947,7 @@ function buildMilestoneBlogHTML(movie, milestoneKey, totalNet, ai, slug, title, 
   const additionalTags = (ai.seoTags || "").split(",").map(t => t.trim()).filter(Boolean);
   const keywordsArr = [
     movieName, `${movieName} ${milestoneClean}`, `${movieName} box office milestone`,
-    `${movieName} total collection`, "Hindi box office records", "Bbollywood collections",
+    `${movieName} total collection`, "${langConfig.adjective} box office records", "${langConfig.industry} collections",
     ...additionalTags
   ];
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
@@ -8095,7 +8124,7 @@ ${EVENT_BLOG_RESPONSIVE_STYLES}
 </section>
 
 <section id="industry-impact" style="${css.card}">
-  <h2 style="${css.h2}">Impact on Bbollywood</h2>
+  <h2 style="${css.h2}">Impact on ${langConfig.industry}</h2>
   <p style="color:#ccc;line-height:1.8;font-size:0.95rem;margin:0;">
     ${ai.industryImpactSection}
   </p>
@@ -8131,7 +8160,7 @@ ${EVENT_BLOG_RESPONSIVE_STYLES}
     <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" style="margin-bottom:18px;">
       <h3 itemprop="name" style="color:#e0e0e0;font-size:1.05rem;margin-bottom:8px;font-weight:700;">What is the total box office collection of ${movieName}?</h3>
       <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-        <p itemprop="text" style="color:#aaa;line-height:1.7;font-size:0.95rem;margin:0;">As of its latest milestone run, ${movieName} has accumulated a total net collection of <strong style="color:#10b981;">${totalNetStr}</strong> at the Hindi box office.</p>
+        <p itemprop="text" style="color:#aaa;line-height:1.7;font-size:0.95rem;margin:0;">As of its latest milestone run, ${movieName} has accumulated a total net collection of <strong style="color:#10b981;">${totalNetStr}</strong> at the ${langConfig.adjective} box office.</p>
       </div>
     </div>
     <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" style="margin-bottom:18px;">
@@ -8157,6 +8186,7 @@ ${relatedMovies.length ? `
 }
 
 function buildComparisonBlogHTML(movie, comparators, totalNet, ai, slug, title, relatedMovies) {
+  const langConfig = getLangConfig(movie.language);
   const movieName = movie.title;
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const totalNetStr = formatINR(totalNet);
@@ -8188,8 +8218,8 @@ function buildComparisonBlogHTML(movie, comparators, totalNet, ai, slug, title, 
   ].filter(Boolean);
 
   const keywordsArr = [
-    movieName, `${movieName} box office comparison`, `${movieName} vs other hindi movies`,
-    "Hindi box office hits", "Bbollywood collections"
+    movieName, `${movieName} box office comparison`, `${movieName} vs other ${langConfig.adjective} movies`,
+    "${langConfig.adjective} box office hits", "${langConfig.industry} collections"
   ];
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
   const plainWordCount = Object.values(ai).join(" ").split(/\s+/).filter(Boolean).length;
@@ -8284,7 +8314,7 @@ ${EVENT_BLOG_RESPONSIVE_STYLES}
 <div class="hero-section" style="background:linear-gradient(135deg,#1b1002 0%,#121212 100%);border:1px solid #3d2403;border-radius:14px;padding:30px 28px 24px;margin-bottom:22px;">
     <div style="margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
       <span style="display:inline-block;background:#381d02;color:#ff9800;font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:4px 12px;border-radius:999px;border:1px solid #542f02;">📊 Box Office Comparison</span>
-      <span style="display:inline-block;background:#1e1e1e;color:#888;font-size:0.68rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:4px 12px;border-radius:999px;border:1px solid #2a2a2a;">Hindi Film Rankings</span>
+      <span style="display:inline-block;background:#1e1e1e;color:#888;font-size:0.68rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:4px 12px;border-radius:999px;border:1px solid #2a2a2a;">${langConfig.adjective} film Rankings</span>
     </div>
     <h1 style="color:#fff;font-size:clamp(1.2rem,4.5vw,1.6rem);line-height:1.3;font-weight:800;margin:0 0 14px;word-break:break-word;">
       ${title}
@@ -8318,7 +8348,7 @@ ${EVENT_BLOG_RESPONSIVE_STYLES}
       <thead>
         <tr>
           <th style="${css.th}">Movie Name</th>
-          <th style="${css.th}">First Week Net (Hindi Box Office)</th>
+          <th style="${css.th}">First Week Net (${langConfig.adjective} box office)</th>
         </tr>
       </thead>
       <tbody>
@@ -8372,6 +8402,7 @@ ${relatedMovies.length ? `
 
 // ── Orchestrators ────────────────────────────────────────────────────────────
 async function maybeGenerateFirstWeekBlog(movie, sortedDays, totalNet, movieId) {
+  const langConfig = getLangConfig(movie.language);
   try {
     const eventType = "first-week";
     const exists = await EventBlog.findOne({ movieId, eventType });
@@ -8381,7 +8412,7 @@ async function maybeGenerateFirstWeekBlog(movie, sortedDays, totalNet, movieId) 
     const slug = buildFirstWeekSlug(movie);
     const totalNetStr = formatINR(totalNet);
     const seed = (String(movieId) + eventType).split("").reduce((s, c) => s + c.charCodeAt(0), 0);
-    const title = getFirstWeekTitle(movie.title, totalNetStr, seed);
+    const title = getFirstWeekTitle(movie.title, totalNetStr, seed, langConfig);
 
     const relatedMovies = await fetchRelatedMovies(movie);
     const html = buildFirstWeekBlogHTML(movie, sortedDays, totalNet, ai, slug, title, relatedMovies);
@@ -8392,7 +8423,7 @@ async function maybeGenerateFirstWeekBlog(movie, sortedDays, totalNet, movieId) 
       excerpt: ai.metaDescription,
       content: html,
       category: "Box Office",
-      tags: [movie.title, "Box Office", "First Week", "Hindi Cinema", "Bbollywood", "7 Days"].filter(Boolean),
+      tags: [movie.title, "Box Office", "First Week", "${langConfig.adjective} Cinema", "${langConfig.industry}", "7 Days"].filter(Boolean),
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId,
       movieTitle: movie.title,
@@ -8426,6 +8457,7 @@ async function maybeGenerateFirstWeekBlog(movie, sortedDays, totalNet, movieId) 
 }
 
 async function maybeGenerateWeekendBlog(movie, sortedDays, actualDay, totalNet, movieId) {
+  const langConfig = getLangConfig(movie.language);
   try {
     let weekendNum = 0;
     let weekendLabel = "";
@@ -8458,7 +8490,7 @@ async function maybeGenerateWeekendBlog(movie, sortedDays, actualDay, totalNet, 
     const slug = buildWeekendSlug(movie, weekendNum);
     const totalNetStr = formatINR(totalNet);
     const seed = (String(movieId) + eventType + weekendNum).split("").reduce((s, c) => s + c.charCodeAt(0), 0);
-    const title = getWeekendTitle(movie.title, weekendLabel, totalNetStr, seed);
+    const title = getWeekendTitle(movie.title, weekendLabel, totalNetStr, seed, langConfig);
 
     const relatedMovies = await fetchRelatedMovies(movie);
     const html = buildWeekendBlogHTML(movie, sortedDays, totalNet, weekendLabel, ai, slug, title, relatedMovies);
@@ -8469,7 +8501,7 @@ async function maybeGenerateWeekendBlog(movie, sortedDays, actualDay, totalNet, 
       excerpt: ai.metaDescription,
       content: html,
       category: "Box Office",
-      tags: [movie.title, "Box Office", weekendLabel, "Hindi Cinema", "Bbollywood"].filter(Boolean),
+      tags: [movie.title, "Box Office", weekendLabel, "${langConfig.adjective} Cinema", "${langConfig.industry}"].filter(Boolean),
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId,
       movieTitle: movie.title,
@@ -8503,6 +8535,7 @@ async function maybeGenerateWeekendBlog(movie, sortedDays, actualDay, totalNet, 
 }
 
 async function maybeGenerateMilestoneBlog(movie, sortedDays, totalNet, prevTotalNet, movieId) {
+  const langConfig = getLangConfig(movie.language);
   try {
     const MILESTONES = [
       { val: 1000000, key: "10L", clean: "10 Lakh" },
@@ -8530,7 +8563,7 @@ async function maybeGenerateMilestoneBlog(movie, sortedDays, totalNet, prevTotal
         const ai = await generateMilestoneAI(movie, milestone.key, totalNet);
         const slug = buildMilestoneSlug(movie, milestone.key);
         const seed = (String(movieId) + eventType + milestone.key).split("").reduce((s, c) => s + c.charCodeAt(0), 0);
-        const title = getMilestoneTitle(movie.title, milestone.clean, seed);
+        const title = getMilestoneTitle(movie.title, milestone.clean, seed, langConfig);
 
         const relatedMovies = await fetchRelatedMovies(movie);
         const html = buildMilestoneBlogHTML(movie, milestone.key, totalNet, ai, slug, title, relatedMovies, sortedDays);
@@ -8541,7 +8574,7 @@ async function maybeGenerateMilestoneBlog(movie, sortedDays, totalNet, prevTotal
           excerpt: ai.metaDescription,
           content: html,
           category: "Box Office",
-          tags: [movie.title, "Box Office", `Crosses ${milestone.clean}`, "Hindi Cinema", "Bbollywood", "Milestone", ...(ai.seoTags || "").split(",").map(t => t.trim())].filter(Boolean),
+          tags: [movie.title, "Box Office", `Crosses ${milestone.clean}`, "${langConfig.adjective} Cinema", "${langConfig.industry}", "Milestone", ...(ai.seoTags || "").split(",").map(t => t.trim())].filter(Boolean),
           coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
           movieId,
           movieTitle: movie.title,
@@ -8577,6 +8610,7 @@ async function maybeGenerateMilestoneBlog(movie, sortedDays, totalNet, prevTotal
 }
 
 async function maybeGenerateComparisonBlog(movie, sortedDays, totalNet, movieId) {
+  const langConfig = getLangConfig(movie.language);
   try {
     const eventType = "comparison-first-week";
     if (totalNet < 10000000) return; // Only for totalNet >= 1 Crore
@@ -8609,7 +8643,7 @@ async function maybeGenerateComparisonBlog(movie, sortedDays, totalNet, movieId)
     const ai = await generateComparisonAI(movie, comparators, totalNet);
     const slug = buildComparisonSlug(movie);
     const seed = (String(movieId) + eventType).split("").reduce((s, c) => s + c.charCodeAt(0), 0);
-    const title = getComparisonTitle(movie.title, seed);
+    const title = getComparisonTitle(movie.title, seed, langConfig);
 
     const relatedMovies = await fetchRelatedMovies(movie);
     const html = buildComparisonBlogHTML(movie, comparators, totalNet, ai, slug, title, relatedMovies);
@@ -8620,7 +8654,7 @@ async function maybeGenerateComparisonBlog(movie, sortedDays, totalNet, movieId)
       excerpt: ai.metaDescription,
       content: html,
       category: "Box Office",
-      tags: [movie.title, "Box Office", "First Week Comparison", "Hindi Cinema", "Bbollywood"].filter(Boolean),
+      tags: [movie.title, "Box Office", "First Week Comparison", "${langConfig.adjective} Cinema", "${langConfig.industry}"].filter(Boolean),
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId,
       movieTitle: movie.title,
@@ -8672,44 +8706,44 @@ function buildJubileeSlug(movie, type) {
   return trimSlugToLength(`${movie.slug}-${label}-box-office`, 80);
 }
 
-function getSecondWeekTitle(movieTitle, totalNetStr, week2NetStr, seed) {
+function getSecondWeekTitle(movieTitle, totalNetStr, week2NetStr, seed, langConfig) {
   const templates = [
     `${movieTitle} Second Week Box Office: ${week2NetStr} in Week 2, ${totalNetStr} Total`,
     `${movieTitle} Completes Second Week — ${totalNetStr} Cumulative Net Collection Report`,
     `${movieTitle} 2nd Week Box Office Verdict: Strong Hold or Steep Drop? Full Analysis`,
-    `${movieTitle} Two Weeks at Bbollywood Box Office: Complete Day-Wise Collection Report`,
+    `${movieTitle} Two Weeks at ${langConfig.industry} Box Office: Complete Day-Wise Collection Report`,
     `${movieTitle} Second Week: Audience Hold \u0026 Box Office Performance Analysis`
   ];
   return templates[seed % templates.length];
 }
-function getThirdWeekTitle(movieTitle, totalNetStr, seed) {
+function getThirdWeekTitle(movieTitle, totalNetStr, seed, langConfig) {
   const templates = [
     `${movieTitle} Third Week Box Office: ${totalNetStr} Total Net — Extended Run Analysis`,
     `${movieTitle} Completes 3 Weeks in Theatres — ${totalNetStr} Net Cumulative Report`,
-    `${movieTitle} 21 Days at Hindi Box Office: Third Week Collection \u0026 Audience Verdict`,
+    `${movieTitle} 21 Days at ${langConfig.adjective} Box Office: Third Week Collection \u0026 Audience Verdict`,
     `${movieTitle} Three-Week Box Office Report: Sustained Run \u0026 Future Outlook`,
     `${movieTitle} Third Week Collection — ${totalNetStr} Net and Still Running Strong`
   ];
   return templates[seed % templates.length];
 }
-function getFourthWeekTitle(movieTitle, totalNetStr, seed) {
+function getFourthWeekTitle(movieTitle, totalNetStr, seed, langConfig) {
   const templates = [
     `${movieTitle} Fourth Week Box Office: ${totalNetStr} Total — Remarkable Theatrical Run`,
-    `${movieTitle} Completes 4 Weeks: ${totalNetStr} Net in an Extraordinary Bbollywood Run`,
+    `${movieTitle} Completes 4 Weeks: ${totalNetStr} Net in an Extraordinary ${langConfig.industry} Run`,
     `${movieTitle} 28 Days in Theatres — Fourth Week Box Office Report \u0026 Legacy Analysis`,
-    `${movieTitle} Fourth Week at Box Office: A Landmark Run in Hindi Cinema History`,
+    `${movieTitle} Fourth Week at Box Office: A Landmark Run in ${langConfig.adjective} Cinema History`,
     `${movieTitle} Month-Long Theatrical Run: Fourth Week Collection \u0026 Final Verdict`
   ];
   return templates[seed % templates.length];
 }
-function getJubileeTitle(movieTitle, days, totalNetStr, seed) {
+function getJubileeTitle(movieTitle, days, totalNetStr, seed, langConfig) {
   const jubileeLabel = days === 25 ? "Silver Jubilee" : "Golden Jubilee";
   const dayLabel = days === 25 ? "25 Days" : "50 Days";
   const templates = [
     `${movieTitle} ${jubileeLabel}! ${dayLabel} at Box Office — ${totalNetStr} Net Collection`,
-    `${movieTitle} Celebrates ${jubileeLabel}: ${dayLabel} Theatrical Run in Bbollywood History`,
+    `${movieTitle} Celebrates ${jubileeLabel}: ${dayLabel} Theatrical Run in ${langConfig.industry} History`,
     `${movieTitle} ${jubileeLabel} Box Office Report: ${totalNetStr} Net After ${dayLabel}`,
-    `${movieTitle} Scripts ${jubileeLabel} — A Historic ${dayLabel} Run at Hindi Box Office`,
+    `${movieTitle} Scripts ${jubileeLabel} — A Historic ${dayLabel} Run at ${langConfig.adjective} Box Office`,
     `${movieTitle} ${dayLabel} \u0026 ${jubileeLabel}: Complete Box Office Report \u0026 Legacy Analysis`
   ];
   return templates[seed % templates.length];
@@ -8717,6 +8751,7 @@ function getJubileeTitle(movieTitle, days, totalNetStr, seed) {
 
 // ── AI Content Generators ────────────────────────────────────────────────────
 async function generateSecondWeekAI(movie, days, totalNet) {
+  const langConfig = getLangConfig(movie.language);
   const movieName = movie.title;
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const totalNetStr = formatINR(totalNet);
@@ -8737,18 +8772,18 @@ async function generateSecondWeekAI(movie, days, totalNet) {
   const fallbacks = {
     metaDescription: `${movieName} Second Week Box Office: ${week2Str} in Week 2, total ${totalNetStr} net. Week-on-week drop ${dropPct}%. Full analysis inside.`,
     headline: `${movieName} Second Week: ${week2Str} and a Box Office Run That Commands Respect`,
-    introParagraph: `${movieName}${year ? ` (${year})` : ""} has completed its second week in Hindi theatres, and the numbers paint a revealing picture of where this film stands in the hearts of Hindi audiences. The second seven-day window added ${week2Str} to the cumulative total, pushing the film's overall net collection to ${totalNetStr}. After the initial burst of opening excitement, Week 2 is always the moment of truth — and ${movieName} has faced it with the kind of composure that distinguishes a genuinely content-driven release from an opening-weekend flash-in-the-pan.`,
-    weekOneTwoComparison: `The week-on-week comparison tells the most important story. ${movieName} collected ${week1Str} in its first seven days and followed that with ${week2Str} in Week 2 — a drop of approximately ${dropPct}%. In the Hindi theatrical market, a Week 2 drop of under 50% is considered a strong hold; anything above 65% signals a front-loaded film that struggled to sustain word-of-mouth. A ${dropPct}% drop places ${movieName} in the category that distributors and exhibitors watch most closely: a film with genuine legs.`,
-    mondayHoldSection: `${mondayHold ? `The Monday (Day 8) figure of ${mondayHold.split(": ")[1] || "—"} was particularly significant, as Monday collections are considered the purest indicator of true word-of-mouth — they represent viewers who chose to visit the theatre not because of promotional buzz but because of what friends and family told them about the film. A strong Monday hold from any Hindi release immediately signals to exhibitors that they should consider maintaining or even expanding screen availability for the rest of Week 2.` : `The early days of Week 2 were the critical test for ${movieName} — weekday audiences post-opening buzz are among the most discerning in the Hindi cinema market, coming to theatres purely on the strength of personal recommendations rather than promotional noise.`}`,
-    weekendContribution: `The second weekend — Days 12 through 14 — provided an important secondary lift for ${movieName}. ${day14 ? `The film closed its second week with a Day 14 collection of ${day14.net || "N/A"}, ` : ""}signalling that weekend audiences are still choosing this film over competing releases. Second weekends in Bbollywood are becoming increasingly vital, as the OTT announcement cycle means audiences are acutely aware of when a film will leave theatres — and those who genuinely want the theatrical experience are making a point of catching it before that window closes.`,
-    audienceProfileWeek2: `The demographic profile of ${movieName}'s Week 2 audience has shifted subtly from its first-week composition. The initial front-loaded audience — fans of the lead actors, genre enthusiasts, early-adopter cinephiles — has given way to a broader family demographic drawn by the positive word-of-mouth that spread through Hindi social media and community networks during the first week. This demographic shift is healthy and sustainable — it suggests the film's appeal extends well beyond its core fanbase.`,
-    industryReadSection: `For Bbollywood, ${movieName}'s Week 2 performance carries meaningful industry implications. The Hindi theatrical ecosystem depends critically on films sustaining screen count into their second week — a Week 2 drop of over 70% typically triggers mass screen releases, compressing the film's lifetime theatrical window dramatically. The fact that ${movieName} is holding well enough to warrant continued exhibition is an encouraging signal for the entire industry.`,
-    week3OutlookSection: `As ${movieName} moves into its third week, the key variables to watch are screen count, competition from new Hindi or Hindi releases, and whether the OTT announcement has been made. Films at this stage with ${totalNetStr} in total net typically add between 20-35% more in their remaining theatrical run, depending on these factors. Week 3 weekend numbers will be the final major test of the film's sustained audience appeal.`,
-    conclusionParagraph: `Two weeks in, ${movieName}'s total net of ${totalNetStr} is a testament to the film's content quality and the authenticity of its audience connection. The week-on-week performance data tells a story of a film that opened promisingly, held reasonably, and continues to draw Hindi cinema lovers to the big screen. For the creative team, the cast, and the producers, this second-week report is something to be read with genuine satisfaction.`
+    introParagraph: `${movieName}${year ? ` (${year})` : ""} has completed its second week in ${langConfig.adjective} theatres, and the numbers paint a revealing picture of where this film stands in the hearts of ${langConfig.adjective} audiences. The second seven-day window added ${week2Str} to the cumulative total, pushing the film's overall net collection to ${totalNetStr}. After the initial burst of opening excitement, Week 2 is always the moment of truth — and ${movieName} has faced it with the kind of composure that distinguishes a genuinely content-driven release from an opening-weekend flash-in-the-pan.`,
+    weekOneTwoComparison: `The week-on-week comparison tells the most important story. ${movieName} collected ${week1Str} in its first seven days and followed that with ${week2Str} in Week 2 — a drop of approximately ${dropPct}%. In the ${langConfig.adjective} theatrical market, a Week 2 drop of under 50% is considered a strong hold; anything above 65% signals a front-loaded film that struggled to sustain word-of-mouth. A ${dropPct}% drop places ${movieName} in the category that distributors and exhibitors watch most closely: a film with genuine legs.`,
+    mondayHoldSection: `${mondayHold ? `The Monday (Day 8) figure of ${mondayHold.split(": ")[1] || "—"} was particularly significant, as Monday collections are considered the purest indicator of true word-of-mouth — they represent viewers who chose to visit the theatre not because of promotional buzz but because of what friends and family told them about the film. A strong Monday hold from any ${langConfig.adjective} release immediately signals to exhibitors that they should consider maintaining or even expanding screen availability for the rest of Week 2.` : `The early days of Week 2 were the critical test for ${movieName} — weekday audiences post-opening buzz are among the most discerning in the ${langConfig.adjective} cinema market, coming to theatres purely on the strength of personal recommendations rather than promotional noise.`}`,
+    weekendContribution: `The second weekend — Days 12 through 14 — provided an important secondary lift for ${movieName}. ${day14 ? `The film closed its second week with a Day 14 collection of ${day14.net || "N/A"}, ` : ""}signalling that weekend audiences are still choosing this film over competing releases. Second weekends in ${langConfig.industry} are becoming increasingly vital, as the OTT announcement cycle means audiences are acutely aware of when a film will leave theatres — and those who genuinely want the theatrical experience are making a point of catching it before that window closes.`,
+    audienceProfileWeek2: `The demographic profile of ${movieName}'s Week 2 audience has shifted subtly from its first-week composition. The initial front-loaded audience — fans of the lead actors, genre enthusiasts, early-adopter cinephiles — has given way to a broader family demographic drawn by the positive word-of-mouth that spread through ${langConfig.adjective} social media and community networks during the first week. This demographic shift is healthy and sustainable — it suggests the film's appeal extends well beyond its core fanbase.`,
+    industryReadSection: `For ${langConfig.industry}, ${movieName}'s Week 2 performance carries meaningful industry implications. The ${langConfig.adjective} theatrical ecosystem depends critically on films sustaining screen count into their second week — a Week 2 drop of over 70% typically triggers mass screen releases, compressing the film's lifetime theatrical window dramatically. The fact that ${movieName} is holding well enough to warrant continued exhibition is an encouraging signal for the entire industry.`,
+    week3OutlookSection: `As ${movieName} moves into its third week, the key variables to watch are screen count, competition from new ${langConfig.adjective} or ${langConfig.adjective} releases, and whether the OTT announcement has been made. Films at this stage with ${totalNetStr} in total net typically add between 20-35% more in their remaining theatrical run, depending on these factors. Week 3 weekend numbers will be the final major test of the film's sustained audience appeal.`,
+    conclusionParagraph: `Two weeks in, ${movieName}'s total net of ${totalNetStr} is a testament to the film's content quality and the authenticity of its audience connection. The week-on-week performance data tells a story of a film that opened promisingly, held reasonably, and continues to draw ${langConfig.adjective} cinema lovers to the big screen. For the creative team, the cast, and the producers, this second-week report is something to be read with genuine satisfaction.`
   };
 
-  const systemPrompt = "You are a senior Hindi cinema (Bbollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic authority. Avoid AI clichés. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text with no HTML tags. Every paragraph must be at least 5-7 full sentences.";
-  const userPrompt = `Write a second week box office report for the Hindi movie "${movieName}" (${year}).
+  const systemPrompt = "You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic authority. Avoid AI clichés. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text with no HTML tags. Every paragraph must be at least 5-7 full sentences.";
+  const userPrompt = `Write a second week box office report for the ${langConfig.adjective} movie "${movieName}" (${year}).
 Week 1 total: ${week1Str}. Week 2 total: ${week2Str}. Week-on-week drop: ${dropPct}%.
 Week 2 day-wise data: ${week2DataStr}. Cumulative total after 2 weeks: ${totalNetStr}.
 
@@ -8764,6 +8799,7 @@ Include JSON keys: metaDescription, headline, introParagraph, weekOneTwoComparis
 }
 
 async function generateThirdWeekAI(movie, days, totalNet) {
+  const langConfig = getLangConfig(movie.language);
   const movieName = movie.title;
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const totalNetStr = formatINR(totalNet);
@@ -8777,19 +8813,19 @@ async function generateThirdWeekAI(movie, days, totalNet) {
   const week3DataStr = week3Days.map(d => `Day ${d.day}: ${d.net || "N/A"}`).join("; ");
 
   const fallbacks = {
-    metaDescription: `${movieName} Third Week Box Office: ${week3Str} in Week 3, total ${totalNetStr} net after 21 days. Complete analysis of this extended Bbollywood run.`,
+    metaDescription: `${movieName} Third Week Box Office: ${week3Str} in Week 3, total ${totalNetStr} net after 21 days. Complete analysis of this extended ${langConfig.industry} run.`,
     headline: `${movieName} Third Week: ${week3Str} More at Box Office — 21 Days and Still Running`,
-    introParagraph: `${movieName}${year ? ` (${year})` : ""} has completed 21 days in Hindi theatres — a milestone that most Hindi releases never reach in today's compressed theatrical environment. The third week added ${week3Str} to the cumulative total, pushing the film's lifetime net to ${totalNetStr}. In an era where OTT platforms announce their streaming dates within weeks of a film's theatrical release, a film that sustains audience interest deep into its third week has achieved something genuinely exceptional.`,
-    sustainedRunAnalysis: `The theatrical journey of ${movieName} through three full weeks — Week 1 (${week1Str}), Week 2 (${week2Str}), Week 3 (${week3Str}) — tells a compelling story about a film that found its audience not through marketing alone but through the most reliable force in cinema: genuine word-of-mouth. ${week3DataStr ? `The Week 3 day-wise breakdown (${week3DataStr}) shows ` : "The Week 3 pattern shows "}the kind of steady, loyal trickle of audience that characterises an Hindi film that has become part of community conversation — discussed at family gatherings, recommended by friends, and sought out by those who missed it in the first two weekends.`,
-    repeatViewerSection: `Films that sustain theatrical runs into their third week in India are almost always driven significantly by repeat viewers — people who saw the film in its first or second week and returned because the experience merited a second, or even third, theatrical viewing. This repeat-viewing phenomenon is rare in contemporary Hindi cinema and represents one of the highest possible compliments an audience can pay to a film. For ${movieName}, reaching Week 3 with meaningful occupancy is evidence of this deep, lasting connection.`,
-    screenCountContext: `The screen count story for ${movieName} by Week 3 will likely reflect a consolidation — fewer screens than Week 1 but those that remain are seeing higher occupancy rates than many newer releases. This is the natural ecology of a long-running film: it may lose breadth (number of screens) while gaining depth (occupancy percentage on available screens). Theatre owners in major India centres — Mumbai, Delhi, Bengaluru — are among the most experienced readers of audience data in the Hindi circuit, and their decision to continue programming ${movieName} into Week 3 is its own form of industry endorsement.`,
-    industryMilestoneSection: `In the contemporary Bbollywood landscape, most commercially successful films complete their active theatrical run in 10-14 days. For ${movieName} to extend that window to 21 days places it in a select group of recent Hindi releases that have demonstrated multi-week durability. This durability has ripple effects across the industry: it raises the ceiling of expectation for future productions, strengthens the case for larger theatrical windows before OTT releases, and gives producers and distributors a benchmark for what sustained quality content can achieve.`,
-    lifetimePrediction: `Based on Week 3 trajectory, ${movieName}'s lifetime theatrical collection is now taking clear shape. Films at this stage typically add their final 10-20% in Week 4 and beyond, driven by B-centre and C-centre audiences in smaller India districts and towns who tend to come later in a film's run. The total net of ${totalNetStr} after 21 days positions ${movieName} for a lifetime collection that reflects genuine commercial success for an Hindi language production.`,
-    conclusionParagraph: `The third week of ${movieName} at the Hindi box office is not merely a collection report — it is a statement about the quality of Hindi cinema and the sophistication of Hindi audiences. A film that still draws paying viewers in Week 3 has earned its place in the recent history of Bbollywood, and the ${totalNetStr} cumulative total after 21 days is a number that will be referenced as a benchmark for years to come.`
+    introParagraph: `${movieName}${year ? ` (${year})` : ""} has completed 21 days in ${langConfig.adjective} theatres — a milestone that most ${langConfig.adjective} releases never reach in today's compressed theatrical environment. The third week added ${week3Str} to the cumulative total, pushing the film's lifetime net to ${totalNetStr}. In an era where OTT platforms announce their streaming dates within weeks of a film's theatrical release, a film that sustains audience interest deep into its third week has achieved something genuinely exceptional.`,
+    sustainedRunAnalysis: `The theatrical journey of ${movieName} through three full weeks — Week 1 (${week1Str}), Week 2 (${week2Str}), Week 3 (${week3Str}) — tells a compelling story about a film that found its audience not through marketing alone but through the most reliable force in cinema: genuine word-of-mouth. ${week3DataStr ? `The Week 3 day-wise breakdown (${week3DataStr}) shows ` : "The Week 3 pattern shows "}the kind of steady, loyal trickle of audience that characterises an ${langConfig.adjective} film that has become part of community conversation — discussed at family gatherings, recommended by friends, and sought out by those who missed it in the first two weekends.`,
+    repeatViewerSection: `Films that sustain theatrical runs into their third week in India are almost always driven significantly by repeat viewers — people who saw the film in its first or second week and returned because the experience merited a second, or even third, theatrical viewing. This repeat-viewing phenomenon is rare in contemporary ${langConfig.adjective} cinema and represents one of the highest possible compliments an audience can pay to a film. For ${movieName}, reaching Week 3 with meaningful occupancy is evidence of this deep, lasting connection.`,
+    screenCountContext: `The screen count story for ${movieName} by Week 3 will likely reflect a consolidation — fewer screens than Week 1 but those that remain are seeing higher occupancy rates than many newer releases. This is the natural ecology of a long-running film: it may lose breadth (number of screens) while gaining depth (occupancy percentage on available screens). Theatre owners in major India centres — Mumbai, Delhi, Bengaluru — are among the most experienced readers of audience data in the ${langConfig.adjective} circuit, and their decision to continue programming ${movieName} into Week 3 is its own form of industry endorsement.`,
+    industryMilestoneSection: `In the contemporary ${langConfig.industry} landscape, most commercially successful films complete their active theatrical run in 10-14 days. For ${movieName} to extend that window to 21 days places it in a select group of recent ${langConfig.adjective} releases that have demonstrated multi-week durability. This durability has ripple effects across the industry: it raises the ceiling of expectation for future productions, strengthens the case for larger theatrical windows before OTT releases, and gives producers and distributors a benchmark for what sustained quality content can achieve.`,
+    lifetimePrediction: `Based on Week 3 trajectory, ${movieName}'s lifetime theatrical collection is now taking clear shape. Films at this stage typically add their final 10-20% in Week 4 and beyond, driven by B-centre and C-centre audiences in smaller India districts and towns who tend to come later in a film's run. The total net of ${totalNetStr} after 21 days positions ${movieName} for a lifetime collection that reflects genuine commercial success for an ${langConfig.adjective} language production.`,
+    conclusionParagraph: `The third week of ${movieName} at the ${langConfig.adjective} box office is not merely a collection report — it is a statement about the quality of ${langConfig.adjective} cinema and the sophistication of ${langConfig.adjective} audiences. A film that still draws paying viewers in Week 3 has earned its place in the recent history of ${langConfig.industry}, and the ${totalNetStr} cumulative total after 21 days is a number that will be referenced as a benchmark for years to come.`
   };
 
-  const systemPrompt = "You are a senior Hindi cinema journalist writing a third-week box office analysis for The Cinema Verse. Emphasise the exceptional nature of a three-week Hindi theatrical run. Write with genuine editorial authority. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.";
-  const userPrompt = `Third week box office report for the Hindi movie "${movieName}" (${year}).
+  const systemPrompt = "You are a senior ${langConfig.adjective} cinema journalist writing a third-week box office analysis for The Cinema Verse. Emphasise the exceptional nature of a three-week ${langConfig.adjective} theatrical run. Write with genuine editorial authority. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.";
+  const userPrompt = `Third week box office report for the ${langConfig.adjective} movie "${movieName}" (${year}).
 Week 1: ${week1Str}. Week 2: ${week2Str}. Week 3: ${week3Str}. Total after 21 days: ${totalNetStr}.
 Week 3 day-wise: ${week3DataStr}.
 
@@ -8805,6 +8841,7 @@ JSON keys: metaDescription, headline, introParagraph, sustainedRunAnalysis, repe
 }
 
 async function generateFourthWeekAI(movie, days, totalNet) {
+  const langConfig = getLangConfig(movie.language);
   const movieName = movie.title;
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const totalNetStr = formatINR(totalNet);
@@ -8819,17 +8856,17 @@ async function generateFourthWeekAI(movie, days, totalNet) {
   ];
 
   const fallbacks = {
-    metaDescription: `${movieName} Fourth Week Box Office: ${week4Str} in Week 4, total ${totalNetStr} after 28 days. Rare extended run analysis for this Hindi cinema landmark.`,
-    headline: `${movieName} Completes Four Weeks: ${totalNetStr} Total — A Landmark Hindi Theatrical Run`,
-    introParagraph: `${movieName}${year ? ` (${year})` : ""} has completed a full four weeks in Hindi theatres — a feat that is extraordinarily rare in contemporary Bbollywood. Adding ${week4Str} in its fourth week, the film's cumulative net has reached ${totalNetStr}, making this one of the most sustained theatrical runs in recent Hindi cinema history. Week 1 delivered ${weeklyTotals[0]}, Week 2 added ${weeklyTotals[1]}, Week 3 contributed ${weeklyTotals[2]}, and now Week 4 rounds out this remarkable journey with ${week4Str} more.`,
-    historicalContextSection: `Four-week theatrical runs are not merely commercial achievements in Bbollywood — they are cultural events. When an Hindi film sustains audience attention for 28 consecutive days, it enters the conversation of films that have genuinely shaped the sensibility of their era. In the OTT age, where a film's digital release often follows within weeks of its theatrical premiere, a four-week run signals one thing above all else: this film was worth the theatre experience, again and again.`,
-    legacySection: `The legacy of ${movieName} at the Hindi box office will be debated and discussed in trade circles and among cinema lovers for a long time. A four-week run produces a specific kind of cultural imprint — it means the film was discussed at workplaces and family dinners across India for an entire month, that multiple generations within the same family went to watch it at different points during its run, and that it was good enough to be recommended by someone every single day for 28 days.`,
-    finalVerdict: `After four full weeks, ${movieName}'s total net of ${totalNetStr} represents not just a financial milestone but an audience verdict delivered through the most democratic medium available — the movie ticket. This number will stand as one of the notable Hindi box office achievements in recent memory, and it reflects the hard work of every single member of the production — from the director to the junior technician.`,
-    conclusionParagraph: `As ${movieName}'s fourth week concludes, it does so with the quiet confidence of a film that never needed validation — it earned it. The ${totalNetStr} in cumulative net collection after 28 days is a number worth celebrating, and the fact that Hindi audiences chose this film, repeatedly, over the course of a full month, is the most meaningful review that any film — and any filmmaker — could ever receive.`
+    metaDescription: `${movieName} Fourth Week Box Office: ${week4Str} in Week 4, total ${totalNetStr} after 28 days. Rare extended run analysis for this ${langConfig.adjective} cinema landmark.`,
+    headline: `${movieName} Completes Four Weeks: ${totalNetStr} Total — A Landmark ${langConfig.adjective} Theatrical Run`,
+    introParagraph: `${movieName}${year ? ` (${year})` : ""} has completed a full four weeks in ${langConfig.adjective} theatres — a feat that is extraordinarily rare in contemporary ${langConfig.industry}. Adding ${week4Str} in its fourth week, the film's cumulative net has reached ${totalNetStr}, making this one of the most sustained theatrical runs in recent ${langConfig.adjective} cinema history. Week 1 delivered ${weeklyTotals[0]}, Week 2 added ${weeklyTotals[1]}, Week 3 contributed ${weeklyTotals[2]}, and now Week 4 rounds out this remarkable journey with ${week4Str} more.`,
+    historicalContextSection: `Four-week theatrical runs are not merely commercial achievements in ${langConfig.industry} — they are cultural events. When an ${langConfig.adjective} film sustains audience attention for 28 consecutive days, it enters the conversation of films that have genuinely shaped the sensibility of their era. In the OTT age, where a film's digital release often follows within weeks of its theatrical premiere, a four-week run signals one thing above all else: this film was worth the theatre experience, again and again.`,
+    legacySection: `The legacy of ${movieName} at the ${langConfig.adjective} box office will be debated and discussed in trade circles and among cinema lovers for a long time. A four-week run produces a specific kind of cultural imprint — it means the film was discussed at workplaces and family dinners across India for an entire month, that multiple generations within the same family went to watch it at different points during its run, and that it was good enough to be recommended by someone every single day for 28 days.`,
+    finalVerdict: `After four full weeks, ${movieName}'s total net of ${totalNetStr} represents not just a financial milestone but an audience verdict delivered through the most democratic medium available — the movie ticket. This number will stand as one of the notable ${langConfig.adjective} box office achievements in recent memory, and it reflects the hard work of every single member of the production — from the director to the junior technician.`,
+    conclusionParagraph: `As ${movieName}'s fourth week concludes, it does so with the quiet confidence of a film that never needed validation — it earned it. The ${totalNetStr} in cumulative net collection after 28 days is a number worth celebrating, and the fact that ${langConfig.adjective} audiences chose this film, repeatedly, over the course of a full month, is the most meaningful review that any film — and any filmmaker — could ever receive.`
   };
 
-  const systemPrompt = "You are a senior Hindi cinema journalist covering an extraordinary four-week box office run. Write with genuine editorial gravitas — this is a landmark moment for Bbollywood. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.";
-  const userPrompt = `Fourth week box office report for the Hindi movie "${movieName}" (${year}).
+  const systemPrompt = "You are a senior ${langConfig.adjective} cinema journalist covering an extraordinary four-week box office run. Write with genuine editorial gravitas — this is a landmark moment for ${langConfig.industry}. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.";
+  const userPrompt = `Fourth week box office report for the ${langConfig.adjective} movie "${movieName}" (${year}).
 Weekly breakdown — Week 1: ${weeklyTotals[0]}, Week 2: ${weeklyTotals[1]}, Week 3: ${weeklyTotals[2]}, Week 4: ${week4Str}.
 Total after 28 days: ${totalNetStr}.
 
@@ -8845,6 +8882,7 @@ JSON keys: metaDescription, headline, introParagraph, historicalContextSection, 
 }
 
 async function generateJubileeAI(movie, days, totalNet, jubileeType) {
+  const langConfig = getLangConfig(movie.language);
   const movieName = movie.title;
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const totalNetStr = formatINR(totalNet);
@@ -8854,18 +8892,18 @@ async function generateJubileeAI(movie, days, totalNet, jubileeType) {
   const recentDays = days.slice(-3).map(d => `Day ${d.day}: ${d.net || "—"}`).join(", ");
 
   const fallbacks = {
-    metaDescription: `${movieName} celebrates its ${jubileeName} — ${dayCount} days at the Hindi box office with ${totalNetStr} total net collection. A historic milestone for Bbollywood!`,
-    headline: `${movieName} ${jubileeType === "silver" ? "Silver Jubilee" : "Golden Jubilee"}: ${dayCount} Days of Pure Cinematic Triumph at the Hindi Box Office`,
-    introParagraph: `${movieName}${year ? ` (${year})` : ""} has achieved the extraordinary milestone of completing ${dayCount} days in Hindi theatres — officially crossing into ${jubileeName} territory. With a cumulative net collection of ${totalNetStr} and counting, this film has transcended the ordinary commercial lifecycle to become a genuine cultural event in Hindi cinema. The ${jubileeName} is not just a box office milestone; it is an acknowledgement from Hindi audiences that this film has something irreplaceable to offer — something worth returning to the cinema for, day after day, week after week.`,
-    jubileeSignificanceSection: `The ${jubileeName} milestone carries a meaning in cinema that goes far beyond simple arithmetic. A ${dayCount}-day theatrical run means that this film has been in active exhibition across India through multiple weekends, multiple festive occasions, and multiple rounds of competition from newer releases — and has survived and thrived through all of them. In contemporary Bbollywood, where the average theatrical window has compressed to fewer than 14 days for most releases, completing ${dayCount} days is a statement of exceptional durability and quality.`,
-    journeyNarrativeSection: `The journey of ${movieName} from its first day — when it opened with ${openingDayNet} — to this ${jubileeName} milestone is the kind of box office story that enriches the folklore of Hindi cinema. Recent daily figures (${recentDays}) confirm that this film continues to attract paying audiences even at this advanced stage of its theatrical run — a phenomenon driven not by promotional push but by the organic, unstoppable force of genuine audience admiration.`,
-    industryMilestoneSection: `The ${jubileeName} of ${movieName} will be studied and referenced in Bbollywood industry conversations for years. It establishes a new benchmark for what sustained theatrical success looks like in the Hindi language market, and it signals to investors, producers, and OTT platforms alike that quality Hindi content can generate the kind of long-term cultural engagement that no algorithm can manufacture. The film's ${totalNetStr} total collection is secondary to what it represents: proof that Hindi audiences will sustain their cinema-going commitment for a film that truly connects with them.`,
-    filmmakerLegacySection: `For the director, the lead cast, and the entire production team of ${movieName}, the ${jubileeName} is an achievement that will define their professional legacy. In a film industry where box office verdicts are often delivered within 72 hours of release, reaching ${dayCount} days means this creative team's work has been embraced and celebrated by Hindi audiences across generations, geographies, and demographics — a validation that extends far beyond any numerical milestone.`,
-    conclusionParagraph: `As ${movieName} marks its ${jubileeName} at the Hindi box office, Bbollywood has reason to celebrate — not just the success of one film, but what that success says about the state of Hindi cinema and the appetite of Hindi audiences for authentic, well-crafted storytelling. The ${totalNetStr} cumulative net collection after ${dayCount} days is a historic number, and this ${jubileeName} will be remembered as one of the defining box office moments in recent Hindi film history.`
+    metaDescription: `${movieName} celebrates its ${jubileeName} — ${dayCount} days at the ${langConfig.adjective} box office with ${totalNetStr} total net collection. A historic milestone for ${langConfig.industry}!`,
+    headline: `${movieName} ${jubileeType === "silver" ? "Silver Jubilee" : "Golden Jubilee"}: ${dayCount} Days of Pure Cinematic Triumph at the ${langConfig.adjective} Box Office`,
+    introParagraph: `${movieName}${year ? ` (${year})` : ""} has achieved the extraordinary milestone of completing ${dayCount} days in ${langConfig.adjective} theatres — officially crossing into ${jubileeName} territory. With a cumulative net collection of ${totalNetStr} and counting, this film has transcended the ordinary commercial lifecycle to become a genuine cultural event in ${langConfig.adjective} cinema. The ${jubileeName} is not just a box office milestone; it is an acknowledgement from ${langConfig.adjective} audiences that this film has something irreplaceable to offer — something worth returning to the cinema for, day after day, week after week.`,
+    jubileeSignificanceSection: `The ${jubileeName} milestone carries a meaning in cinema that goes far beyond simple arithmetic. A ${dayCount}-day theatrical run means that this film has been in active exhibition across India through multiple weekends, multiple festive occasions, and multiple rounds of competition from newer releases — and has survived and thrived through all of them. In contemporary ${langConfig.industry}, where the average theatrical window has compressed to fewer than 14 days for most releases, completing ${dayCount} days is a statement of exceptional durability and quality.`,
+    journeyNarrativeSection: `The journey of ${movieName} from its first day — when it opened with ${openingDayNet} — to this ${jubileeName} milestone is the kind of box office story that enriches the folklore of ${langConfig.adjective} cinema. Recent daily figures (${recentDays}) confirm that this film continues to attract paying audiences even at this advanced stage of its theatrical run — a phenomenon driven not by promotional push but by the organic, unstoppable force of genuine audience admiration.`,
+    industryMilestoneSection: `The ${jubileeName} of ${movieName} will be studied and referenced in ${langConfig.industry} industry conversations for years. It establishes a new benchmark for what sustained theatrical success looks like in the ${langConfig.adjective} language market, and it signals to investors, producers, and OTT platforms alike that quality ${langConfig.adjective} content can generate the kind of long-term cultural engagement that no algorithm can manufacture. The film's ${totalNetStr} total collection is secondary to what it represents: proof that ${langConfig.adjective} audiences will sustain their cinema-going commitment for a film that truly connects with them.`,
+    filmmakerLegacySection: `For the director, the lead cast, and the entire production team of ${movieName}, the ${jubileeName} is an achievement that will define their professional legacy. In a film industry where box office verdicts are often delivered within 72 hours of release, reaching ${dayCount} days means this creative team's work has been embraced and celebrated by ${langConfig.adjective} audiences across generations, geographies, and demographics — a validation that extends far beyond any numerical milestone.`,
+    conclusionParagraph: `As ${movieName} marks its ${jubileeName} at the ${langConfig.adjective} box office, ${langConfig.industry} has reason to celebrate — not just the success of one film, but what that success says about the state of ${langConfig.adjective} cinema and the appetite of ${langConfig.adjective} audiences for authentic, well-crafted storytelling. The ${totalNetStr} cumulative net collection after ${dayCount} days is a historic number, and this ${jubileeName} will be remembered as one of the defining box office moments in recent ${langConfig.adjective} film history.`
   };
 
-  const systemPrompt = `You are a senior Hindi cinema journalist covering a ${jubileeName} milestone — one of the rarest achievements in Bbollywood. Write with the full weight and celebration this deserves. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.`;
-  const userPrompt = `Write a ${jubileeName} box office report for the Hindi movie "${movieName}" (${year}).
+  const systemPrompt = `You are a senior ${langConfig.adjective} cinema journalist covering a ${jubileeName} milestone — one of the rarest achievements in ${langConfig.industry}. Write with the full weight and celebration this deserves. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.`;
+  const userPrompt = `Write a ${jubileeName} box office report for the ${langConfig.adjective} movie "${movieName}" (${year}).
 Days in theatres: ${dayCount}. Total net collection: ${totalNetStr}.
 Opening day collection: ${openingDayNet}. Recent daily figures: ${recentDays || "N/A"}.
 
@@ -8882,6 +8920,7 @@ JSON keys: metaDescription, headline, introParagraph, jubileeSignificanceSection
 
 // ── HTML Builders for Week Blogs ─────────────────────────────────────────────
 function buildWeekSummaryBlogHTML(movie, days, totalNet, weekNum, weekLabel, ai, slug, title, relatedMovies) {
+  const langConfig = getLangConfig(movie.language);
   const movieName = movie.title;
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const totalNetStr = formatINR(totalNet);
@@ -8920,7 +8959,7 @@ function buildWeekSummaryBlogHTML(movie, days, totalNet, weekNum, weekLabel, ai,
 
   const keywords = [
     movieName, `${movieName} ${weekLabel}`, `${movieName} box office`,
-    `${movieName} week ${weekNum} collection`, "Hindi box office", "Bbollywood"
+    `${movieName} week ${weekNum} collection`, "${langConfig.adjective} box office", "${langConfig.industry}"
   ].join(", ");
 
   return `<!-- ════════════════════════════════════════════════════════════════
@@ -9094,7 +9133,7 @@ function buildJubileblogHTML(movie, days, totalNet, jubileeType, ai, slug, title
   }).join("");
 
   const keywords = [movieName, `${movieName} ${jubileeName}`, `${movieName} ${dayCount} days`,
-    `${movieName} box office`, "Hindi box office", "Bbollywood", jubileeName].join(", ");
+    `${movieName} box office`, `${langConfig.adjective} box office`, langConfig.industry, jubileeName].join(", ");
 
   return `<!-- ════════════════════════════════════════════════════════════════
   cinemaverse SEO META — READ BY CMS
@@ -9225,6 +9264,7 @@ ${relatedMovies.length ? `
 
 // ── Orchestrators ────────────────────────────────────────────────────────────
 async function maybeGenerateWeekSummaryBlog(movie, sortedDays, totalNet, movieId, weekNum) {
+  const langConfig = getLangConfig(movie.language);
   const weekLabels = { 2: "Second Week", 3: "Third Week", 4: "Fourth Week" };
   const weekLabel = weekLabels[weekNum] || `Week ${weekNum}`;
   const eventType = `week-${weekNum}`;
@@ -9248,9 +9288,9 @@ async function maybeGenerateWeekSummaryBlog(movie, sortedDays, totalNet, movieId
     const seed = (String(movieId) + eventType).split("").reduce((s, c) => s + c.charCodeAt(0), 0);
 
     let title;
-    if (weekNum === 2) title = getSecondWeekTitle(movie.title, totalNetStr, week2Total, seed);
-    else if (weekNum === 3) title = getThirdWeekTitle(movie.title, totalNetStr, seed);
-    else title = getFourthWeekTitle(movie.title, totalNetStr, seed);
+    if (weekNum === 2) title = getSecondWeekTitle(movie.title, totalNetStr, week2Total, seed, langConfig);
+    else if (weekNum === 3) title = getThirdWeekTitle(movie.title, totalNetStr, seed, langConfig);
+    else title = getFourthWeekTitle(movie.title, totalNetStr, seed, langConfig);
 
     let slug;
     if (weekNum === 2) slug = buildSecondWeekSlug(movie);
@@ -9266,7 +9306,7 @@ async function maybeGenerateWeekSummaryBlog(movie, sortedDays, totalNet, movieId
       excerpt: ai.metaDescription,
       content: html,
       category: "Box Office",
-      tags: [movie.title, "Box Office", weekLabel, "Hindi Cinema", "Bbollywood", `${weekNum * 7} Days`].filter(Boolean),
+      tags: [movie.title, "Box Office", weekLabel, "${langConfig.adjective} Cinema", "${langConfig.industry}", `${weekNum * 7} Days`].filter(Boolean),
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId,
       movieTitle: movie.title,
@@ -9307,7 +9347,7 @@ async function maybeGenerateJubileblog(movie, sortedDays, totalNet, actualDay, m
     const slug = buildJubileeSlug(movie, jubileeType);
     const totalNetStr = formatINR(totalNet);
     const seed = (String(movieId) + eventType).split("").reduce((s, c) => s + c.charCodeAt(0), 0);
-    const title = getJubileeTitle(movie.title, dayCount, totalNetStr, seed);
+    const title = getJubileeTitle(movie.title, dayCount, totalNetStr, seed, langConfig);
 
     const relatedMovies = await fetchRelatedMovies(movie);
     const html = buildJubileblogHTML(movie, sortedDays, totalNet, jubileeType, ai, slug, title, relatedMovies);
@@ -9319,7 +9359,7 @@ async function maybeGenerateJubileblog(movie, sortedDays, totalNet, actualDay, m
       excerpt: ai.metaDescription,
       content: html,
       category: "Box Office",
-      tags: [movie.title, "Box Office", jubileeName, `${dayCount} Days`, "Hindi Cinema", "Bbollywood"].filter(Boolean),
+      tags: [movie.title, "Box Office", jubileeName, `${dayCount} Days`, `${langConfig.adjective} Cinema`, langConfig.industry].filter(Boolean),
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId,
       movieTitle: movie.title,
