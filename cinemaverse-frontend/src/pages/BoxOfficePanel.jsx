@@ -260,7 +260,7 @@ const classifyBoxOfficeDayType = (targetDay, daysUpToN, totalNet, movie) => {
 
   if (targetDay > 3) tags.push(isWeekend ? "weekend" : "weekday");
 
-  const MILESTONES_CR = [1, 2, 3, 5, 10, 15, 20, 25, 35, 50, 75, 100, 150, 200];
+  const MILESTONES_CR = [25, 50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000];
   const crossed = MILESTONES_CR.find((cr) => {
     const r = cr * 1_00_00_000;
     return prevTotalNetNum < r && (totalNet || 0) >= r;

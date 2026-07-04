@@ -147,9 +147,9 @@ const classifyBoxOfficeDayType = (day, dateStr, totalNetNum, prevTotalNetNum, mo
   }
 
   // ── Milestone detection — sub-crore AND crore marks ─────────────
-  const MILESTONES_L = [10, 25, 50, 75].map(l => l * 1_00_000);       // ₹10L..₹75L
-  const MILESTONES_CR = [1, 2, 3, 5, 10, 15, 20, 25, 35, 50, 75, 100, 150, 200]
-    .map(cr => cr * 1_00_00_000);                                        // ₹1Cr..₹200Cr
+  const MILESTONES_L = [];
+  const MILESTONES_CR = [25, 50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000]
+    .map(cr => cr * 1_00_00_000);
   const allMilestones = [...MILESTONES_L, ...MILESTONES_CR];
 
   const crossed = allMilestones.find(m => prevTotalNetNum < m && totalNetNum >= m);

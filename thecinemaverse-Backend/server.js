@@ -5288,9 +5288,9 @@ async function scrapeSacnilkForMovie(movieId) {
     }
 
     // ── Milestone detection — sub-crore AND crore marks ─────────────
-    const MILESTONES_L = [10, 25, 50, 75].map(l => l * 1_00_000);       // ₹10L..₹75L
-    const MILESTONES_CR = [1, 2, 3, 5, 10, 15, 20, 25, 35, 50, 75, 100, 150, 200]
-      .map(cr => cr * 1_00_00_000);                                        // ₹1Cr..₹200Cr
+    const MILESTONES_L = [];
+    const MILESTONES_CR = [25, 50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000]
+      .map(cr => cr * 1_00_00_000);
     const allMilestones = [...MILESTONES_L, ...MILESTONES_CR];
 
     const crossed = allMilestones.find(m => prevTotalNetNum < m && totalNetNum >= m);
@@ -5384,8 +5384,10 @@ async function scrapeSacnilkForMovie(movieId) {
         prediction: `Based on current trends, ${movie.title} is expected to maintain momentum in the coming days, especially during weekends.`,
         industryImpact: `${movie.title}'s box office run is being closely watched within Bbollywood as a marker of audience appetite for ${Array.isArray(movie.genre) ? movie.genre.join("/") : (movie.genre || "this genre")} content in Hindi cinema. A strong showing for the film would encourage producers to continue investing in similar theatrical releases for the Hindi film industry.`,
         futureOutlook: (() => {
-          if (milestoneCr)
-            return `Having just crossed the ₹${milestoneCr} Cr mark, ${movie.title} enters a new chapter in its box office story. In Hindi cinema, reaching this level is a significant achievement — the film now joins a select group of Bbollywood releases that have crossed this threshold in recent years. The next milestone to watch will be ₹${Number(milestoneCr) < 1 ? 1 : Number(milestoneCr) < 2 ? 2 : Number(milestoneCr) < 3 ? 3 : Number(milestoneCr) < 5 ? 5 : Number(milestoneCr) < 10 ? 10 : Number(milestoneCr) + 5} Cr, and whether audience momentum can carry the film there.`;
+          if (milestoneCr) {
+            const nextMilestone = [25, 50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000].find(m => m > Number(milestoneCr)) || (Number(milestoneCr) + 100);
+            return `Having just crossed the ₹${milestoneCr} Cr mark, ${movie.title} enters a new chapter in its box office story. In Hindi cinema, reaching this level is a significant achievement — the film now joins a select group of Bbollywood releases that have crossed this threshold in recent years. The next milestone to watch will be ₹${nextMilestone} Cr, and whether audience momentum can carry the film there.`;
+          }
           if (tagSet.has("approaching-ott"))
             return `With the OTT release of ${movie.title} approaching within the next week, the theatrical window is in its final days. Audiences who have been waiting to watch at home will shortly get that chance, which may slow the final few days of theatre collections. However, a digital release on a major platform will introduce the film to a far wider audience across India and among the Hindi diaspora globally.`;
           if (tagSet.has("silver-jubilee-run") || tagSet.has("extended-run"))
@@ -7328,7 +7330,9 @@ async function generateMilestoneAI(movie, milestoneLabel, totalNet, sortedDays) 
     industryImpactSection: `The commercial success of ${movieName} carries implications well beyond the immediate production house and distribution team. For Bbollywood as an ecosystem, every film that crosses the ₹${milestoneClean} threshold provides essential ammunition in the industry's ongoing case to multiplex chains, satellite buyers, OTT platforms, and production financiers that quality Hindi content can generate meaningful commercial returns. This creates a positive feedback loop encouraging larger budgets, better technical standards, and more aggressive pan-India distribution efforts.`,
     castDirectorContextSection: `Behind the ₹${milestoneClean} milestone are the creative decisions of a director and cast who believed deeply in their project at a time when every Hindi production is a calculated risk. The lead performers' investment in their characters, the director's clarity of vision, the music team's compositions, and the producer's faith in the project — each element contributed to the box office edifice that has now risen past the ₹${milestoneClean} mark. In Bbollywood, where marketing budgets are a fraction of what larger industries operate with, a film crossing this kind of milestone on the strength of content is an extraordinary achievement.`,
     futureOutlookSection: `With ${totalNetStr} already secured and the theatrical run still active, the question now turns to how much further ${movieName} can push its lifetime collection. Trade analysts tracking Bbollywood market patterns estimate that films at this stage with this level of daily activity typically continue to add between 15–25% to the current cumulative figure before screens are released. The satellite and OTT rights value of the film will also have been considerably enhanced by this box office performance, ensuring meaningful financial returns for all stakeholders.`,
-    conclusionParagraph: `The ₹${milestoneClean} milestone crossed by ${movieName} is a moment deserving of genuine celebration — for the production team, for the cast and crew, and for Hindi cinema as a whole. It is a powerful reminder that audiences in India are ready and willing to support quality content at the box office, and that Bbollywood, despite its resource constraints, is capable of producing commercially viable, artistically compelling cinema. As the theatrical run continues, the legacy of ${movieName} at the box office will be studied and referenced as a benchmark for future Hindi productions.`
+    conclusionParagraph: `The ₹${milestoneClean} milestone crossed by ${movieName} is a moment deserving of genuine celebration — for the production team, for the cast and crew, and for Hindi cinema as a whole. It is a powerful reminder that audiences in India are ready and willing to support quality content at the box office, and that Bbollywood, despite its resource constraints, is capable of producing commercially viable, artistically compelling cinema. As the theatrical run continues, the legacy of ${movieName} at the box office will be studied and referenced as a benchmark for future Hindi productions.`,
+    seoHeadline: `${movieName} Box Office Collection: Crosses ₹${milestoneClean} Milestone`,
+    seoTags: `${movieName}, ${movieName} Box Office, ₹${milestoneClean} Milestone, Hindi Cinema, Bbollywood Hit, Box Office Collection`
   };
 
   const systemPrompt = "You are a senior Hindi cinema (Bbollywood) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic warmth and authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences with specific references to the milestone, box office data, and Bbollywood industry context.";
@@ -7341,6 +7345,8 @@ Recent daily collections: ${recentStr || "not available"}.
 Write with the authority of a senior film journalist who covers Bbollywood professionally. Reference actual figures throughout. Make every paragraph feel human, analytical, and editorial.
 
 Include the following JSON keys:
+- seoHeadline (A highly searched SEO H1 headline, e.g. "Movie Name Box Office Collection: Hits X Crore")
+- seoTags (Comma-separated strong SEO keywords for this specific milestone and movie)
 - metaDescription (155–165 chars, include milestone amount and current total collection)
 - headline (celebratory editorial headline, no HTML, max 90 chars)
 - introParagraph (announce the milestone: days in run, opening day, current total, what crossing this milestone represents)
@@ -7354,7 +7360,7 @@ Include the following JSON keys:
   return callGroqStructured(
     systemPrompt,
     userPrompt,
-    ["metaDescription", "headline", "introParagraph", "milestoneSignificanceParagraph", "journeyTimelineSection", "industryImpactSection", "castDirectorContextSection", "futureOutlookSection", "conclusionParagraph"],
+    ["seoHeadline", "seoTags", "metaDescription", "headline", "introParagraph", "milestoneSignificanceParagraph", "journeyTimelineSection", "industryImpactSection", "castDirectorContextSection", "futureOutlookSection", "conclusionParagraph"],
     fallbacks,
     3500
   );
@@ -7899,12 +7905,15 @@ function buildMilestoneBlogHTML(movie, milestoneKey, totalNet, ai, slug, title, 
     ["Creative Team Context", "creative-team"],
     ["Future Outlook", "future-outlook"],
     ["Conclusion", "conclusion"],
+    ["Frequently Asked Questions", "faq"],
     relatedMovies.length ? ["Related Reads", "related-movies"] : null
   ].filter(Boolean);
 
+  const additionalTags = (ai.seoTags || "").split(",").map(t => t.trim()).filter(Boolean);
   const keywordsArr = [
     movieName, `${movieName} ${milestoneClean}`, `${movieName} box office milestone`,
-    "Hindi box office records", "Bbollywood collections"
+    `${movieName} total collection`, "Hindi box office records", "Bbollywood collections",
+    ...additionalTags
   ];
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
   const plainWordCount = Object.values(ai).join(" ").split(/\s+/).filter(Boolean).length;
@@ -8050,7 +8059,7 @@ ${EVENT_BLOG_RESPONSIVE_STYLES}
       <span style="display:inline-block;background:#1e1e1e;color:#888;font-size:0.68rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:4px 12px;border-radius:999px;border:1px solid #2a2a2a;">₹${milestoneClean}</span>
     </div>
     <h1 style="color:#fff;font-size:clamp(1.2rem,4.5vw,1.6rem);line-height:1.3;font-weight:800;margin:0 0 14px;word-break:break-word;">
-      ${title}
+      ${ai.seoHeadline || title}
     </h1>
     <p style="color:#bbb;font-size:0.98rem;line-height:1.85;margin:0 0 16px;">
       ${ai.introParagraph}
@@ -8108,6 +8117,30 @@ ${EVENT_BLOG_RESPONSIVE_STYLES}
   <p style="font-size:0.75rem;color:#555;margin-top:15px;">
     * All figures are based on estimates. Back to <a href="${movieUrl}" style="color:#c9973a;text-decoration:underline;">${movieName} Main Page</a>.
   </p>
+</section>
+
+<section id="faq" style="${css.card}">
+  <h2 style="${css.h2}">Frequently Asked Questions (FAQ)</h2>
+  <div itemscope itemtype="https://schema.org/FAQPage">
+    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" style="margin-bottom:18px;">
+      <h3 itemprop="name" style="color:#e0e0e0;font-size:1.05rem;margin-bottom:8px;font-weight:700;">What is the total box office collection of ${movieName}?</h3>
+      <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+        <p itemprop="text" style="color:#aaa;line-height:1.7;font-size:0.95rem;margin:0;">As of its latest milestone run, ${movieName} has accumulated a total net collection of <strong style="color:#10b981;">${totalNetStr}</strong> at the Hindi box office.</p>
+      </div>
+    </div>
+    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" style="margin-bottom:18px;">
+      <h3 itemprop="name" style="color:#e0e0e0;font-size:1.05rem;margin-bottom:8px;font-weight:700;">Is ${movieName} a hit or flop?</h3>
+      <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+        <p itemprop="text" style="color:#aaa;line-height:1.7;font-size:0.95rem;margin:0;">By successfully crossing the ₹${milestoneClean} mark, ${movieName} has demonstrated strong audience retention and stands as a significant commercial success.</p>
+      </div>
+    </div>
+    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+      <h3 itemprop="name" style="color:#e0e0e0;font-size:1.05rem;margin-bottom:8px;font-weight:700;">Where can I watch ${movieName} on OTT?</h3>
+      <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+        <p itemprop="text" style="color:#aaa;line-height:1.7;font-size:0.95rem;margin:0;">${movie.streamingOn ? `${movieName} is available or set to release on <strong style="color:#7ec8e3;">${movie.streamingOn}</strong>.` : `The official OTT streaming platform for ${movieName} has not been confirmed yet. Stay tuned for official digital release announcements.`}</p>
+      </div>
+    </div>
+  </div>
 </section>
 
 ${relatedMovies.length ? `
@@ -8502,14 +8535,14 @@ async function maybeGenerateMilestoneBlog(movie, sortedDays, totalNet, prevTotal
           excerpt: ai.metaDescription,
           content: html,
           category: "Box Office",
-          tags: [movie.title, "Box Office", `Crosses ${milestone.clean}`, "Hindi Cinema", "Bbollywood", "Milestone"].filter(Boolean),
+          tags: [movie.title, "Box Office", `Crosses ${milestone.clean}`, "Hindi Cinema", "Bbollywood", "Milestone", ...(ai.seoTags || "").split(",").map(t => t.trim())].filter(Boolean),
           coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
           movieId,
           movieTitle: movie.title,
           author: "The Cinema Verse Desk",
           published: true,
           featured: false,
-          seoTitle: title,
+          seoTitle: ai.seoHeadline || title,
           seoDesc: ai.metaDescription
         };
 
