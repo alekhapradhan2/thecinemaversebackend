@@ -9919,7 +9919,7 @@ app.listen(process.env.PORT || 4000, () => {
   //   SELF_URL = https://your-app-name.onrender.com
   const SELF_URL = process.env.SELF_URL;
   if (SELF_URL) {
-    const PING_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+    const PING_INTERVAL_MS = 14 * 60 * 1000; // 14 minutes (Render sleeps after 15m)
     setInterval(async () => {
       try {
         const res = await fetch(`${SELF_URL}/api/ping`);
