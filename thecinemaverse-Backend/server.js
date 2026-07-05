@@ -6401,7 +6401,7 @@ Rules:
         "@type": "Movie",
         "name":       "${movieName}",
         "url": "${SITE_URL}${boxOfficeUrl}",
-        "inLanguage": langConfig.adjective,
+        "inLanguage": "${langConfig.adjective}",
         "genre":      "${genre}"${releaseDateFmt ? `,
         "datePublished": "${releaseDateFmt}"` : ""}${directorName ? `,
         "director": { "@type": "Person", "name": "${directorName}" }` : ""}${producerName ? `,
