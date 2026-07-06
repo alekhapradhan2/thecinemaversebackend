@@ -1471,6 +1471,7 @@ function pickVariant(seed, array) {
  *  same slug (idempotent), while different movies get different suffixes.
  *  Max 60 chars total per Google URL-length guidance. */
 function buildMovieDetailsSlug(movie) {
+  const langConfig = getLangConfig(movie.language);
   const suffixes = [
     "movie-details",
     "complete-movie-guide",
@@ -2013,6 +2014,7 @@ Return a JSON object with exactly these keys (plain text only, NO HTML, NO markd
 }
 
 function buildOttBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, dateModified, relatedMovies = []) {
+  const langConfig = getLangConfig(movie.language);
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const isDateAvailable = isRealDate(movie.ottReleaseDate);
   const ottDateFmt = isDateAvailable ? formatHumanDate(movie.ottReleaseDate) : "Release Date Not Announced";
@@ -2318,6 +2320,7 @@ async function autoGenerateOttBlog(movie) {
  *  no keyword value) and capped at 90 chars so long names/platforms don't
  *  get truncated by Google with a graceful 1-lead-name fallback. */
 function buildOttLiveTitle(movie, cc) {
+  const langConfig = getLangConfig(movie.language);
   // BUGFIX: same fix as buildOttTitle — use the strictly-filtered ottCast
   // so a crew member never ends up named as a "Starrer" in the title.
   const build = (leadCount) => {
@@ -2396,6 +2399,7 @@ Return a JSON object with exactly these keys (plain text only, NO HTML, NO markd
 }
 
 function buildOttLiveBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, dateModified, relatedMovies = []) {
+  const langConfig = getLangConfig(movie.language);
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const ottDateFmt = isRealDate(movie.ottReleaseDate) ? formatHumanDate(movie.ottReleaseDate) : "Now Available";
   const poster = movie.posterUrl || movie.thumbnailUrl || movie.bannerUrl || "";
@@ -7195,6 +7199,7 @@ function buildMilestoneSlug(movie, milestoneLabel) {
 }
 
 function buildComparisonSlug(movie) {
+  const langConfig = getLangConfig(movie.language);
   return trimSlugToLength(`${movie.slug}-first-week-comparison-${langConfig.adjective.toLowerCase()}-box-office`, 80);
 }
 
@@ -9132,6 +9137,7 @@ ${relatedMovies.length ? `
 }
 
 function buildJubileblogHTML(movie, days, totalNet, jubileeType, ai, slug, title, relatedMovies) {
+  const langConfig = getLangConfig(movie.language);
   const movieName = movie.title;
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
   const totalNetStr = formatINR(totalNet);
