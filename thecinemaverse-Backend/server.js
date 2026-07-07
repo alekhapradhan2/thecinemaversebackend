@@ -5569,21 +5569,16 @@ async function scrapeSacnilkForMovie(movieId) {
   const yesterdayEntry = existingDays.find(d => d.date === yesterdayStr);
 
   // §4b  PREVIOUS STORED CUMULATIVE TOTAL
-  let previousIndiaNetNum = parseToRupeesGlobal(movie.boxOffice?.total || "0");
-  let previousOverseasNum = parseToRupeesGlobal(movie.boxOffice?.overseasCollection || "0");
-  const previousGrossNum = parseToRupeesGlobal(movie.boxOffice?.grossCollection || "0");
+  let previousIndiaNetNum = 0;
+  let previousOverseasNum = 0;
+  let previousGrossNum = 0;
 
-  if (yesterdayEntry) {
-    let sumBeforeYesterdayNet = 0;
-    let sumBeforeYesterdayOverseas = 0;
-    for (const d of existingDays) {
-      if (d.date !== yesterdayStr) {
-        sumBeforeYesterdayNet += parseToRupeesGlobal(d.net || "0");
-        sumBeforeYesterdayOverseas += parseToRupeesGlobal(d.overseas || "0");
-      }
+  for (const d of existingDays) {
+    if (d.date !== yesterdayStr) {
+      previousIndiaNetNum += parseToRupeesGlobal(d.net || "0");
+      previousOverseasNum += parseToRupeesGlobal(d.overseas || "0");
+      previousGrossNum += parseToRupeesGlobal(d.gross || "0");
     }
-    previousIndiaNetNum = sumBeforeYesterdayNet;
-    previousOverseasNum = sumBeforeYesterdayOverseas;
   }
 
   // §4c  DAILY DELTAS
@@ -5603,7 +5598,7 @@ async function scrapeSacnilkForMovie(movieId) {
       day: null,
       blogSlug: "",
       rawSnippet: "Sacnilk revised numbers downwards.",
-      error: `Data correction: India Net delta ${dailyNetNum}, Overseas delta ${dailyOverseasNum}. Deltas set to 0 to prevent negative daily values.`,
+      error: `Data correction: India Net delta ${dailyNetNum}, Overseas delta ${dailyOverseasNum}. Deltas set to 0.`,
     });
     
     dailyNetNum = Math.max(0, dailyNetNum);
@@ -5611,7 +5606,7 @@ async function scrapeSacnilkForMovie(movieId) {
   }
 
   const GST_RATE = 1.18;
-  const dailyGrossNum = Math.round(dailyNetNum * GST_RATE) + dailyOverseasNum;
+  const dailyGrossNum = Math.round(dailyNetNum * GST_RATE);
 
   const dailyNetRaw = formatINR(dailyNetNum);
   const dailyOverseasRaw = (dailyOverseasNum > 0 || scrapedOverseasNum > 0) ? formatINR(dailyOverseasNum) : "";
