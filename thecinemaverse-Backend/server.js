@@ -877,7 +877,7 @@ function findNearbyFestival(dateStr) {
 }
 
 /** Rotating SEO title builder for the "Movie Details" blog.
- *  Picks one of 10 distinct editorial-style templates deterministically
+ *  Picks one of 22 distinct editorial-style templates deterministically
  *  per movie (same movie → same template always; different movies → variety).
  *  Movie name always leads; length targets 60–90 chars. */
 function buildMovieDetailsTitle(movie) {
@@ -897,12 +897,24 @@ function buildMovieDetailsTitle(movie) {
     () => `${m}${y} — Cast, Story, Trailer, Songs & All You Need to Know`,
     () => `${m} Movie${y}: Story, Star Cast, Release Date, Music, OTT & Box Office Update`,
     () => `${m}${y}: Release Date, Cast, Crew, Trailer, Songs & Complete Movie Details`,
+    () => `${m}${y}: Complete Cast, Story, Release Date, Budget, Box Office Collection & OTT Release Details`,
+    () => `${m} Movie${y} – Full Cast, Crew, Storyline, Trailer, Songs, Budget, Collection & OTT Platform`,
+    () => `${m}${y} Complete Movie Guide: Cast, Crew, Plot, Release Date, Runtime, OTT & Box Office Updates`,
+    () => `${m} Movie Details: Story, Cast, Crew, Budget, Collection, Reviews, OTT Streaming & Latest Updates`,
+    () => `${m}${y} Full Movie Information – Plot, Cast, Crew, Songs, Budget, Collection, OTT Release & Reviews`,
+    () => `${m} Movie Review & Complete Details: Story, Release Date, Cast, Budget, OTT Streaming & Box Office`,
+    () => `${m}${y}: OTT Release Date, Streaming Platform, Cast, Crew, Story, Runtime & Collection Report`,
+    () => `${m}${y} Movie Database: Complete Cast, Story, Budget, Collection, OTT Platform & Updates`,
+    () => `${m}${y} Complete Entertainment Guide – Story, Cast, Crew, Songs, Reviews & OTT Release`,
+    () => `${m} Movie${y}: Cast & Crew, Story Explained, Budget, Collection, OTT Release & Latest Information`,
+    () => `${m}${y} Film Details: Storyline, Star Cast, Director, Producer, Music, OTT & Box Office Performance`,
+    () => `${m}${y}: Complete Movie Details, Story, Cast, Crew, Runtime, Box Office, OTT & More`,
   ];
   return pickVariant(seed, templates)();
 }
 
 /** Rotating SEO title builder for the "OTT Release Announcement" blog.
- *  Picks one of 8 distinct editorial-style templates per movie.
+ *  Picks one of 20 distinct editorial-style templates per movie.
  *  Capped at 90 chars with graceful lead-count fallback. */
 function buildOttTitle(movie, cc) {
   const langConfig = getLangConfig(movie.language);
@@ -925,6 +937,18 @@ function buildOttTitle(movie, cc) {
       () => `When Is ${m} Coming to OTT? ${platform} Streaming Date${dateStr ? ` is ${datePart}` : " Revealed"}`,
       () => `${m} on ${platform}: OTT Release Date${dateStr ? ` Confirmed as ${datePart}` : ", Cast & All Details"}`,
       () => `${m} OTT Streaming Date Revealed — ${cast} Arrives on ${platform}${dateStr ? ` on ${datePart}` : ""}`,
+      () => `Official OTT Release Announcement: ${m} to Stream on ${platform}${dateStr ? ` from ${datePart}` : ""}`,
+      () => `${m} OTT Release Confirmed — Watch ${cast} on ${platform}${dateStr ? ` Starting ${datePart}` : ""}`,
+      () => `Digital Streaming Update: ${m} Premieres on ${platform}${dateStr ? ` on ${datePart}` : " Soon"}`,
+      () => `${m} OTT Debut on ${platform}: ${cast}${dateStr ? ` — ${datePart}` : " — Date to Be Announced"}`,
+      () => `${m} Arrives on OTT: Stream on ${platform}${dateStr ? ` from ${datePart}` : " — Watch Out for Date"}`,
+      () => `OTT Launch Update: ${m} Set to Stream on ${platform}${dateStr ? ` on ${datePart}` : " — Details Inside"}`,
+      () => `Watch ${m} Online — ${platform} OTT Release${dateStr ? ` on ${datePart}` : " Date Coming Soon"}`,
+      () => `${m} Digital Premiere Guide: ${cast} on ${platform}${dateStr ? ` — Release Date ${datePart}` : ""}`,
+      () => `Latest OTT Announcement: ${m} Coming to ${platform}${dateStr ? ` on ${datePart}` : ""}`,
+      () => `${m} OTT Release Schedule on ${platform}${dateStr ? `: ${datePart}` : " — Announcement Made"}`,
+      () => `OTT News: ${m}${dateStr ? ` Streaming from ${datePart}` : " OTT Release"} on ${platform}`,
+      () => `${m} OTT Availability Update — ${cast} Streaming on ${platform}${dateStr ? ` from ${datePart}` : ""}`,
     ];
     return pickVariant(m, templates)().replace(/\s+/g, " ").trim();
   };
@@ -1011,6 +1035,13 @@ async function generateMovieDetailsAiSections(movie, cc) {
     `Start by focusing on the director's vision (${cc.director}) and the scale of the production.`,
     `Start with the story's core hook and what makes this narrative unique for ${langConfig.adjective} cinema audiences.`,
     `Start by discussing the massive anticipation, buzz, and box office expectations surrounding this release.`,
+    `Open with the genre (${genre}) and how ${movie.title} represents a new benchmark for ${langConfig.adjective} cinema in this category.`,
+    `Lead with the historical or cultural significance of this production within the ${langConfig.industry} landscape.`,
+    `Begin by describing the film's visual aesthetics, production scale, and cinematic scope before introducing the story.`,
+    `Start with a comparison to the director's (${cc.director || "filmmaker's"}) previous work and how this film marks a creative evolution.`,
+    `Open by addressing the unique story premise and how it distinguishes ${movie.title} from typical ${genre} narratives.`,
+    `Lead with the music angle — how the songs and background score create the emotional identity of the film.`,
+    `Begin with the release date context and why the timing of ${movie.title}'s arrival in cinemas is significant for ${langConfig.industry}.`,
   ];
   const introStyle = pickVariant(movie.title, introStyles);
 
@@ -1020,6 +1051,11 @@ async function generateMovieDetailsAiSections(movie, cc) {
     "a thoughtful cinema blogger focusing on cultural storytelling",
     "a sharp, modern digital journalist writing for a young cinephile audience",
     `a passionate ${langConfig.industry} historian connecting new films to classic trends`,
+    `a film studies professor specialising in ${langConfig.adjective} regional cinema`,
+    "a celebrity entertainment blogger writing engaging, accessible film features for millions of readers",
+    `a senior features writer for a leading ${langConfig.industry} trade publication`,
+    "an audience-first content creator who writes honest, detailed film previews",
+    `an OTT content strategist analysing ${langConfig.industry} films for digital streaming audiences`,
   ];
   const persona = pickVariant(movie.title + "sys", personas);
 
@@ -1029,13 +1065,13 @@ ${ctx}
 
 Return a JSON object with exactly these keys (plain text only, NO HTML, NO markdown):
 - metaDescription: 150-160 characters mentioning movie title, release date and genre, maximising Google click-through rate.
-- introParagraph: 250-350 words introducing the film in depth. ${introStyle} Start with "${movie.title}".
-- storyParagraph: 350-500 words expanding on the synopsis — discuss narrative background, major themes, emotional conflicts, setting, tone, and pacing. Do not invent plot twists.
-- castCrewParagraph: 300-400 words covering each lead cast member individually — their roles, acting style, and chemistry.
-- directorVisionParagraph: 250-350 words about the filmmaking style, visual language, and creative ambition.
-- musicParagraph: 200-280 words about the soundtrack, background score, and musical mood.
-- whereToWatchParagraph: 180-250 words on the theatrical release strategy and the cinematic experience advantage.
-- anticipationParagraph: 250-350 words on audience expectations, industry buzz, and cultural significance.`;
+- introParagraph: 350-450 words introducing the film in depth. ${introStyle} Start with "${movie.title}".
+- storyParagraph: 450-600 words expanding on the synopsis — discuss narrative background, major themes, emotional conflicts, setting, tone, and pacing. Do not invent plot twists.
+- castCrewParagraph: 400-550 words covering each lead cast member individually — their roles, acting style, and chemistry.
+- directorVisionParagraph: 350-450 words about the filmmaking style, visual language, and creative ambition.
+- musicParagraph: 300-400 words about the soundtrack, background score, and musical mood.
+- whereToWatchParagraph: 250-350 words on the theatrical release strategy and the cinematic experience advantage.
+- anticipationParagraph: 350-450 words on audience expectations, industry buzz, and cultural significance.`;
 
   const fallbacks = {
     metaDescription: `${movie.title}${year ? ` (${year})` : ""}: full cast, crew, story and release date. Read the complete details on The Cinema Verse, your home for ${langConfig.adjective} cinema.`,
@@ -1076,6 +1112,45 @@ Return a JSON object with exactly these keys (plain text only, NO HTML, NO markd
   );
 }
 
+/**
+ * getMovieDetailsTpl \u2014 25 unique presentation configs for Movie Details blogs.
+ * Only affects visible headings, section order, and accent colors.
+ * JSON-LD schema, SEO meta, canonical URLs, and data values are never changed.
+ */
+function getMovieDetailsTpl(idx, movie, langConfig) {
+  const t = movie.title;
+  const ind = langConfig.industry;
+  const adj = langConfig.adjective;
+  const C = [
+    /* 0 */ { storyH:"Story & Plot",castH:"Cast & Crew",castSub:"Lead Cast",dirH:"Director's Vision",musicH:"Music & Soundtrack",watchH:"Where to Watch",whyH:`Why Watch ${t}?`,accent:"#c9973a",heroGrad:"linear-gradient(135deg,#1a0e00 0%,#121212 100%)",heroBdr:"#2e2000",order:["quickFacts","story","castCrew","director","music","trailer","boxOffice","watch","why"],cta:`Browse More ${adj} Movies \u2192`,ctaBg:"#c9973a" },
+    /* 1 */ { storyH:"Storyline",castH:"Star Cast",castSub:"Main Cast Members",dirH:"The Director's Approach",musicH:"Songs & Soundtrack",watchH:"How to Watch",whyH:`What Makes ${t} Special?`,accent:"#e8a020",heroGrad:"linear-gradient(135deg,#1a0800 0%,#121212 100%)",heroBdr:"#3d1a00",order:["castCrew","story","quickFacts","director","music","trailer","boxOffice","watch","why"],cta:`Explore More ${ind} Films \u2192`,ctaBg:"#e8a020" },
+    /* 2 */ { storyH:"Plot Overview",castH:"Lead Cast",castSub:"Complete Cast",dirH:"Filmmaking Style",musicH:"Music & Songs",watchH:"Theatrical Experience",whyH:`Audience Expectations for ${t}`,accent:"#5bb8c4",heroGrad:"linear-gradient(135deg,#001a1e 0%,#121212 100%)",heroBdr:"#003540",order:["story","quickFacts","castCrew","director","music","trailer","boxOffice","watch","why"],cta:`Discover More ${adj} Films \u2192`,ctaBg:"#5bb8c4" },
+    /* 3 */ { storyH:"Movie Synopsis",castH:"Complete Cast",castSub:"Star Cast",dirH:"Behind the Camera",musicH:"Album & Songs",watchH:"Release Strategy",whyH:`Production Highlights for ${t}`,accent:"#a07be8",heroGrad:"linear-gradient(135deg,#0d0a1f 0%,#121212 100%)",heroBdr:"#1e1540",order:["quickFacts","director","castCrew","story","music","trailer","boxOffice","watch","why"],cta:`Browse All ${adj} Movies \u2192`,ctaBg:"#a07be8" },
+    /* 4 */ { storyH:"Film Overview",castH:"Actors & Characters",castSub:"Full Star Cast",dirH:"Creative Vision",musicH:"Album Tracks & Music",watchH:"Where to Experience It",whyH:`Interesting Facts About ${t}`,accent:"#4ade80",heroGrad:"linear-gradient(135deg,#001a0e 0%,#121212 100%)",heroBdr:"#004d1a",order:["quickFacts","story","director","music","castCrew","trailer","boxOffice","watch","why"],cta:`View More ${ind} Releases \u2192`,ctaBg:"#4ade80" },
+    /* 5 */ { storyH:"What Is the Movie About?",castH:"Main Cast",castSub:"Actors & Roles",dirH:"Director's Signature Style",musicH:"Soundtrack Details",watchH:"Book Your Tickets",whyH:`Behind the Scenes of ${t}`,accent:"#f472b6",heroGrad:"linear-gradient(135deg,#1a001a 0%,#121212 100%)",heroBdr:"#3d003d",order:["castCrew","director","story","quickFacts","music","trailer","boxOffice","watch","why"],cta:`Find More ${adj} Films \u2192`,ctaBg:"#f472b6" },
+    /* 6 */ { storyH:"Story Explained",castH:"Cast and Crew",castSub:"Full Cast",dirH:"Direction & Cinematography",musicH:"Music Director & Tracks",watchH:"Cinema Release Info",whyH:`Music & Soundtrack of ${t}`,accent:"#d4a843",heroGrad:"linear-gradient(135deg,#1a1200 0%,#121212 100%)",heroBdr:"#332400",order:["story","castCrew","music","director","quickFacts","trailer","boxOffice","watch","why"],cta:`See More ${ind} Movies \u2192`,ctaBg:"#d4a843" },
+    /* 7 */ { storyH:"Storyline Details",castH:"Full Star Cast",castSub:"Lead Actors",dirH:"Directorial Vision",musicH:"Film Music",watchH:"Streaming & Theatres",whyH:`Technical Details of ${t}`,accent:"#22d3ee",heroGrad:"linear-gradient(135deg,#001a22 0%,#121212 100%)",heroBdr:"#003344",order:["story","castCrew","director","music","quickFacts","trailer","boxOffice","watch","why"],cta:`Explore ${adj} Cinema \u2192`,ctaBg:"#22d3ee" },
+    /* 8 */ { storyH:"The Story",castH:"Cast Members",castSub:"Film Cast",dirH:"Director's Craft",musicH:"Songs & Background Score",watchH:"Watch in Theatres",whyH:`Highlights of ${t}`,accent:"#818cf8",heroGrad:"linear-gradient(135deg,#080d20 0%,#121212 100%)",heroBdr:"#12182a",order:["director","castCrew","quickFacts","story","music","trailer","boxOffice","watch","why"],cta:`Browse ${ind} Releases \u2192`,ctaBg:"#818cf8" },
+    /* 9 */ { storyH:"Narrative & Plot",castH:"Film Cast",castSub:"Lead Performers",dirH:"Production & Direction",musicH:"Official Soundtrack",watchH:"Theatrical Run Details",whyH:"Why This Film Matters",accent:"#fb923c",heroGrad:"linear-gradient(135deg,#1a0800 0%,#121212 100%)",heroBdr:"#40180a",order:["story","director","castCrew","music","quickFacts","trailer","boxOffice","watch","why"],cta:`More ${adj} Blockbusters \u2192`,ctaBg:"#fb923c" },
+    /* 10 */ { storyH:"Story Background",castH:"Star Power",castSub:"Principal Cast",dirH:"Vision & Execution",musicH:"Musical Journey",watchH:"Where You Can Watch",whyH:`The ${t} Experience`,accent:"#c9973a",heroGrad:"linear-gradient(135deg,#1a0f00 0%,#121212 100%)",heroBdr:"#2e1a00",order:["castCrew","quickFacts","story","director","music","trailer","boxOffice","watch","why"],cta:`See All ${adj} Films \u2192`,ctaBg:"#c9973a" },
+    /* 11 */ { storyH:"Plot Summary",castH:"Screen Performers",castSub:"Key Cast",dirH:"The Filmmaker's Eye",musicH:"Audio Landscape",watchH:"Cinema Details",whyH:`What Audiences Are Saying About ${t}`,accent:"#e8b520",heroGrad:"linear-gradient(135deg,#1a1000 0%,#121212 100%)",heroBdr:"#3d2800",order:["quickFacts","castCrew","story","music","director","trailer","boxOffice","watch","why"],cta:`Browse ${ind} Hit Films \u2192`,ctaBg:"#e8b520" },
+    /* 12 */ { storyH:"Cinema Story",castH:"Actors in Focus",castSub:"Lead Cast & Roles",dirH:"Creative Direction",musicH:"Score & Songs",watchH:"Viewing Options",whyH:`${t} \u2014 Audience Guide`,accent:"#2dd4bf",heroGrad:"linear-gradient(135deg,#001815 0%,#121212 100%)",heroBdr:"#003830",order:["story","quickFacts","director","castCrew","music","trailer","boxOffice","watch","why"],cta:`Find ${adj} Films Like This \u2192`,ctaBg:"#2dd4bf" },
+    /* 13 */ { storyH:"Movie Overview",castH:"Cast Profiles",castSub:"Featured Cast",dirH:"Artistic Direction",musicH:"Music Composition",watchH:"How to Experience",whyH:`${t} \u2014 Must Watch Reasons`,accent:"#b8952a",heroGrad:"linear-gradient(135deg,#15100a 0%,#0d0d0d 100%)",heroBdr:"#2a1e00",order:["quickFacts","story","music","castCrew","director","trailer","boxOffice","watch","why"],cta:`Top ${adj} Films \u2192`,ctaBg:"#b8952a" },
+    /* 14 */ { storyH:"Breaking Down the Story",castH:"Who's in the Cast?",castSub:"Cast List",dirH:"The Director's Take",musicH:"Songs You'll Love",watchH:"Ticket & Streaming Info",whyH:`Buzz Around ${t}`,accent:"#60a5fa",heroGrad:"linear-gradient(135deg,#050e1a 0%,#121212 100%)",heroBdr:"#0d2040",order:["story","castCrew","quickFacts","director","music","trailer","boxOffice","watch","why"],cta:`Latest ${ind} News \u2192`,ctaBg:"#60a5fa" },
+    /* 15 */ { storyH:"Thematic Overview",castH:"Ensemble Cast",castSub:"Cast & Collaborators",dirH:"Auteur's Vision",musicH:"Film Score & Songs",watchH:"Where & When",whyH:`Cinematic Depth of ${t}`,accent:"#c084fc",heroGrad:"linear-gradient(135deg,#100820 0%,#121212 100%)",heroBdr:"#200f3d",order:["director","story","castCrew","quickFacts","music","trailer","boxOffice","watch","why"],cta:`More Acclaimed ${adj} Films \u2192`,ctaBg:"#c084fc" },
+    /* 16 */ { storyH:"Story at a Glance",castH:"Star Lineup",castSub:"Stars of the Film",dirH:"Directorial Signature",musicH:"Hit Songs",watchH:"Ticket Information",whyH:`Why ${t} Will Be a Blockbuster`,accent:"#f59e0b",heroGrad:"linear-gradient(135deg,#1a0f00 0%,#121212 100%)",heroBdr:"#40250a",order:["castCrew","story","director","quickFacts","music","trailer","boxOffice","watch","why"],cta:`More ${ind} Entertainers \u2192`,ctaBg:"#f59e0b" },
+    /* 17 */ { storyH:"Narrative Breakdown",castH:"Screen Actors",castSub:"Starring Cast",dirH:"Filmmaker's Intent",musicH:"Sonic Identity",watchH:"Viewing Guide",whyH:`Critical Appeal of ${t}`,accent:"#fb7185",heroGrad:"linear-gradient(135deg,#1a0009 0%,#121212 100%)",heroBdr:"#3d0010",order:["story","director","music","castCrew","quickFacts","trailer","boxOffice","watch","why"],cta:`Explore ${adj} Masterpieces \u2192`,ctaBg:"#fb7185" },
+    /* 18 */ { storyH:"Story in Focus",castH:"Celebrity Cast",castSub:"Film Celebrities",dirH:"Behind the Lens",musicH:"Music Showcase",watchH:"Theatre & OTT Details",whyH:`The Verdict on ${t}`,accent:"#34d399",heroGrad:"linear-gradient(135deg,#001a0f 0%,#121212 100%)",heroBdr:"#003d20",order:["castCrew","quickFacts","director","story","music","trailer","boxOffice","watch","why"],cta:`All ${ind} Releases \u2192`,ctaBg:"#34d399" },
+    /* 19 */ { storyH:"Full Storyline",castH:"Full Cast List",castSub:"Complete Cast",dirH:"Direction & Production",musicH:"Songs & Composer",watchH:"Release & Streaming",whyH:`Top Reasons to Watch ${t}`,accent:"#d97706",heroGrad:"linear-gradient(135deg,#1a0c00 0%,#121212 100%)",heroBdr:"#3d1f00",order:["quickFacts","story","director","music","castCrew","trailer","boxOffice","watch","why"],cta:`See Upcoming ${adj} Films \u2192`,ctaBg:"#d97706" },
+    /* 20 */ { storyH:"Screenplay & Story",castH:"Casting Highlights",castSub:"Film Stars",dirH:"Vision of the Director",musicH:"Music Department",watchH:"Booking & Streaming",whyH:`${t} \u2014 Worth the Watch?`,accent:"#c9973a",heroGrad:"linear-gradient(135deg,#1a1400 0%,#121212 100%)",heroBdr:"#2e2500",order:["quickFacts","castCrew","story","director","music","trailer","boxOffice","watch","why"],cta:`Browse Box Office ${adj} Hits \u2192`,ctaBg:"#c9973a" },
+    /* 21 */ { storyH:"The Film's Story",castH:"Complete Star Cast",castSub:"Artists",dirH:"Directorial Approach",musicH:"Film Soundtrack",watchH:"OTT & Theatre Release",whyH:`Stream or Cinema \u2014 Why ${t} Delivers`,accent:"#38bdf8",heroGrad:"linear-gradient(135deg,#00121a 0%,#121212 100%)",heroBdr:"#002a3d",order:["quickFacts","story","castCrew","music","director","trailer","boxOffice","watch","why"],cta:`Find More on OTT \u2192`,ctaBg:"#38bdf8" },
+    /* 22 */ { storyH:"Plot & Storyline",castH:"Your Favourite Stars",castSub:"All Cast",dirH:"Director's Details",musicH:"All Songs & Music",watchH:"Fan Watch Guide",whyH:`Fan Expectations from ${t}`,accent:"#e8c030",heroGrad:"linear-gradient(135deg,#1a1600 0%,#121212 100%)",heroBdr:"#3d3000",order:["castCrew","story","quickFacts","music","director","trailer","boxOffice","watch","why"],cta:`Join the ${ind} Community \u2192`,ctaBg:"#e8c030" },
+    /* 23 */ { storyH:"Detailed Story Analysis",castH:"Performance Roster",castSub:"Key Performers",dirH:"Technical Filmmaking",musicH:"Composition & Rhythm",watchH:"Cinema & Digital Release",whyH:`In-Depth Look at ${t}`,accent:"#94a3b8",heroGrad:"linear-gradient(135deg,#0f1218 0%,#121212 100%)",heroBdr:"#1e2530",order:["story","director","castCrew","quickFacts","music","trailer","boxOffice","watch","why"],cta:`Read More ${adj} Film Analysis \u2192`,ctaBg:"#94a3b8" },
+    /* 24 */ { storyH:"The Grand Story",castH:"Cast Spotlight",castSub:"Star Cast of the Film",dirH:"The Master's Vision",musicH:"Musical Score & Songs",watchH:"Experience in Cinemas",whyH:`The Impact of ${t}`,accent:"#ef4444",heroGrad:"linear-gradient(135deg,#1a0000 0%,#121212 100%)",heroBdr:"#3d0000",order:["director","story","castCrew","quickFacts","music","trailer","boxOffice","watch","why"],cta:`More ${adj} Cinematic Experiences \u2192`,ctaBg:"#ef4444" },
+  ];
+  return C[idx % C.length];
+}
+
 function buildMovieDetailsBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, dateModified, relatedMovies = []) {
   const langConfig = getLangConfig(movie.language);
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
@@ -1101,8 +1176,12 @@ function buildMovieDetailsBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublis
   const dp = datePublished || new Date().toISOString();
   const dm = dateModified || dp;
 
+  // ── Template config — 25 unique layouts per movie ────────────────────────
+  const tplIdx = pickVariant(movie.title + (year || ""), Array.from({length: 25}, (_, i) => i));
+  const tpl = getMovieDetailsTpl(tplIdx, movie, langConfig);
+
   const card = `background:#181818;border:1px solid #242424;border-radius:14px;padding:26px 28px;margin-bottom:22px;`;
-  const h2 = `font-size:1.05rem;font-weight:800;color:#c9973a;border-left:4px solid #c9973a;padding-left:12px;margin:0 0 18px;line-height:1.3;`;
+  const h2 = `font-size:1.05rem;font-weight:800;color:${tpl.accent};border-left:4px solid ${tpl.accent};padding-left:12px;margin:0 0 18px;line-height:1.3;`;
   const h3 = `color:#ccc;font-size:0.95rem;font-weight:700;margin:18px 0 8px;`;
   const tdL = `padding:10px 0;border-bottom:1px solid #1e1e1e;color:#888;font-size:0.87rem;width:38%;vertical-align:top;`;
   const tdR = `padding:10px 0;border-bottom:1px solid #1e1e1e;color:#ddd;font-size:0.87rem;font-weight:600;`;
@@ -1114,7 +1193,7 @@ function buildMovieDetailsBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublis
     return `
       <tr>
         <td style="${td}font-weight:600;">${url ? `<a href="${url}" style="color:#e8c87a;text-decoration:underline;text-underline-offset:2px;">${c.name || ""}</a>` : (c.name || "")}</td>
-        <td style="${td}color:#c9973a;">${c.role || c.type || ""}</td>
+        <td style="${td}color:${tpl.accent};">${c.role || c.type || ""}</td>
       </tr>`;
   }).join("");
 
@@ -1148,20 +1227,22 @@ function buildMovieDetailsBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublis
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
 
   const toc = [
-    ["Quick Facts", "quick-facts"], ["Story & Plot", "story"], ["Cast & Crew", "cast-crew"],
-    ["Director's Vision", "director-vision"], hasSongs ? ["Music & Soundtrack", "music"] : null,
+    ["Quick Facts", "quick-facts"],
+    [tpl.storyH, "story"],
+    [tpl.castH, "cast-crew"],
+    [tpl.dirH, "director-vision"],
+    hasSongs ? [tpl.musicH, "music"] : null,
     trailerId ? ["Official Trailer", "trailer"] : null,
     hasBoxOffice ? ["Box Office Collection", "box-office"] : null,
-    ["Where to Watch", "where-to-watch"],
-    // SEO FIX: non-keyword-aligned heading replaced with a search-intent match
-    [`Why Watch ${movie.title}?`, "anticipation"],
+    [tpl.watchH, "where-to-watch"],
+    [tpl.whyH, "anticipation"],
     relatedMovies.length ? ["Related Movies", "related-movies"] : null,
   ].filter(Boolean);
   const tocHtml = `
 <nav aria-label="Table of contents" style="${card}padding:18px 24px;">
   <strong style="color:#888;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;">On this page</strong>
   <ul style="margin:10px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px 18px;">
-    ${toc.map(([label, id]) => `<li><a href="#${id}" style="color:#7ec8e3;text-decoration:none;font-size:0.85rem;">${label}</a></li>`).join("")}
+    ${toc.map(([label, id]) => `<li><a href="#${id}" style="color:${tpl.accent};text-decoration:none;font-size:0.85rem;">${label}</a></li>`).join("")}
   </ul>
 </nav>`;
 
@@ -1300,10 +1381,10 @@ function buildMovieDetailsBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublis
   </nav>
 </div>
 
-<div class="hero-section" style="background:linear-gradient(135deg,#1a0e00 0%,#121212 100%);border:1px solid #2e2000;border-radius:14px;padding:30px 28px 24px;margin-bottom:22px;">
+<div class="hero-section" style="background:${tpl.heroGrad};border:1px solid ${tpl.heroBdr};border-radius:14px;padding:30px 28px 24px;margin-bottom:22px;">
   <h1 style="color:#fff;font-size:1.4rem;font-weight:800;margin:0 0 12px;line-height:1.3;">${seoTitle}</h1>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#c9973a;font-weight:700;">${genre}</span>
+    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:${tpl.accent};font-weight:700;">${genre}</span>
     <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#7ec8e3;font-weight:700;">${movie.language || langConfig.adjective}</span>
     <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#e8c87a;font-weight:700;">📅 ${releaseFmt}</span>
     ${hasImdb ? `<span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#f5c518;font-weight:700;">⭐ ${imdbNum}/10 IMDb</span>` : ""}
@@ -1327,10 +1408,12 @@ ${BLOG_RESPONSIVE_STYLES}
 <div class="blog-content-layout">
   <aside class="blog-poster-aside">
     ${poster ? `<img src="${poster}" alt="${movie.title} Poster" width="240" height="360" fetchpriority="high" style="object-fit:cover;" onError="this.style.display='none'" />` : ""}
-    <a href="${movieUrl}" style="display:block;background:#c9973a;color:#000;font-weight:800;font-size:0.82rem;padding:10px;border-radius:8px;text-decoration:none;margin-top:12px;text-align:center;">View Full Movie Page →</a>
+    <a href="${movieUrl}" style="display:block;background:${tpl.ctaBg};color:#000;font-weight:800;font-size:0.82rem;padding:10px;border-radius:8px;text-decoration:none;margin-top:12px;text-align:center;">View Full Movie Page →</a>
   </aside>
   <div style="flex: 1; min-width: 0;">
-    <section id="quick-facts" style="${card}">
+    ${(() => {
+      // Build each section as a named variable, then assemble in template order
+      const SEC_QUICK_FACTS = `<section id="quick-facts" style="${card}">
       <h2 style="${h2}">Quick Facts</h2>
       <table style="width:100%;border-collapse:collapse;" class="info-table">
         <tbody>
@@ -1342,18 +1425,18 @@ ${BLOG_RESPONSIVE_STYLES}
           ${keyCrewRows}
         </tbody>
       </table>
-    </section>
+    </section>`;
 
-    <section id="story" style="${card}">
-      <h2 style="${h2}">Story &amp; Plot</h2>
+      const SEC_STORY = `<section id="story" style="${card}">
+      <h2 style="${h2}">${tpl.storyH}</h2>
       ${autoBlogParagraphs(ai.storyParagraph)}
-    </section>
+    </section>`;
 
-    <section id="cast-crew" style="${card}">
-      <h2 style="${h2}">Cast &amp; Crew</h2>
+      const SEC_CAST_CREW = `<section id="cast-crew" style="${card}">
+      <h2 style="${h2}">${tpl.castH}</h2>
       ${autoBlogParagraphs(ai.castCrewParagraph)}
       ${castRows ? `
-      <h3 style="${h3}">Lead Cast</h3>
+      <h3 style="${h3}">${tpl.castSub}</h3>
       <div class="tbl-scroll" style="overflow-x:auto;margin-top:10px;">
         <table style="width:100%;border-collapse:collapse;min-width:320px;" class="data-table">
           <thead><tr><th style="${th}">Name</th><th style="${th}">Role</th></tr></thead>
@@ -1361,16 +1444,15 @@ ${BLOG_RESPONSIVE_STYLES}
         </table>
       </div>` : ""}
       ${keyCrewRows ? `<h3 style="${h3}">Key Crew</h3><p style="color:#999;line-height:1.8;margin:0;font-size:0.87rem;">See the full crew breakdown in Quick Facts above, including director, producer, music direction, writing, cinematography, and editing credits.</p>` : ""}
-    </section>
+    </section>`;
 
-    <section id="director-vision" style="${card}">
-      <h2 style="${h2}">Director's Vision</h2>
+      const SEC_DIRECTOR = `<section id="director-vision" style="${card}">
+      <h2 style="${h2}">${tpl.dirH}</h2>
       ${autoBlogParagraphs(ai.directorVisionParagraph)}
-    </section>
+    </section>`;
 
-    ${hasSongs ? `
-    <section id="music" style="${card}">
-      <h2 style="${h2}">Music &amp; Soundtrack</h2>
+      const SEC_MUSIC = hasSongs ? `<section id="music" style="${card}">
+      <h2 style="${h2}">${tpl.musicH}</h2>
       ${autoBlogParagraphs(ai.musicParagraph)}
       <div class="tbl-scroll" style="overflow-x:auto;margin-top:10px;">
         <table style="width:100%;border-collapse:collapse;min-width:320px;" class="data-table">
@@ -1378,22 +1460,19 @@ ${BLOG_RESPONSIVE_STYLES}
           <tbody>${songRows}</tbody>
         </table>
       </div>
-    </section>` : `
-    <section id="music" style="${card}">
-      <h2 style="${h2}">Music &amp; Soundtrack</h2>
+    </section>` : `<section id="music" style="${card}">
+      <h2 style="${h2}">${tpl.musicH}</h2>
       ${autoBlogParagraphs(ai.musicParagraph)}
-    </section>`}
+    </section>`;
 
-    ${trailerId ? `
-    <section id="trailer" style="${card}">
+      const SEC_TRAILER = trailerId ? `<section id="trailer" style="${card}">
       <h2 style="${h2}">Official Trailer</h2>
       <div style="position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden;background:#000;">
         <iframe src="https://www.youtube.com/embed/${trailerId}" loading="lazy" title="${movie.title} Official Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"></iframe>
       </div>
-    </section>` : ""}
+    </section>` : "";
 
-    ${hasBoxOffice ? `
-    <section id="box-office" style="${card}">
+      const SEC_BOX_OFFICE = hasBoxOffice ? `<section id="box-office" style="${card}">
       <h2 style="${h2}">Box Office Collection</h2>
       <table style="width:100%;border-collapse:collapse;" class="info-table">
         <tbody>
@@ -1402,22 +1481,36 @@ ${BLOG_RESPONSIVE_STYLES}
           ${movie.boxOffice.total && movie.boxOffice.total !== "TBA" ? `<tr><td style="${tdL}">Total Collection</td><td style="${tdR}">${movie.boxOffice.total}</td></tr>` : ""}
         </tbody>
       </table>
-    </section>` : ""}
+    </section>` : "";
 
-    <section id="where-to-watch" style="${card}">
-      <h2 style="${h2}">Where to Watch</h2>
+      const SEC_WATCH = `<section id="where-to-watch" style="${card}">
+      <h2 style="${h2}">${tpl.watchH}</h2>
       ${autoBlogParagraphs(ai.whereToWatchParagraph)}
-    </section>
+    </section>`;
 
-    <section id="anticipation" style="${card}">
-      <h2 style="${h2}">Why Watch ${movie.title}?</h2>
+      const SEC_WHY = `<section id="anticipation" style="${card}">
+      <h2 style="${h2}">${tpl.whyH}</h2>
       ${autoBlogParagraphs(ai.anticipationParagraph)}
-    </section>
+    </section>`;
 
-    ${buildRelatedMoviesHtml(relatedMovies, "#c9973a")}
+      const SECTION_MAP = {
+        quickFacts: SEC_QUICK_FACTS,
+        story: SEC_STORY,
+        castCrew: SEC_CAST_CREW,
+        director: SEC_DIRECTOR,
+        music: SEC_MUSIC,
+        trailer: SEC_TRAILER,
+        boxOffice: SEC_BOX_OFFICE,
+        watch: SEC_WATCH,
+        why: SEC_WHY,
+      };
+      return tpl.order.map(k => SECTION_MAP[k] || "").join("\n\n    ");
+    })()}
+
+    ${buildRelatedMoviesHtml(relatedMovies, tpl.accent)}
 
     <section style="background:#111;border-radius:14px;padding:20px 26px;margin-bottom:22px;display:flex;gap:12px;flex-wrap:wrap;">
-      <a href="/movies" style="display:inline-block;background:#c9973a;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">Browse More ${langConfig.adjective} Movies →</a>
+      <a href="/movies" style="display:inline-block;background:${tpl.ctaBg};color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">${tpl.cta}</a>
     </section>
   </div>
 </div>`;
@@ -1467,18 +1560,24 @@ function pickVariant(seed, array) {
 }
 
 /** Rotating slug suffix variants for the Movie Details blog.
+ *  10 unique suffixes (up from 6) for better URL diversity across movies.
  *  Picks deterministically per-movie so the same movie always gets the
  *  same slug (idempotent), while different movies get different suffixes.
  *  Max 60 chars total per Google URL-length guidance. */
 function buildMovieDetailsSlug(movie) {
   const langConfig = getLangConfig(movie.language);
+  const ind = langConfig.industry.toLowerCase().replace(/\s+/g, "-");
   const suffixes = [
     "movie-details",
     "complete-movie-guide",
     "cast-story-release-date",
     "full-movie-information",
-    `${langConfig.industry.toLowerCase()}-film-guide`,
+    `${ind}-film-guide`,
     "movie-details-cast-crew",
+    "cast-crew-story-ott",
+    "film-details-review",
+    "full-cast-crew-details",
+    "movie-guide-ott-release",
   ];
   const suffix = pickVariant(movie.title, suffixes);
   const base = trimSlugToLength(makeMovieSlug(movie.title, movie.releaseDate), 45);
@@ -1486,8 +1585,8 @@ function buildMovieDetailsSlug(movie) {
 }
 
 /** Rotating OTT-announcement slug variants — does NOT embed the release
- *  date so it never goes stale. Platform name appended for keyword value.
- *  Max 65 chars. */
+ *  date so it never goes stale. 10 unique prefixes (up from 6).
+ *  Platform name appended for keyword value. Max 65 chars. */
 function buildOttSlug(movie) {
   const platform = trimSlugToLength(
     String(movie.streamingOn || "").toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim(),
@@ -1501,6 +1600,10 @@ function buildOttSlug(movie) {
     "ott-streaming",
     "streaming-announcement",
     "ott-release-date",
+    "digital-premiere",
+    "ott-debut",
+    "online-release",
+    "ott-confirmed",
   ];
   const prefix = pickVariant(movie.title, prefixes);
   const base = trimSlugToLength(makeMovieSlug(movie.title, movie.releaseDate), 35);
@@ -1965,6 +2068,11 @@ async function generateOttAiSections(movie, cc) {
     `Open with a news-breaking tone about the official OTT confirmation for ${movie.title}.`,
     `Start by discussing the film's genre and theatrical buzz before confirming its arrival on ${movie.streamingOn}.`,
     `Lead with the date (${ottDateFmt}) and the platform, setting up why this is a highly anticipated digital premiere.`,
+    `Begin by contrasting the theatrical experience with the convenience of streaming ${movie.title} on ${movie.streamingOn}.`,
+    `Open with how ${movie.streamingOn} is expanding ${langConfig.adjective} cinema's digital reach and ${movie.title} is the latest example.`,
+    `Start by discussing what sets ${movie.title} apart from other ${(movie.genre || []).join(", ") || langConfig.adjective} films currently available on OTT platforms.`,
+    `Lead with a question: why should viewers subscribe to ${movie.streamingOn} for ${movie.title}? Answer it immediately with enthusiasm.`,
+    `Open with the significance of this OTT deal for ${langConfig.industry} — why ${movie.title} on ${movie.streamingOn} is a milestone for ${langConfig.adjective} digital cinema.`,
   ];
   const introStyle = pickVariant(movie.title + "ott", introStyles);
 
@@ -1973,6 +2081,10 @@ async function generateOttAiSections(movie, cc) {
     "a sharp, modern entertainment journalist",
     "a passionate OTT content reviewer and cinema fan",
     `an insider ${langConfig.industry} desk editor`,
+    `a digital media analyst tracking ${langConfig.adjective} cinema's OTT growth`,
+    "a streaming platform content strategist who knows what makes viewers subscribe",
+    `a senior entertainment reporter covering OTT and theatrical releases for ${langConfig.industry}`,
+    "a cinephile blogger who bridges mainstream audiences and OTT content discovery",
   ];
   const persona = pickVariant(movie.title + "ottsys", personas);
 
@@ -2013,6 +2125,41 @@ Return a JSON object with exactly these keys (plain text only, NO HTML, NO markd
   );
 }
 
+/**
+ * getOttAnnounceTpl — 20 unique presentation configs for OTT Announcement blogs.
+ * Only affects visible headings, accent colors, hero gradient, section order, CTA.
+ * JSON-LD, SEO meta, canonical, and data are never changed.
+ */
+function getOttAnnounceTpl(idx, movie, langConfig) {
+  const t = movie.title;
+  const p = movie.streamingOn;
+  const adj = langConfig.adjective;
+  const ind = langConfig.industry;
+  const C = [
+    /* 0 */ { relH:"OTT Release Details",synH:"Story",castH:"Cast Highlights",howH:"How to Watch",platH:`About ${p}`,accent:"#7ec8e3",heroGrad:"linear-gradient(135deg,#001a1e 0%,#121212 100%)",heroBdr:"#00343d",order:["release","synopsis","cast","howTo","platform"],cta:`Browse ${adj} OTT Releases →`,ctaBg:"#7ec8e3" },
+    /* 1 */ { relH:"Digital Release Info",synH:"Movie Story",castH:"Star Cast Highlights",howH:"Start Streaming Now",platH:`Watch on ${p}`,accent:"#5bb8c4",heroGrad:"linear-gradient(135deg,#001720 0%,#121212 100%)",heroBdr:"#00303a",order:["synopsis","release","cast","howTo","platform"],cta:`Explore ${ind} Films on OTT →`,ctaBg:"#5bb8c4" },
+    /* 2 */ { relH:"Streaming Release Info",synH:"Film Overview",castH:"Lead Cast",howH:"How to Stream",platH:`About ${p} Platform`,accent:"#4ecde0",heroGrad:"linear-gradient(135deg,#001e24 0%,#121212 100%)",heroBdr:"#003845",order:["cast","release","synopsis","howTo","platform"],cta:`See More on ${p} →`,ctaBg:"#4ecde0" },
+    /* 3 */ { relH:"OTT Platform Release",synH:"Storyline",castH:"Performers & Cast",howH:"Watch It Online",platH:`Why ${p}?`,accent:"#38bdf8",heroGrad:"linear-gradient(135deg,#00121a 0%,#121212 100%)",heroBdr:"#002a3d",order:["release","cast","synopsis","howTo","platform"],cta:`Stream ${adj} Cinema on ${p} →`,ctaBg:"#38bdf8" },
+    /* 4 */ { relH:"Confirmed OTT Details",synH:"What to Expect",castH:"Meet the Cast",howH:"Guide to Watching",platH:`${p} Streaming Platform`,accent:"#22d3ee",heroGrad:"linear-gradient(135deg,#001a22 0%,#121212 100%)",heroBdr:"#003344",order:[ "synopsis","cast","release","howTo","platform"],cta:`Discover ${adj} Films Online →`,ctaBg:"#22d3ee" },
+    /* 5 */ { relH:"Official OTT Announcement",synH:"Film Synopsis",castH:"Star Performances",howH:"Viewer Guide",platH:`${p} at a Glance`,accent:"#60efff",heroGrad:"linear-gradient(135deg,#00181f 0%,#121212 100%)",heroBdr:"#003240",order:["cast","synopsis","release","howTo","platform"],cta:`Browse OTT ${adj} Content →`,ctaBg:"#60efff" },
+    /* 6 */ { relH:"OTT Streaming Date",synH:"Plot Summary",castH:"Actors & Characters",howH:"Streaming Instructions",platH:`${p} Overview`,accent:"#06b6d4",heroGrad:"linear-gradient(135deg,#001520 0%,#121212 100%)",heroBdr:"#002d3f",order:["release","synopsis","cast","platform","howTo"],cta:`View ${adj} Streaming Releases →`,ctaBg:"#06b6d4" },
+    /* 7 */ { relH:"When Does It Stream?",synH:"Story Details",castH:"Cast Members",howH:"How to Access",platH:`Streaming on ${p}`,accent:"#2dd4bf",heroGrad:"linear-gradient(135deg,#001815 0%,#121212 100%)",heroBdr:"#003830",order:["synopsis","release","platform","cast","howTo"],cta:`Find More ${adj} OTT Films →`,ctaBg:"#2dd4bf" },
+    /* 8 */ { relH:"Digital Premiere Details",synH:"The Story at a Glance",castH:"Lead Performers",howH:"Step-by-Step Watch Guide",platH:`Why Watch on ${p}`,accent:"#14b8a6",heroGrad:"linear-gradient(135deg,#001a18 0%,#121212 100%)",heroBdr:"#003530",order:["cast","release","platform","synopsis","howTo"],cta:`All ${adj} Films on OTT →`,ctaBg:"#14b8a6" },
+    /* 9 */ { relH:"OTT Release Confirmed",synH:"Film Storyline",castH:"Star Cast & Roles",howH:"Complete Watch Guide",platH:`${p} — The OTT Destination`,accent:"#0d9488",heroGrad:"linear-gradient(135deg,#001612 0%,#121212 100%)",heroBdr:"#003030",order:["release","cast","platform","synopsis","howTo"],cta:`Explore ${ind} OTT Releases →`,ctaBg:"#0d9488" },
+    /* 10 */ { relH:"Streaming Announcement",synH:"What Is It About?",castH:"Film Cast Spotlight",howH:"Ways to Watch Online",platH:`${p} Platform Details`,accent:"#22d3ee",heroGrad:"linear-gradient(135deg,#001a22 0%,#121212 100%)",heroBdr:"#003344",order:["synopsis","platform","cast","release","howTo"],cta:`Watch More on ${p} →`,ctaBg:"#22d3ee" },
+    /* 11 */ { relH:"OTT Date Confirmed",synH:"Full Story",castH:"Screen Cast",howH:"How to Subscribe & Watch",platH:`Know ${p} Better`,accent:"#67e8f9",heroGrad:"linear-gradient(135deg,#001a20 0%,#121212 100%)",heroBdr:"#00363f",order:["release","synopsis","platform","cast","howTo"],cta:`${adj} OTT Now Streaming →`,ctaBg:"#67e8f9" },
+    /* 12 */ { relH:"OTT Viewing Date",synH:"Movie Overview",castH:"Cast & Performers",howH:"How to Start Watching",platH:`About the ${p} App`,accent:"#38bdf8",heroGrad:"linear-gradient(135deg,#00121a 0%,#121212 100%)",heroBdr:"#002a3d",order:["cast","platform","synopsis","release","howTo"],cta:`See All ${adj} OTT Films →`,ctaBg:"#38bdf8" },
+    /* 13 */ { relH:"Streaming Start Date",synH:"Narrative Breakdown",castH:"Acting Ensemble",howH:"Watch on Any Device",platH:`${p}'s ${adj} Library`,accent:"#0ea5e9",heroGrad:"linear-gradient(135deg,#000f1a 0%,#121212 100%)",heroBdr:"#00243d",order:["synopsis","cast","platform","howTo","release"],cta:`Browse All ${p} Releases →`,ctaBg:"#0ea5e9" },
+    /* 14 */ { relH:"OTT Release Update",synH:"Story & Plot",castH:"Film Stars",howH:"Easy Streaming Guide",platH:`Stream on ${p}`,accent:"#7dd3fc",heroGrad:"linear-gradient(135deg,#001424 0%,#121212 100%)",heroBdr:"#00284d",order:["release","platform","synopsis","cast","howTo"],cta:`Latest ${adj} OTT Releases →`,ctaBg:"#7dd3fc" },
+    /* 15 */ { relH:"OTT Streaming Schedule",synH:"Complete Story",castH:"Starring Cast",howH:"Watch from Home Guide",platH:`Why ${p} Is ${adj}'s Favourite`,accent:"#a5f3fc",heroGrad:"linear-gradient(135deg,#001822 0%,#121212 100%)",heroBdr:"#003040",order:["cast","synopsis","release","platform","howTo"],cta:`Top ${adj} Films on OTT →`,ctaBg:"#a5f3fc" },
+    /* 16 */ { relH:"OTT Premiere Date",synH:"The Film's Story",castH:"Cast in the Spotlight",howH:"Stream It Now",platH:`${p} for ${adj} Viewers`,accent:"#48cfe8",heroGrad:"linear-gradient(135deg,#001620 0%,#121212 100%)",heroBdr:"#003040",order:["synopsis","release","cast","howTo","platform"],cta:`Stream ${adj} Cinema →`,ctaBg:"#48cfe8" },
+    /* 17 */ { relH:"New on ${p}",synH:"The Story Line",castH:"Key Cast Members",howH:"Watch Guide for ${adj} Fans",platH:`${p} Content Library`,accent:"#22d3ee",heroGrad:"linear-gradient(135deg,#001a22 0%,#121212 100%)",heroBdr:"#003344",order:["cast","release","synopsis","platform","howTo"],cta:`More ${adj} Blockbusters Online →`,ctaBg:"#22d3ee" },
+    /* 18 */ { relH:"Confirmed Streaming Date",synH:"Storyline & Genre",castH:"Actors & Roles",howH:"Watch It on ${p}",platH:`${p}: A Quick Guide`,accent:"#06b6d4",heroGrad:"linear-gradient(135deg,#001520 0%,#121212 100%)",heroBdr:"#002d3f",order:["synopsis","cast","release","howTo","platform"],cta:`See More ${ind} OTT Films →`,ctaBg:"#06b6d4" },
+    /* 19 */ { relH:"OTT Digital Release",synH:"What Is the Film About?",castH:"Stars of the Film",howH:"How to Catch It Online",platH:`${p} — Stream Anytime`,accent:"#2dd4bf",heroGrad:"linear-gradient(135deg,#001815 0%,#121212 100%)",heroBdr:"#003830",order:["release","cast","synopsis","platform","howTo"],cta:`Find ${adj} Films on ${p} →`,ctaBg:"#2dd4bf" },
+  ];
+  return C[idx % C.length];
+}
+
 function buildOttBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, dateModified, relatedMovies = []) {
   const langConfig = getLangConfig(movie.language);
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
@@ -2034,14 +2181,18 @@ function buildOttBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, date
   const dp = datePublished || new Date().toISOString();
   const dm = dateModified || dp;
 
+  // ── Template config — 20 unique OTT announcement layouts per movie ─────
+  const ottTplIdx = pickVariant(movie.title + "ottann", Array.from({length: 20}, (_, i) => i));
+  const ottTpl = getOttAnnounceTpl(ottTplIdx, movie, langConfig);
+
   const card = `background:#181818;border:1px solid #242424;border-radius:14px;padding:26px 28px;margin-bottom:22px;`;
-  const h2 = `font-size:1.05rem;font-weight:800;color:#7ec8e3;border-left:4px solid #7ec8e3;padding-left:12px;margin:0 0 18px;line-height:1.3;`;
+  const h2 = `font-size:1.05rem;font-weight:800;color:${ottTpl.accent};border-left:4px solid ${ottTpl.accent};padding-left:12px;margin:0 0 18px;line-height:1.3;`;
   const tdL = `padding:10px 0;border-bottom:1px solid #1e1e1e;color:#888;font-size:0.87rem;width:38%;vertical-align:top;`;
   const tdR = `padding:10px 0;border-bottom:1px solid #1e1e1e;color:#ddd;font-size:0.87rem;font-weight:600;`;
 
   const castChips = leadCast.map(c => {
     const url = castProfileUrl(c);
-    return `<span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#ddd;">${url ? `<a href="${url}" style="color:#7ec8e3;text-decoration:underline;text-underline-offset:2px;">${c.name}</a>` : c.name}</span>`;
+    return `<span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#ddd;">${url ? `<a href="${url}" style="color:${ottTpl.accent};text-decoration:underline;text-underline-offset:2px;">${c.name}</a>` : c.name}</span>`;
   }).join("");
 
   const leadNames = leadCast.map(c => c.name).filter(Boolean);
@@ -2054,15 +2205,18 @@ function buildOttBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, date
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
 
   const toc = [
-    ["OTT Release Details", "release-details"], ["Story", "synopsis"], ["Cast Highlights", "cast"],
-    ["How to Watch", "how-to-watch"], [`About ${movie.streamingOn}`, "platform"],
+    [ottTpl.relH, "release-details"],
+    [ottTpl.synH, "synopsis"],
+    [ottTpl.castH, "cast"],
+    [ottTpl.howH, "how-to-watch"],
+    [ottTpl.platH, "platform"],
     relatedMovies.length ? ["Related Movies", "related-movies"] : null,
   ].filter(Boolean);
   const tocHtml = `
 <nav aria-label="Table of contents" style="${card}padding:18px 24px;">
   <strong style="color:#888;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;">On this page</strong>
   <ul style="margin:10px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px 18px;">
-    ${toc.map(([label, id]) => `<li><a href="#${id}" style="color:#7ec8e3;text-decoration:none;font-size:0.85rem;">${label}</a></li>`).join("")}
+    ${toc.map(([label, id]) => `<li><a href="#${id}" style="color:${ottTpl.accent};text-decoration:none;font-size:0.85rem;">${label}</a></li>`).join("")}
   </ul>
 </nav>`;
 
@@ -2175,10 +2329,10 @@ function buildOttBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, date
   </nav>
 </div>
 
-<div class="hero-section" style="background:linear-gradient(135deg,#001a1e 0%,#121212 100%);border:1px solid #00343d;border-radius:14px;padding:30px 28px 24px;margin-bottom:22px;">
+<div class="hero-section" style="background:${ottTpl.heroGrad};border:1px solid ${ottTpl.heroBdr};border-radius:14px;padding:30px 28px 24px;margin-bottom:22px;">
   <h1 style="color:#fff;font-size:1.4rem;font-weight:800;margin:0 0 12px;line-height:1.3;">${seoTitle}</h1>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#7ec8e3;font-weight:700;">📺 ${movie.streamingOn}</span>
+    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:${ottTpl.accent};font-weight:700;">📺 ${movie.streamingOn}</span>
     <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#e8c87a;font-weight:700;">📅 ${ottDateFmt}</span>
     ${castChips}
   </div>
@@ -2201,11 +2355,12 @@ ${BLOG_RESPONSIVE_STYLES}
 <div class="blog-content-layout">
   <aside class="blog-poster-aside">
     ${poster ? `<img src="${poster}" alt="${movie.title} Poster" width="240" height="360" fetchpriority="high" style="object-fit:cover;" onError="this.style.display='none'" />` : ""}
-    ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" style="display:block;background:#7ec8e3;color:#000;font-weight:800;font-size:0.82rem;padding:10px;border-radius:8px;text-decoration:none;margin-top:12px;text-align:center;">▶ Watch on ${movie.streamingOn}</a>` : `<a href="${movieUrl}" style="display:block;background:#7ec8e3;color:#000;font-weight:800;font-size:0.82rem;padding:10px;border-radius:8px;text-decoration:none;margin-top:12px;text-align:center;">View Full Movie Page →</a>`}
+    ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" style="display:block;background:${ottTpl.ctaBg};color:#000;font-weight:800;font-size:0.82rem;padding:10px;border-radius:8px;text-decoration:none;margin-top:12px;text-align:center;">▶ Watch on ${movie.streamingOn}</a>` : `<a href="${movieUrl}" style="display:block;background:${ottTpl.ctaBg};color:#000;font-weight:800;font-size:0.82rem;padding:10px;border-radius:8px;text-decoration:none;margin-top:12px;text-align:center;">View Full Movie Page →</a>`}
   </aside>
   <div style="flex: 1; min-width: 0;">
-    <section id="release-details" style="${card}">
-      <h2 style="${h2}">OTT Release Details</h2>
+    ${(() => {
+      const SEC_RELEASE = `<section id="release-details" style="${card}">
+      <h2 style="${h2}">${ottTpl.relH}</h2>
       <table style="width:100%;border-collapse:collapse;" class="info-table">
         <tbody>
           <tr><td style="${tdL}">Streaming Platform</td><td style="${tdR}">${movie.streamingOn}</td></tr>
@@ -2215,34 +2370,41 @@ ${BLOG_RESPONSIVE_STYLES}
           ${movie.releaseDate ? `<tr><td style="${tdL}">Theatrical Release</td><td style="${tdR}">${formatHumanDate(movie.releaseDate)}</td></tr>` : ""}
         </tbody>
       </table>
-    </section>
+    </section>`;
 
-    <section id="synopsis" style="${card}">
-      <h2 style="${h2}">Story</h2>
+      const SEC_SYNOPSIS = `<section id="synopsis" style="${card}">
+      <h2 style="${h2}">${ottTpl.synH}</h2>
       ${autoBlogParagraphs(ai.synopsisParagraph)}
-    </section>
+    </section>`;
 
-    <section id="cast" style="${card}">
-      <h2 style="${h2}">Cast Highlights</h2>
+      const SEC_CAST = `<section id="cast" style="${card}">
+      <h2 style="${h2}">${ottTpl.castH}</h2>
       ${autoBlogParagraphs(ai.castHighlightParagraph)}
-    </section>
+    </section>`;
 
-    <section id="how-to-watch" style="${card}">
-      <h2 style="${h2}">How to Watch</h2>
+      const SEC_HOW = `<section id="how-to-watch" style="${card}">
+      <h2 style="${h2}">${ottTpl.howH}</h2>
       ${autoBlogParagraphs(ai.howToWatchParagraph)}
-      ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" class="cta-btn" style="display:inline-block;background:#7ec8e3;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;margin-top:6px;">Watch on ${movie.streamingOn} →</a>` : ""}
-    </section>
+      ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" class="cta-btn" style="display:inline-block;background:${ottTpl.ctaBg};color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;margin-top:6px;">Watch on ${movie.streamingOn} →</a>` : ""}
+    </section>`;
 
-    <section id="platform" style="${card}">
-      <h2 style="${h2}">About ${movie.streamingOn}</h2>
+      const SEC_PLATFORM = `<section id="platform" style="${card}">
+      <h2 style="${h2}">${ottTpl.platH}</h2>
       ${autoBlogParagraphs(ai.platformParagraph)}
-    </section>
+    </section>`;
 
-    ${buildRelatedMoviesHtml(relatedMovies, "#7ec8e3", `More ${langConfig.adjective} Movies on ${movie.streamingOn}`)}
+      const OTT_SECTION_MAP = {
+        release: SEC_RELEASE, synopsis: SEC_SYNOPSIS,
+        cast: SEC_CAST, howTo: SEC_HOW, platform: SEC_PLATFORM,
+      };
+      return ottTpl.order.map(k => OTT_SECTION_MAP[k] || "").join("\n\n    ");
+    })()}
+
+    ${buildRelatedMoviesHtml(relatedMovies, ottTpl.accent, `More ${langConfig.adjective} Movies on ${movie.streamingOn}`)}
 
     <section style="background:#111;border-radius:14px;padding:20px 26px;margin-bottom:22px;display:flex;gap:12px;flex-wrap:wrap;">
-      <a href="${movieUrl}" style="display:inline-block;background:#c9973a;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">View Full Movie Page →</a>
-      <a href="/movies" style="display:inline-block;background:transparent;border:1px solid #333;color:#ccc;font-weight:700;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">Browse More ${langConfig.adjective} Movies →</a>
+      <a href="${movieUrl}" style="display:inline-block;background:${ottTpl.ctaBg};color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">View Full Movie Page →</a>
+      <a href="/movies" style="display:inline-block;background:transparent;border:1px solid #333;color:#ccc;font-weight:700;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">${ottTpl.cta}</a>
     </section>
   </div>
 </div>`;
@@ -2315,10 +2477,8 @@ async function autoGenerateOttBlog(movie) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** SEO title for the "Now Streaming" blog.
- *  SEO FIX: dropped the redundant "Available to Watch Online" padding
- *  (every streaming announcement implies availability — the phrase added
- *  no keyword value) and capped at 90 chars so long names/platforms don't
- *  get truncated by Google with a graceful 1-lead-name fallback. */
+ *  10 rotating editorial patterns — deterministically chosen per movie so
+ *  pages never share an identical headline. Capped at 90 chars. */
 function buildOttLiveTitle(movie, cc) {
   const langConfig = getLangConfig(movie.language);
   // BUGFIX: same fix as buildOttTitle — use the strictly-filtered ottCast
@@ -2326,7 +2486,21 @@ function buildOttLiveTitle(movie, cc) {
   const build = (leadCount) => {
     const leads = (cc.ottCast || cc.leadCast || []).slice(0, leadCount).map(c => c.name).filter(Boolean);
     const subject = leads.length ? `${leads.join(" & ")} Starrer` : `${langConfig.adjective} Movie`;
-    return `${movie.title} Is Now Streaming on ${movie.streamingOn}: ${subject}`.replace(/\s+/g, " ").trim();
+    const p = movie.streamingOn;
+    const t = movie.title;
+    const templates = [
+      () => `${t} Is Now Streaming on ${p}: ${subject}`,
+      () => `Watch ${t} Online — Now Live on ${p} for ${subject} Fans`,
+      () => `${t} OTT Premiere Is Live — ${subject} Now Streaming on ${p}`,
+      () => `${t} Digital Premiere Live: ${subject} Now on ${p}`,
+      () => `${t} Is Available on ${p} — ${subject} Can Stream Now`,
+      () => `Stream ${t} on ${p} Today — ${subject} Arrives Online`,
+      () => `${t} Has Landed on ${p} — ${subject} Now Streaming`,
+      () => `${t} Starts Streaming on ${p} Now — Watch ${subject}`,
+      () => `${t} OTT Drop: ${subject} Goes Live on ${p}`,
+      () => `Don't Miss ${t} — ${subject} Now Streaming on ${p}`,
+    ];
+    return pickVariant(t + "live", templates)().replace(/\s+/g, " ").trim();
   };
   let title = build(2);
   if (title.length > 90) title = build(1);
@@ -2368,11 +2542,11 @@ ${ctx}
 
 Return a JSON object with exactly these keys (plain text only, NO HTML, NO markdown):
 - metaDescription: 150-160 characters announcing that "${movie.title}" is NOW streaming on ${movie.streamingOn}, with date, maximising click-through.
-- introParagraph: 250-350 words. ${introStyle} Name the lead cast and describe the genre and emotional tone.
-- whyWatchParagraph: 250-350 words making the case for why viewers should watch "${movie.title}" RIGHT NOW on ${movie.streamingOn}. Cover emotional appeal, performances, and director's craft.
-- synopsisParagraph: 200-280 words retelling the story vividly without spoilers. IMPORTANT: paraphrase and reframe in your own words — do not copy the source synopsis verbatim.
-- castReviewParagraph: 220-300 words — present-tense review-style writing about the lead actors' performances. Name each lead actor.
-- howToWatchParagraph: 180-250 words — direct, step-by-step guide to streaming "${movie.title}" on ${movie.streamingOn} RIGHT NOW. Include a strong call to action.`;
+- introParagraph: 350-450 words. ${introStyle} Name the lead cast and describe the genre and emotional tone.
+- whyWatchParagraph: 350-450 words making the case for why viewers should watch "${movie.title}" RIGHT NOW on ${movie.streamingOn}. Cover emotional appeal, performances, and director's craft.
+- synopsisParagraph: 300-400 words retelling the story vividly without spoilers. IMPORTANT: paraphrase and reframe in your own words — do not copy the source synopsis verbatim.
+- castReviewParagraph: 300-400 words — present-tense review-style writing about the lead actors' performances. Name each lead actor.
+- howToWatchParagraph: 250-350 words — direct, step-by-step guide to streaming "${movie.title}" on ${movie.streamingOn} RIGHT NOW. Include a strong call to action.`;
 
   const fallbacks = {
     metaDescription: `${movie.title} is NOW streaming on ${movie.streamingOn}! Watch this ${langConfig.adjective} ${genre} film online today. Full details on The Cinema Verse.`,
@@ -2398,6 +2572,41 @@ Return a JSON object with exactly these keys (plain text only, NO HTML, NO markd
   );
 }
 
+/**
+ * getOttLiveTpl — 20 unique presentation configs for "Now Streaming" blogs.
+ * Only affects visible headings, accent colors, hero gradient, section order, CTA.
+ * JSON-LD, SEO meta, canonical, and data are never changed.
+ */
+function getOttLiveTpl(idx, movie, langConfig) {
+  const t = movie.title;
+  const p = movie.streamingOn;
+  const adj = langConfig.adjective;
+  const ind = langConfig.industry;
+  const C = [
+    /* 0 */ { streamH:"Streaming Details",whyH:`Why You Should Watch ${t}`,synH:"Story",castH:"Cast Performances",howH:`How to Watch Now on ${p}`,accent:"#4ade80",heroGrad:"linear-gradient(135deg,#001a0e 0%,#121212 100%)",heroBdr:"#004d1a",posterBdr:"#4ade80",badgeBg:"#4ade80",order:["stream","why","synopsis","cast","howTo"],cta:`Browse More ${adj} Movies →`,ctaBg:"#c9973a" },
+    /* 1 */ { streamH:"Now Live on ${p}",whyH:`Top Reasons to Watch ${t}`,synH:"Movie Story",castH:"Star Performances",howH:`Start Watching on ${p}`,accent:"#22c55e",heroGrad:"linear-gradient(135deg,#001a0b 0%,#121212 100%)",heroBdr:"#003d15",posterBdr:"#22c55e",badgeBg:"#22c55e",order:["why","stream","synopsis","cast","howTo"],cta:`Explore ${ind} Films →`,ctaBg:"#22c55e" },
+    /* 2 */ { streamH:"Digital Streaming Details",whyH:`Must Watch: ${t}`,synH:"Film Overview",castH:"Cast Highlight",howH:`Access ${t} on ${p}`,accent:"#86efac",heroGrad:"linear-gradient(135deg,#001a0e 0%,#121212 100%)",heroBdr:"#004020",posterBdr:"#86efac",badgeBg:"#86efac",order:["synopsis","stream","why","cast","howTo"],cta:`See All ${adj} OTT Films →`,ctaBg:"#86efac" },
+    /* 3 */ { streamH:"OTT Streaming Info",whyH:`${t} — Audience Review`,synH:"Storyline",castH:"Lead Actors Review",howH:`Stream ${t} Right Now`,accent:"#16a34a",heroGrad:"linear-gradient(135deg,#001206 0%,#121212 100%)",heroBdr:"#003010",posterBdr:"#16a34a",badgeBg:"#16a34a",order:["why","synopsis","cast","stream","howTo"],cta:`More ${adj} Films on OTT →`,ctaBg:"#16a34a" },
+    /* 4 */ { streamH:"Watch Now Details",whyH:`${t} Is Worth Watching — Here's Why`,synH:"What to Expect",castH:"Acting Ensemble",howH:`How to Start Streaming`,accent:"#34d399",heroGrad:"linear-gradient(135deg,#001a18 0%,#121212 100%)",heroBdr:"#003535",posterBdr:"#34d399",badgeBg:"#34d399",order:["stream","cast","why","synopsis","howTo"],cta:`Watch ${adj} Cinema Online →`,ctaBg:"#34d399" },
+    /* 5 */ { streamH:"Streaming Platform Details",whyH:`5 Reasons to Watch ${t} Today`,synH:"Plot Summary",castH:"Actors & Characters",howH:`Easy Watch Guide for ${p}`,accent:"#6ee7b7",heroGrad:"linear-gradient(135deg,#001a14 0%,#121212 100%)",heroBdr:"#003d2a",posterBdr:"#6ee7b7",badgeBg:"#6ee7b7",order:["why","cast","synopsis","stream","howTo"],cta:`Top ${adj} Streaming Picks →`,ctaBg:"#6ee7b7" },
+    /* 6 */ { streamH:"Now Streaming Info",whyH:`Is ${t} Worth Watching on OTT?`,synH:"Story Explained",castH:"Cast Member Performances",howH:`Step-by-Step ${p} Guide`,accent:"#10b981",heroGrad:"linear-gradient(135deg,#001a10 0%,#121212 100%)",heroBdr:"#003820",posterBdr:"#10b981",badgeBg:"#10b981",order:["synopsis","why","stream","cast","howTo"],cta:`Find ${adj} Films Like This →`,ctaBg:"#10b981" },
+    /* 7 */ { streamH:"Live Streaming Details",whyH:`${t} OTT Verdict`,synH:"The Story at a Glance",castH:"Star Cast Review",howH:`How to Watch on ${p} Instantly`,accent:"#4ade80",heroGrad:"linear-gradient(135deg,#001a0e 0%,#121212 100%)",heroBdr:"#004d1a",posterBdr:"#4ade80",badgeBg:"#4ade80",order:["why","synopsis","stream","cast","howTo"],cta:`Browse ${ind} OTT Hits →`,ctaBg:"#4ade80" },
+    /* 8 */ { streamH:"Where It Streams",whyH:`Critics & Fans on ${t}`,synH:"Film Synopsis",castH:"Cast Spotlight",howH:`How to Find ${t} Online`,accent:"#3fba77",heroGrad:"linear-gradient(135deg,#001c0f 0%,#121212 100%)",heroBdr:"#004520",posterBdr:"#3fba77",badgeBg:"#3fba77",order:["stream","synopsis","why","cast","howTo"],cta:`All ${adj} Streaming Now →`,ctaBg:"#3fba77" },
+    /* 9 */ { streamH:"OTT Streaming Update",whyH:`${t} — Why Press Play Now?`,synH:"Narrative Overview",castH:"Screen Actors & Roles",howH:`${p} Subscriber Watch Guide`,accent:"#22d3ee",heroGrad:"linear-gradient(135deg,#001a22 0%,#121212 100%)",heroBdr:"#003344",posterBdr:"#22d3ee",badgeBg:"#22d3ee",order:["cast","synopsis","why","stream","howTo"],cta:`Stream ${adj} Cinema →`,ctaBg:"#22d3ee" },
+    /* 10 */ { streamH:"Current Streaming Status",whyH:`The ${t} Experience on OTT`,synH:"The Story",castH:"Lead Cast Analysis",howH:"Watch Online Today",accent:"#4ade80",heroGrad:"linear-gradient(135deg,#001a0e 0%,#121212 100%)",heroBdr:"#004d1a",posterBdr:"#4ade80",badgeBg:"#4ade80",order:["synopsis","cast","stream","why","howTo"],cta:`More ${adj} Films on ${p} →`,ctaBg:"#4ade80" },
+    /* 11 */ { streamH:"Streaming Now on ${p}",whyH:"Top Viewing Reasons",synH:"Story Details",castH:"Performance Highlights",howH:"How to Stream Today",accent:"#16a34a",heroGrad:"linear-gradient(135deg,#001206 0%,#121212 100%)",heroBdr:"#003010",posterBdr:"#16a34a",badgeBg:"#16a34a",order:["why","stream","cast","synopsis","howTo"],cta:`Browse ${adj} OTT Picks →`,ctaBg:"#16a34a" },
+    /* 12 */ { streamH:"Available on ${p} Now",whyH:`Why ${t} Is a Must-Watch`,synH:"Movie Plot",castH:"Featured Performers",howH:"Start Your Stream",accent:"#86efac",heroGrad:"linear-gradient(135deg,#001a0e 0%,#121212 100%)",heroBdr:"#004020",posterBdr:"#86efac",badgeBg:"#86efac",order:["stream","why","cast","synopsis","howTo"],cta:`View ${adj} Releases →`,ctaBg:"#86efac" },
+    /* 13 */ { streamH:"Where to Stream",whyH:`${t}: OTT Audience Expectations`,synH:"What the Film Is About",castH:"Star Actors",howH:"Complete Streaming Guide",accent:"#34d399",heroGrad:"linear-gradient(135deg,#001a18 0%,#121212 100%)",heroBdr:"#003535",posterBdr:"#34d399",badgeBg:"#34d399",order:["why","cast","synopsis","stream","howTo"],cta:`Find More ${ind} Films →`,ctaBg:"#34d399" },
+    /* 14 */ { streamH:"OTT Debut Details",whyH:`${t} Hits the Digital Scene`,synH:"Storyline Breakdown",castH:"Cast Members",howH:`Watch ${t} in Minutes`,accent:"#4ade80",heroGrad:"linear-gradient(135deg,#001a0e 0%,#121212 100%)",heroBdr:"#004d1a",posterBdr:"#4ade80",badgeBg:"#4ade80",order:["cast","why","synopsis","stream","howTo"],cta:`Latest ${adj} OTT Hits →`,ctaBg:"#4ade80" },
+    /* 15 */ { streamH:"Digital Release Details",whyH:`${t}: Fan Verdict`,synH:"Full Storyline",castH:"Cast Performance Review",howH:`Subscribe & Watch on ${p}`,accent:"#22c55e",heroGrad:"linear-gradient(135deg,#001a0b 0%,#121212 100%)",heroBdr:"#003d15",posterBdr:"#22c55e",badgeBg:"#22c55e",order:["synopsis","stream","cast","why","howTo"],cta:`Top ${adj} Streaming Films →`,ctaBg:"#22c55e" },
+    /* 16 */ { streamH:"Now on ${p}",whyH:"Why Watch It Today?",synH:"The Full Story",castH:"Screen Chemistry & Cast",howH:"How to Access & Stream",accent:"#10b981",heroGrad:"linear-gradient(135deg,#001a10 0%,#121212 100%)",heroBdr:"#003820",posterBdr:"#10b981",badgeBg:"#10b981",order:["why","cast","stream","synopsis","howTo"],cta:`See ${adj} OTT Highlights →`,ctaBg:"#10b981" },
+    /* 17 */ { streamH:"Streaming Status",whyH:`${t}: Watch Right Now`,synH:"Plot & Theme",castH:"Lead Performers",howH:`How to Watch on ${p} Now`,accent:"#6ee7b7",heroGrad:"linear-gradient(135deg,#001a14 0%,#121212 100%)",heroBdr:"#003d2a",posterBdr:"#6ee7b7",badgeBg:"#6ee7b7",order:["stream","why","cast","synopsis","howTo"],cta:`All ${adj} Films Online →`,ctaBg:"#6ee7b7" },
+    /* 18 */ { streamH:"Where to Watch Online",whyH:`${t}: The Digital Experience`,synH:"The Story Line",castH:"Cast Overview",howH:`${p} Watch Guide`,accent:"#4ade80",heroGrad:"linear-gradient(135deg,#001a0e 0%,#121212 100%)",heroBdr:"#004d1a",posterBdr:"#4ade80",badgeBg:"#4ade80",order:["synopsis","why","cast","stream","howTo"],cta:`Discover ${adj} Cinema Online →`,ctaBg:"#4ade80" },
+    /* 19 */ { streamH:"OTT Drop Details",whyH:`${t} OTT: Fan Anticipation`,synH:"Film's Storyline",castH:"Actors in Focus",howH:`Direct Watch Guide for ${p}`,accent:"#22c55e",heroGrad:"linear-gradient(135deg,#001a0b 0%,#121212 100%)",heroBdr:"#003d15",posterBdr:"#22c55e",badgeBg:"#22c55e",order:["cast","stream","synopsis","why","howTo"],cta:`Browse ${ind} OTT Now →`,ctaBg:"#22c55e" },
+  ];
+  return C[idx % C.length];
+}
+
 function buildOttLiveBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, dateModified, relatedMovies = []) {
   const langConfig = getLangConfig(movie.language);
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
@@ -2416,14 +2625,18 @@ function buildOttLiveBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, 
   const dp = datePublished || new Date().toISOString();
   const dm = dateModified || dp;
 
+  // ── Template config — 20 unique Now-Streaming layouts per movie ─────────
+  const liveTplIdx = pickVariant(movie.title + "ottlive", Array.from({length: 20}, (_, i) => i));
+  const liveTpl = getOttLiveTpl(liveTplIdx, movie, langConfig);
+
   const card = `background:#181818;border:1px solid #242424;border-radius:14px;padding:26px 28px;margin-bottom:22px;`;
-  const h2 = `font-size:1.05rem;font-weight:800;color:#4ade80;border-left:4px solid #4ade80;padding-left:12px;margin:0 0 18px;line-height:1.3;`;
+  const h2 = `font-size:1.05rem;font-weight:800;color:${liveTpl.accent};border-left:4px solid ${liveTpl.accent};padding-left:12px;margin:0 0 18px;line-height:1.3;`;
   const tdL = `padding:10px 0;border-bottom:1px solid #1e1e1e;color:#888;font-size:0.87rem;width:38%;vertical-align:top;`;
   const tdR = `padding:10px 0;border-bottom:1px solid #1e1e1e;color:#ddd;font-size:0.87rem;font-weight:600;`;
 
   const castChips = leadCast.map(c => {
     const url = castProfileUrl(c);
-    return `<span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#ddd;">${url ? `<a href="${url}" style="color:#4ade80;text-decoration:underline;text-underline-offset:2px;">${c.name}</a>` : c.name}</span>`;
+    return `<span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#ddd;">${url ? `<a href="${url}" style="color:${liveTpl.accent};text-decoration:underline;text-underline-offset:2px;">${c.name}</a>` : c.name}</span>`;
   }).join("");
 
   const leadNames = leadCast.map(c => c.name).filter(Boolean);
@@ -2436,15 +2649,18 @@ function buildOttLiveBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, 
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
 
   const toc = [
-    ["Streaming Details", "stream-details"], ["Why You Should Watch", "why-watch"],
-    ["Story", "synopsis"], ["Cast Performances", "cast-review"], ["How to Watch Now", "how-to-watch"],
+    [liveTpl.streamH, "stream-details"],
+    [liveTpl.whyH, "why-watch"],
+    [liveTpl.synH, "synopsis"],
+    [liveTpl.castH, "cast-review"],
+    [liveTpl.howH, "how-to-watch"],
     relatedMovies.length ? ["Related Movies", "related-movies"] : null,
   ].filter(Boolean);
   const tocHtml = `
 <nav aria-label="Table of contents" style="${card}padding:18px 24px;">
   <strong style="color:#888;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;">On this page</strong>
   <ul style="margin:10px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px 18px;">
-    ${toc.map(([label, id]) => `<li><a href="#${id}" style="color:#4ade80;text-decoration:none;font-size:0.85rem;">${label}</a></li>`).join("")}
+    ${toc.map(([label, id]) => `<li><a href="#${id}" style="color:${liveTpl.accent};text-decoration:none;font-size:0.85rem;">${label}</a></li>`).join("")}
   </ul>
 </nav>`;
 
@@ -2544,16 +2760,16 @@ function buildOttLiveBlogHTML(movie, cc, ai, blogSlug, seoTitle, datePublished, 
   </nav>
 </div>
 
-<div class="hero-section" style="background:linear-gradient(135deg,#001a0e 0%,#121212 100%);border:1px solid #004d1a;border-radius:14px;padding:30px 28px 24px;margin-bottom:22px;">
-  <div style="display:inline-block;background:#4ade80;color:#000;font-size:0.7rem;font-weight:800;padding:4px 12px;border-radius:20px;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.08em;">🔴 Now Streaming</div>
+<div class="hero-section" style="background:${liveTpl.heroGrad};border:1px solid ${liveTpl.heroBdr};border-radius:14px;padding:30px 28px 24px;margin-bottom:22px;">
+  <div style="display:inline-block;background:${liveTpl.badgeBg};color:#000;font-size:0.7rem;font-weight:800;padding:4px 12px;border-radius:20px;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.08em;">🔴 Now Streaming</div>
   <h1 style="color:#fff;font-size:1.4rem;font-weight:800;margin:0 0 12px;line-height:1.3;">${seoTitle}</h1>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#4ade80;font-weight:700;">📺 ${movie.streamingOn}</span>
+    <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:${liveTpl.accent};font-weight:700;">📺 ${movie.streamingOn}</span>
     <span style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:20px;padding:5px 14px;font-size:0.78rem;color:#e8c87a;font-weight:700;">🗓 ${ottDateFmt}</span>
     ${castChips}
   </div>
   ${autoBlogParagraphs(ai.introParagraph)}
-  ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" style="display:inline-block;background:#4ade80;color:#000;font-weight:800;font-size:0.9rem;padding:12px 28px;border-radius:8px;text-decoration:none;margin-top:10px;">▶ Watch Now on ${movie.streamingOn}</a>` : ""}
+  ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" style="display:inline-block;background:${liveTpl.badgeBg};color:#000;font-weight:800;font-size:0.9rem;padding:12px 28px;border-radius:8px;text-decoration:none;margin-top:10px;">▶ Watch Now on ${movie.streamingOn}</a>` : ""}
 </div>
 
 ${tocHtml}
@@ -2562,7 +2778,7 @@ ${BLOG_RESPONSIVE_STYLES}
 <style>
   .blog-live-layout { display: flex; flex-direction: column; gap: 24px; }
   .blog-live-poster { width: 100%; max-width: 300px; margin: 0 auto; }
-  .blog-live-poster img { width: 100%; height: auto; border-radius: 12px; border: 2px solid #4ade80; box-shadow: 0 8px 32px rgba(74,222,128,0.15); }
+  .blog-live-poster img { width: 100%; height: auto; border-radius: 12px; border: 2px solid ${liveTpl.posterBdr}; box-shadow: 0 8px 32px rgba(74,222,128,0.15); }
   @media (min-width: 900px) {
     .blog-live-layout { flex-direction: row; align-items: flex-start; }
     .blog-live-poster { width: 240px; position: sticky; top: 80px; flex-shrink: 0; }
@@ -2572,11 +2788,12 @@ ${BLOG_RESPONSIVE_STYLES}
 <div class="blog-live-layout">
   <aside class="blog-live-poster">
     ${poster ? `<img src="${poster}" alt="${movie.title} Poster" width="240" height="360" fetchpriority="high" style="object-fit:cover;" onError="this.style.display='none'" />` : ""}
-    ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" style="display:block;background:#4ade80;color:#000;font-weight:800;font-size:0.82rem;padding:10px;border-radius:8px;text-decoration:none;margin-top:12px;text-align:center;">▶ Watch on ${movie.streamingOn}</a>` : ""}
+    ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" style="display:block;background:${liveTpl.ctaBg};color:#000;font-weight:800;font-size:0.82rem;padding:10px;border-radius:8px;text-decoration:none;margin-top:12px;text-align:center;">▶ Watch on ${movie.streamingOn}</a>` : ""}
   </aside>
   <div style="flex: 1; min-width: 0;">
-    <section id="stream-details" style="${card}">
-      <h2 style="${h2}">Streaming Details</h2>
+    ${(() => {
+      const SEC_STREAM = `<section id="stream-details" style="${card}">
+      <h2 style="${h2}">${liveTpl.streamH}</h2>
       <table style="width:100%;border-collapse:collapse;" class="info-table">
         <tbody>
           <tr><td style="${tdL}">Streaming Platform</td><td style="${tdR}">${movie.streamingOn}</td></tr>
@@ -2584,38 +2801,45 @@ ${BLOG_RESPONSIVE_STYLES}
           <tr><td style="${tdL}">Language</td><td style="${tdR}">${movie.language || langConfig.adjective}</td></tr>
           ${genre ? `<tr><td style="${tdL}">Genre</td><td style="${tdR}">${genre}</td></tr>` : ""}
           ${movie.releaseDate ? `<tr><td style="${tdL}">Theatrical Release</td><td style="${tdR}">${formatHumanDate(movie.releaseDate)}</td></tr>` : ""}
-          ${cc.director ? `<tr><td style="${tdL}">Director</td><td style="${tdR}">${(() => { const u = castProfileUrl(cc.directorEntry); return u ? `<a href="${u}" style="color:#4ade80;text-decoration:underline;text-underline-offset:2px;">${cc.director}</a>` : cc.director; })()}</td></tr>` : ""}
+          ${cc.director ? `<tr><td style="${tdL}">Director</td><td style="${tdR}">${(() => { const u = castProfileUrl(cc.directorEntry); return u ? `<a href="${u}" style="color:${liveTpl.accent};text-decoration:underline;text-underline-offset:2px;">${cc.director}</a>` : cc.director; })()}</td></tr>` : ""}
           ${movie.runtime ? `<tr><td style="${tdL}">Runtime</td><td style="${tdR}">${movie.runtime}</td></tr>` : ""}
         </tbody>
       </table>
-    </section>
+    </section>`;
 
-    <section id="why-watch" style="${card}">
-      <h2 style="${h2}">Why You Should Watch ${movie.title}</h2>
+      const SEC_WHY = `<section id="why-watch" style="${card}">
+      <h2 style="${h2}">${liveTpl.whyH}</h2>
       ${autoBlogParagraphs(ai.whyWatchParagraph)}
-    </section>
+    </section>`;
 
-    <section id="synopsis" style="${card}">
-      <h2 style="${h2}">Story</h2>
+      const SEC_SYNOPSIS = `<section id="synopsis" style="${card}">
+      <h2 style="${h2}">${liveTpl.synH}</h2>
       ${autoBlogParagraphs(ai.synopsisParagraph)}
-    </section>
+    </section>`;
 
-    <section id="cast-review" style="${card}">
-      <h2 style="${h2}">Cast Performances</h2>
+      const SEC_CAST = `<section id="cast-review" style="${card}">
+      <h2 style="${h2}">${liveTpl.castH}</h2>
       ${autoBlogParagraphs(ai.castReviewParagraph)}
-    </section>
+    </section>`;
 
-    <section id="how-to-watch" style="${card}">
-      <h2 style="${h2}">How to Watch Now on ${movie.streamingOn}</h2>
+      const SEC_HOW = `<section id="how-to-watch" style="${card}">
+      <h2 style="${h2}">${liveTpl.howH}</h2>
       ${autoBlogParagraphs(ai.howToWatchParagraph)}
-      ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" style="display:inline-block;background:#4ade80;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;margin-top:6px;">▶ Start Watching on ${movie.streamingOn} →</a>` : ""}
-    </section>
+      ${movie.streamingUrl ? `<a href="${movie.streamingUrl}" target="_blank" rel="nofollow noopener noreferrer" style="display:inline-block;background:${liveTpl.badgeBg};color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;margin-top:6px;">▶ Start Watching on ${movie.streamingOn} →</a>` : ""}
+    </section>`;
 
-    ${buildRelatedMoviesHtml(relatedMovies, "#4ade80", `More ${langConfig.adjective} Movies on ${movie.streamingOn}`)}
+      const LIVE_SECTION_MAP = {
+        stream: SEC_STREAM, why: SEC_WHY,
+        synopsis: SEC_SYNOPSIS, cast: SEC_CAST, howTo: SEC_HOW,
+      };
+      return liveTpl.order.map(k => LIVE_SECTION_MAP[k] || "").join("\n\n    ");
+    })()}
+
+    ${buildRelatedMoviesHtml(relatedMovies, liveTpl.accent, `More ${langConfig.adjective} Movies on ${movie.streamingOn}`)}
 
     <section style="background:#111;border-radius:14px;padding:20px 26px;margin-bottom:22px;display:flex;gap:12px;flex-wrap:wrap;">
-      <a href="${movieUrl}" style="display:inline-block;background:#c9973a;color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">View Full Movie Page →</a>
-      <a href="/movies" style="display:inline-block;background:transparent;border:1px solid #333;color:#ccc;font-weight:700;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">Browse More ${langConfig.adjective} Movies →</a>
+      <a href="${movieUrl}" style="display:inline-block;background:${liveTpl.ctaBg};color:#000;font-weight:800;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">View Full Movie Page →</a>
+      <a href="/movies" style="display:inline-block;background:transparent;border:1px solid #333;color:#ccc;font-weight:700;font-size:0.85rem;padding:10px 22px;border-radius:8px;text-decoration:none;">${liveTpl.cta}</a>
     </section>
   </div>
 </div>`;
