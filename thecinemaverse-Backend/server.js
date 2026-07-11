@@ -4646,9 +4646,12 @@ app.post("/api/admin/movies/:id/boxoffice-days", adminAuth, async (req, res) => 
 
     // Auto-update boxOffice summary totals
     const totalNet = movie.boxOfficeDays.reduce((s, d) => s + parseToRupeesGlobal(d.net || "0"), 0);
-    if (totalNet > 0) {
+    const totalGross = movie.boxOfficeDays.reduce((s, d) => s + parseToRupeesGlobal(d.gross || "0"), 0);
+    const totalOverseasNum = parseToRupeesGlobal(movie.boxOffice?.overseasCollection || "0");
+    if (totalNet > 0 || totalGross > 0 || totalOverseasNum > 0) {
       movie.boxOffice = movie.boxOffice || {};
       movie.boxOffice.total = formatINRGlobal(totalNet);
+      movie.boxOffice.grossCollection = formatINRGlobal(totalGross + totalOverseasNum);
     }
 
     await movie.save({ validateBeforeSave: false });
@@ -4686,9 +4689,12 @@ app.patch("/api/admin/movies/:id/boxoffice-days/:day", adminAuth, async (req, re
 
     // Re-sync total
     const totalNetPatch = movie.boxOfficeDays.reduce((s, d) => s + parseToRupeesGlobal(d.net || "0"), 0);
-    if (totalNetPatch > 0) {
+    const totalGrossPatch = movie.boxOfficeDays.reduce((s, d) => s + parseToRupeesGlobal(d.gross || "0"), 0);
+    const totalOverseas = parseToRupeesGlobal(movie.boxOffice?.overseasCollection || "0");
+    if (totalNetPatch > 0 || totalGrossPatch > 0 || totalOverseas > 0) {
       movie.boxOffice = movie.boxOffice || {};
       movie.boxOffice.total = formatINRGlobal(totalNetPatch);
+      movie.boxOffice.grossCollection = formatINRGlobal(totalGrossPatch + totalOverseas);
     }
 
     await movie.save({ validateBeforeSave: false });
@@ -4785,9 +4791,12 @@ app.post("/api/admin/movies/:id/boxoffice-days/bulk", adminAuth, async (req, res
 
     // Re-sync the boxOffice.total summary from the full day-wise net figures
     const totalNet = movie.boxOfficeDays.reduce((s, d) => s + parseToRupeesGlobal(d.net || "0"), 0);
-    if (totalNet > 0) {
+    const totalGross = movie.boxOfficeDays.reduce((s, d) => s + parseToRupeesGlobal(d.gross || "0"), 0);
+    const totalOverseasNum = parseToRupeesGlobal(movie.boxOffice?.overseasCollection || "0");
+    if (totalNet > 0 || totalGross > 0 || totalOverseasNum > 0) {
       movie.boxOffice = movie.boxOffice || {};
       movie.boxOffice.total = formatINRGlobal(totalNet);
+      movie.boxOffice.grossCollection = formatINRGlobal(totalGross + totalOverseasNum);
     }
 
     await movie.save({ validateBeforeSave: false });
@@ -5907,7 +5916,7 @@ async function scrapeSacnilkForMovie(movieId) {
   // §4f  Update boxOffice totals (running cumulative)
   movie.boxOffice = movie.boxOffice || {};
   movie.boxOffice.total = formatINR(scrapedIndiaNetNum);
-  movie.boxOffice.grossCollection = formatINR(scrapedGrossNum);
+  movie.boxOffice.grossCollection = formatINR(calculatedTotalIndiaGross + scrapedOverseasNum);
   movie.boxOffice.overseasCollection = formatINR(scrapedOverseasNum);
 
   await movie.save({ validateBeforeSave: false });
@@ -6142,7 +6151,7 @@ Rules:
 
   const infoRows = [
     ["Movie Name", movieName],
-    ["Language", "${langConfig.adjective}"],
+    ["Language", `${langConfig.adjective}`],
     ["Industry", langConfig.industry],
     ["Genre", genre],
     releaseDateFmt ? ["Release Date", releaseDateFmt] : null,
@@ -7494,7 +7503,7 @@ async function generateFirstWeekAI(movie, days, totalNet) {
     conclusionParagraph: `In conclusion, the first-week chapter of ${movieName} at the ${langConfig.adjective} box office has been one that the filmmakers, cast, and entire production team can look back on with genuine pride. A net collection of ${totalNetStr} in seven days is not merely a commercial figure — it is an audience endorsement, a critical verdict delivered through the most democratic of all channels: the ticket window. As the film moves into its second week and beyond, the story of its theatrical journey will continue to unfold.`
   };
 
-  const systemPrompt = "You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse — India's leading entertainment portal. Your writing style is warm, authoritative, and genuinely human — like a veteran film correspondent who deeply loves cinema. Avoid all AI writing patterns: no bullet-pointed sentences, no generic filler like 'it is worth noting' or 'needless to say'. Write with a real journalist's voice. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. Every value must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences, rich in specific data references, contextual storytelling, and editorial insight.";
+  const systemPrompt = `You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse — India's leading entertainment portal. Your writing style is warm, authoritative, and genuinely human — like a veteran film correspondent who deeply loves cinema. Avoid all AI writing patterns: no bullet-pointed sentences, no generic filler like 'it is worth noting' or 'needless to say'. Write with a real journalist's voice. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. Every value must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences, rich in specific data references, contextual storytelling, and editorial insight.`;
   const userPrompt = `Write a first week box office report for the ${langConfig.adjective} movie "${movieName}" (${year}).
 Day-wise data: ${dayDataStr}.
 Opening day: ${openingDayNet}. Opening weekend (Days 1-3): ${openingWeekendStr}. Weekdays (Days 4-6): ${weekdayStr}. Day 7: ${day7Net}. Total Week 1 net: ${totalNetStr}.
@@ -7559,7 +7568,7 @@ async function generateWeekendAI(movie, days, weekendNum, totalNet) {
     conclusionParagraph: `The ${weekendLabel.toLowerCase()} has reaffirmed ${movieName}'s status as one of the standout ${langConfig.adjective} theatrical releases of the season. With a cumulative total of ${totalNetStr} and audience enthusiasm showing no signs of dramatic decline, the film remains firmly in the conversation for a memorable theatrical run. The production team, distributors, and exhibitors can take genuine satisfaction from what has been an encouraging weekend at the ${langConfig.adjective} box office.`
   };
 
-  const systemPrompt = "You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic warmth and authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences, incorporating the actual data provided.";
+  const systemPrompt = `You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic warmth and authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences, incorporating the actual data provided.`;
   const userPrompt = `Write a box office report for the ${weekendLabel} of the ${langConfig.adjective} movie "${movieName}" (${year}).
 Weekend breakdown (${weekendDataStr}): ${weekendTotalStr}.
 Total cumulative net: ${totalNetStr}, Gross: ${totalGrossStr}, Overseas: ${totalOverseasStr}.
@@ -7613,7 +7622,7 @@ async function generateMilestoneAI(movie, milestoneLabel, totalNet, sortedDays) 
     seoTags: `${movieName}, ${movieName} Box Office, ₹${milestoneClean} Milestone, ${langConfig.adjective} Cinema, ${langConfig.industry} Hit, Box Office Collection`
   };
 
-  const systemPrompt = "You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic warmth and authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences with specific references to the milestone, box office data, and ${langConfig.industry} industry context.";
+  const systemPrompt = `You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic warmth and authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences with specific references to the milestone, box office data, and ${langConfig.industry} industry context.`;
   const userPrompt = `Write a box office milestone report for the ${langConfig.adjective} movie "${movieName}" (${year}).
 Milestone crossed: ₹${milestoneClean} net.
 Current total net collection: ${totalNetStr}.
@@ -7666,7 +7675,7 @@ async function generateComparisonAI(movie, comparators, totalNet) {
     conclusionParagraph: `In the final analysis, placing ${movieName} in comparison with other ${langConfig.adjective} box office performers of recent vintage allows us to appreciate both its achievements and the broader commercial landscape within which those achievements have been earned. The film's ${totalNetStr} first-week net is a figure that the production team, distributors, and theatre owners can look back on with legitimate satisfaction. More importantly, it contributes another credible data point to the ongoing story of ${langConfig.adjective} cinema's commercial evolution.`
   };
 
-  const systemPrompt = "You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences with specific references to the comparison data. Reference actual film titles and figures from the data provided.";
+  const systemPrompt = `You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic authority. Avoid AI patterns and filler phrases. Return ONLY a valid JSON object — no markdown, no code fences, no extra text. All values must be plain text with no HTML tags. Every paragraph must be at least 5–7 full sentences with specific references to the comparison data. Reference actual film titles and figures from the data provided.`;
   const userPrompt = `Write a first week box office comparison report for the ${langConfig.adjective} movie "${movieName}" (${year}).
 ${movieName} Week 1 net: ${totalNetStr}.
 
@@ -7742,7 +7751,7 @@ function buildFirstWeekBlogHTML(movie, days, totalNet, ai, slug, title, relatedM
 
   const keywordsArr = [
     movieName, `${movieName} first week`, `${movieName} 7 days collection`,
-    `${movieName} box office`, "${langConfig.adjective} box office", "${langConfig.industry} first week report"
+    `${movieName} box office`, `${langConfig.adjective} box office`, `${langConfig.industry} first week report`
   ];
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
   const plainWordCount = [ai.introParagraph, ai.performanceOverview, ai.weekdayHoldAnalysis, ai.audienceResponseSection, ai.dayWiseParagraph, ai.week2OutlookSection, ai.conclusionParagraph]
@@ -7975,7 +7984,7 @@ function buildWeekendBlogHTML(movie, days, totalNet, weekendLabel, ai, slug, tit
 
   const keywordsArr = [
     movieName, `${movieName} ${weekendLabel.toLowerCase()} collection`, `${movieName} weekend box office`,
-    "${langConfig.adjective} box office", "${langConfig.industry} weekend report"
+    `${langConfig.adjective} box office`, `${langConfig.industry} weekend report`
   ];
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
   const plainWordCount = Object.values(ai).join(" ").split(/\s+/).filter(Boolean).length;
@@ -8194,7 +8203,7 @@ function buildMilestoneBlogHTML(movie, milestoneKey, totalNet, ai, slug, title, 
   const additionalTags = (ai.seoTags || "").split(",").map(t => t.trim()).filter(Boolean);
   const keywordsArr = [
     movieName, `${movieName} ${milestoneClean}`, `${movieName} box office milestone`,
-    `${movieName} total collection`, "${langConfig.adjective} box office records", "${langConfig.industry} collections",
+    `${movieName} total collection`, `${langConfig.adjective} box office records`, `${langConfig.industry} collections`,
     ...additionalTags
   ];
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
@@ -8466,7 +8475,7 @@ function buildComparisonBlogHTML(movie, comparators, totalNet, ai, slug, title, 
 
   const keywordsArr = [
     movieName, `${movieName} box office comparison`, `${movieName} vs other ${langConfig.adjective} movies`,
-    "${langConfig.adjective} box office hits", "${langConfig.industry} collections"
+    `${langConfig.adjective} box office hits`, `${langConfig.industry} collections`
   ];
   const keywordsStr = [...new Set(keywordsArr)].join(", ");
   const plainWordCount = Object.values(ai).join(" ").split(/\s+/).filter(Boolean).length;
@@ -8670,7 +8679,7 @@ async function maybeGenerateFirstWeekBlog(movie, sortedDays, totalNet, movieId) 
       excerpt: ai.metaDescription,
       content: html,
       category: "Box Office",
-      tags: [movie.title, "Box Office", "First Week", "${langConfig.adjective} Cinema", "${langConfig.industry}", "7 Days"].filter(Boolean),
+      tags: [movie.title, "Box Office", "First Week", `${langConfig.adjective} Cinema`, `${langConfig.industry}`, "7 Days"].filter(Boolean),
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId,
       movieTitle: movie.title,
@@ -8748,7 +8757,7 @@ async function maybeGenerateWeekendBlog(movie, sortedDays, actualDay, totalNet, 
       excerpt: ai.metaDescription,
       content: html,
       category: "Box Office",
-      tags: [movie.title, "Box Office", weekendLabel, "${langConfig.adjective} Cinema", "${langConfig.industry}"].filter(Boolean),
+      tags: [movie.title, "Box Office", weekendLabel, `${langConfig.adjective} Cinema`, `${langConfig.industry}`].filter(Boolean),
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId,
       movieTitle: movie.title,
@@ -8896,7 +8905,7 @@ async function maybeGenerateComparisonBlog(movie, sortedDays, totalNet, movieId)
       excerpt: ai.metaDescription,
       content: html,
       category: "Box Office",
-      tags: [movie.title, "Box Office", "First Week Comparison", "${langConfig.adjective} Cinema", "${langConfig.industry}"].filter(Boolean),
+      tags: [movie.title, "Box Office", "First Week Comparison", `${langConfig.adjective} Cinema`, `${langConfig.industry}`].filter(Boolean),
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId,
       movieTitle: movie.title,
@@ -9024,7 +9033,7 @@ async function generateSecondWeekAI(movie, days, totalNet) {
     conclusionParagraph: `Two weeks in, ${movieName}'s total net of ${totalNetStr} is a testament to the film's content quality and the authenticity of its audience connection. The week-on-week performance data tells a story of a film that opened promisingly, held reasonably, and continues to draw ${langConfig.adjective} cinema lovers to the big screen. For the creative team, the cast, and the producers, this second-week report is something to be read with genuine satisfaction.`
   };
 
-  const systemPrompt = "You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic authority. Avoid AI clichés. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text with no HTML tags. Every paragraph must be at least 5-7 full sentences.";
+  const systemPrompt = `You are a senior ${langConfig.adjective} cinema (${langConfig.industry}) journalist with 15+ years of experience, writing long-form, deeply analytical, SEO-optimised editorial articles for The Cinema Verse. Write with genuine journalistic authority. Avoid AI clichés. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text with no HTML tags. Every paragraph must be at least 5-7 full sentences.`;
   const userPrompt = `Write a second week box office report for the ${langConfig.adjective} movie "${movieName}" (${year}).
 Week 1 total: ${week1Str}. Week 2 total: ${week2Str}. Week-on-week drop: ${dropPct}%.
 Week 2 day-wise data: ${week2DataStr}. Cumulative total after 2 weeks: ${totalNetStr}.
@@ -9066,7 +9075,7 @@ async function generateThirdWeekAI(movie, days, totalNet) {
     conclusionParagraph: `The third week of ${movieName} at the ${langConfig.adjective} box office is not merely a collection report — it is a statement about the quality of ${langConfig.adjective} cinema and the sophistication of ${langConfig.adjective} audiences. A film that still draws paying viewers in Week 3 has earned its place in the recent history of ${langConfig.industry}, and the ${totalNetStr} cumulative total after 21 days is a number that will be referenced as a benchmark for years to come.`
   };
 
-  const systemPrompt = "You are a senior ${langConfig.adjective} cinema journalist writing a third-week box office analysis for The Cinema Verse. Emphasise the exceptional nature of a three-week ${langConfig.adjective} theatrical run. Write with genuine editorial authority. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.";
+  const systemPrompt = `You are a senior ${langConfig.adjective} cinema journalist writing a third-week box office analysis for The Cinema Verse. Emphasise the exceptional nature of a three-week ${langConfig.adjective} theatrical run. Write with genuine editorial authority. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.`;
   const userPrompt = `Third week box office report for the ${langConfig.adjective} movie "${movieName}" (${year}).
 Week 1: ${week1Str}. Week 2: ${week2Str}. Week 3: ${week3Str}. Total after 21 days: ${totalNetStr}.
 Week 3 day-wise: ${week3DataStr}.
@@ -9107,7 +9116,7 @@ async function generateFourthWeekAI(movie, days, totalNet) {
     conclusionParagraph: `As ${movieName}'s fourth week concludes, it does so with the quiet confidence of a film that never needed validation — it earned it. The ${totalNetStr} in cumulative net collection after 28 days is a number worth celebrating, and the fact that ${langConfig.adjective} audiences chose this film, repeatedly, over the course of a full month, is the most meaningful review that any film — and any filmmaker — could ever receive.`
   };
 
-  const systemPrompt = "You are a senior ${langConfig.adjective} cinema journalist covering an extraordinary four-week box office run. Write with genuine editorial gravitas — this is a landmark moment for ${langConfig.industry}. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.";
+  const systemPrompt = `You are a senior ${langConfig.adjective} cinema journalist covering an extraordinary four-week box office run. Write with genuine editorial gravitas — this is a landmark moment for ${langConfig.industry}. Return ONLY a valid JSON object — no markdown, no code fences. All values must be plain text, no HTML.`;
   const userPrompt = `Fourth week box office report for the ${langConfig.adjective} movie "${movieName}" (${year}).
 Weekly breakdown — Week 1: ${weeklyTotals[0]}, Week 2: ${weeklyTotals[1]}, Week 3: ${weeklyTotals[2]}, Week 4: ${week4Str}.
 Total after 28 days: ${totalNetStr}.
@@ -9201,7 +9210,7 @@ function buildWeekSummaryBlogHTML(movie, days, totalNet, weekNum, weekLabel, ai,
 
   const keywords = [
     movieName, `${movieName} ${weekLabel}`, `${movieName} box office`,
-    `${movieName} week ${weekNum} collection`, "${langConfig.adjective} box office", "${langConfig.industry}"
+    `${movieName} week ${weekNum} collection`, `${langConfig.adjective} box office`, `${langConfig.industry}`
   ].join(", ");
 
   return `<!-- ════════════════════════════════════════════════════════════════
@@ -9549,7 +9558,7 @@ async function maybeGenerateWeekSummaryBlog(movie, sortedDays, totalNet, movieId
       excerpt: ai.metaDescription,
       content: html,
       category: "Box Office",
-      tags: [movie.title, "Box Office", weekLabel, "${langConfig.adjective} Cinema", "${langConfig.industry}", `${weekNum * 7} Days`].filter(Boolean),
+      tags: [movie.title, "Box Office", weekLabel, `${langConfig.adjective} Cinema`, `${langConfig.industry}`, `${weekNum * 7} Days`].filter(Boolean),
       coverImage: movie.bannerUrl || movie.posterUrl || movie.thumbnailUrl || "",
       movieId,
       movieTitle: movie.title,

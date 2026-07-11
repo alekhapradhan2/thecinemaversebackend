@@ -752,7 +752,7 @@ const buildBlogContent = (movie, daysUpToN, totalNet, totalGross, targetDay, sec
       <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:${isToday ? "#c9973a" : "#ddd"};font-weight:700;">${d.net ? fmtINR(d.net) : "—"}</td>
       <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:#7ec8e3;font-weight:600;">${d.gross ? fmtINR(d.gross) : "—"}</td>
       <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:#e87a6a;font-weight:600;">${d.overseas ? fmtINR(d.overseas) : "—"}</td>
-      <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:#c9973a;font-weight:700;">${fmtINR(cumulativeWorldwide)} <span style="margin-left:6px;">${trendHtml}</span></td>
+      <td style="padding:11px 14px;border-bottom:1px solid #1e1e1e;color:#c9973a;font-weight:700;">${fmtINR(worldwideNum)} <span style="margin-left:6px;">${trendHtml}</span></td>
     </tr>`;
   }).join("");
 
