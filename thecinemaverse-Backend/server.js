@@ -5916,6 +5916,7 @@ async function scrapeSacnilkForMovie(movieId) {
   // §4f  Update boxOffice totals (running cumulative)
   movie.boxOffice = movie.boxOffice || {};
   movie.boxOffice.total = formatINR(scrapedIndiaNetNum);
+  const calculatedTotalIndiaGross = Math.round(scrapedIndiaNetNum * GST_RATE);
   movie.boxOffice.grossCollection = formatINR(calculatedTotalIndiaGross + scrapedOverseasNum);
   movie.boxOffice.overseasCollection = formatINR(scrapedOverseasNum);
 
