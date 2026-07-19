@@ -1632,6 +1632,8 @@ function buildOttLiveSlug(movie) {
 }
 
 async function autoGenerateMovieDetailsBlog(movie) {
+  return null; // Disabled per user request
+
   const langConfig = getLangConfig(movie.language);
   try {
     const cc = extractMovieCastCrew(movie);
@@ -1952,6 +1954,7 @@ function ordinalDropName(index) {
  *   (e.g. when the song's ytId or lyrics are updated via the dedicated song edit route).
  */
 async function autoGenerateSongBlog(song, movie, songIndex = 0, onlyIfNew = true) {
+  return null; // Disabled per user request
   const langConfig = getLangConfig(movie.language);
   if (!song?.title?.trim()) return null;
   try {
@@ -2035,6 +2038,7 @@ async function autoGenerateSongBlog(song, movie, songIndex = 0, onlyIfNew = true
  * Always passes onlyIfNew=true so existing song blogs are never clobbered on re-runs.
  */
 async function autoGenerateAllSongBlogs(movie) {
+  return null; // Disabled per user request
   const songs = movie.media?.songs || [];
   for (let i = 0; i < songs.length; i++) {
     const song = songs[i];
@@ -2417,6 +2421,7 @@ ${BLOG_RESPONSIVE_STYLES}
  * doesn't create a duplicate post). Never throws.
  */
 async function autoGenerateOttBlog(movie) {
+  return null; // Disabled per user request
   const langConfig = getLangConfig(movie.language);
   try {
     if (!movie.streamingOn) return null;
@@ -2850,6 +2855,7 @@ ${BLOG_RESPONSIVE_STYLES}
  * when the OTT release date has arrived. Stored separately in movie.ottLiveBlogId.
  */
 async function autoGenerateOttLiveBlog(movie) {
+  return null; // Disabled per user request
   const langConfig = getLangConfig(movie.language);
   try {
     if (!movie.streamingOn) return null;
@@ -10173,7 +10179,7 @@ app.listen(process.env.PORT || 4000, () => {
   try {
     const { spawn } = require("child_process");
     console.log("🤖 Starting AI Bulk Article Generator in background...");
-    const bulkGen = spawn("node", ["bulk_articles.js", "--limit", "20", "--count", "4", "--publish"], {
+    const bulkGen = spawn("node", ["bulk_articles.js", "--limit", "100", "--count", "4", "--publish"], {
       cwd: __dirname,
       stdio: "ignore", // Don't pipe stdout/stderr to prevent memory leaks
       detached: true   // Let it run independently
