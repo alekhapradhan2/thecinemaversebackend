@@ -10175,20 +10175,6 @@ app.listen(process.env.PORT || 4000, () => {
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  // ── Auto-Run Bulk Articles Generator on Startup ──────────────
-  try {
-    const { spawn } = require("child_process");
-    console.log("🤖 Starting AI Bulk Article Generator in background...");
-    const bulkGen = spawn("node", ["bulk_articles.js", "--limit", "100", "--count", "4", "--publish"], {
-      cwd: __dirname,
-      stdio: "ignore", // Don't pipe stdout/stderr to prevent memory leaks
-      detached: true   // Let it run independently
-    });
-    bulkGen.unref(); // Allow the main server to exit even if this is running
-    console.log("✅ AI Bulk Article Generator started successfully.");
-  } catch (err) {
-    console.error("❌ Failed to start bulk article generator:", err.message);
-  }
-  // ─────────────────────────────────────────────────────────────
+
 });
 
